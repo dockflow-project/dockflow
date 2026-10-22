@@ -1,5 +1,7 @@
 """Only owner configuration can add explicit task storage/configuration mounts."""
 
+import re
+
 import pytest
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.definitions import DefinitionError
@@ -26,10 +28,11 @@ target="/etc/artifacts/config.json"
         mounts[0]["source"] == mounts[0]["target"] == str(tmp_path / "data/published")
     )
     assert mounts[1]["read_only"] is True
+    assert mounts[1]["target"] == "/etc/artifacts/config.json"
     assert resource_limits({}, settings.execution)["dockflow_mounts"] == mounts
 
 
-@pytest.mark.parametrize("target", ["/", "../relative", "/unsafe/../path"])
+@pytest.mark.parametrize("target", ["/", "../relative", "/unsafe/../path", "C:/data"])
 def test_invalid_mount_target_rejected(tmp_path, target):
     config = tmp_path / "config.toml"
     config.write_text(f"""
@@ -65,5 +68,5 @@ def test_transport_preserves_runtime_mount_and_rejects_overlap(tmp_path):
         task_volumes(base, configured)
     configured[0]["source"] = str(tmp_path / "missing")
     configured[0]["target"] = "/etc/artifacts/config.json"
-    with pytest.raises(DefinitionError, match=str(tmp_path / "missing")):
+    with pytest.raises(DefinitionError, match=re.escape(str(tmp_path / "missing"))):
         task_volumes(base, configured)

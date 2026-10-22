@@ -6,7 +6,7 @@ import os
 import re
 import tomllib
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -304,14 +304,18 @@ def load_settings(
             )
         source = _path(mount["source"], root)
         target = mount.get("target", str(source))
+        if not isinstance(target, str):
+            raise DockflowError("Task mount targets must be absolute non-root paths")
+        # Explicit destinations belong to the Linux container, not the host OS.
+        # Omitted destinations retain the documented same-path source default.
+        target_path = PurePosixPath(target) if "target" in mount else source
         if (
-            not isinstance(target, str)
-            or not Path(target).is_absolute()
-            or ".." in Path(target).parts
-            or Path(target) == Path("/")
+            not target_path.is_absolute()
+            or ".." in target_path.parts
+            or target_path.parent == target_path
         ):
             raise DockflowError("Task mount targets must be absolute non-root paths")
-        target = str(Path(target))
+        target = str(target_path)
         if str(source) in mount_sources or target in mount_targets:
             raise DockflowError("Task mount sources and targets must be unique")
         mount_sources.add(str(source))

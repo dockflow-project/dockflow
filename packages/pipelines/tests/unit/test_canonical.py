@@ -11,7 +11,7 @@ def test_normative_digest_vectors():
         root
         / ".macrostates/specs/053_dockflow-pipelines/resources/canonical-digests.json"
     )
-    for vector in json.loads(fixture.read_text())["vectors"]:
+    for vector in json.loads(fixture.read_text(encoding="utf-8"))["vectors"]:
         assert canonical_bytes(vector["value"]).decode() == vector["canonical_utf8"]
         assert digest(vector["value"]) == vector["sha256"]
 

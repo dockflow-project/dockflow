@@ -212,7 +212,9 @@ target = "/etc/dockflow-artifacts/config.json"
 ```
 
 Create these sources before running. Relative sources resolve from project.root;
-omitted targets use the same absolute path. Read-only is the default. Targets
+omitted targets use the same absolute path. Explicit targets are absolute Linux
+container paths, even when the configuration is read on Windows. Read-only is
+the default. Targets
 cannot overlap runtime mounts. The Docker daemon must see the same source paths.
 Configuration stores paths/modes, never file contents. Keep secret files out of
 source control. Changing mounted publication configuration is not a tracked data

@@ -1,0 +1,6 @@
+schema_version: 1
+id: source-publication-windows
+origin:
+  commit: "40f53fca9904ebb6f0e943b9210a0356d6816030"
+  specification: "specs-0.1.0"
+  implementation: null
