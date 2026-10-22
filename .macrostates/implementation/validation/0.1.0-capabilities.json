@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "project_id": null,
+  "versions": {
+    "dockflow-pipelines": "0.1.0",
+    "kfp": "2.17.0",
+    "ml-metadata": "1.21.0",
+    "docker": "7.2.0"
+  },
+  "profile": "dockflow-kfp-2.17-v1",
+  "adapter": "dockflow-kfp-2.17-v1-posix-owner-home-v1",
+  "compiled_cache_default": false,
+  "condition_grammar": {
+    "references": "inputs.parameter_values['name'] or inputs.parameter_values[\"name\"]",
+    "literals": "scalar JSON literals",
+    "casts": [
+      "int",
+      "double",
+      "string",
+      "bool"
+    ],
+    "operators": [
+      "==",
+      "!=",
+      "<",
+      "<=",
+      ">",
+      ">=",
+      "!",
+      "&&",
+      "||",
+      "parentheses"
+    ]
+  },
+  "task_identity": "POSIX execution-owner UID/GID with attempt-local HOME unless component supplies HOME",
+  "ir_schema_version": "2.1.0",
+  "qualification": "bounded initial milestone; see version-specific release evidence",
+  "features": [
+    "compiled_ir",
+    "static_dag",
+    "nested_dag",
+    "importer",
+    "scalar_conditions",
+    "artifacts",
+    "reuse",
+    "partial_selection",
+    "pipeline_uploads",
+    "web_interface"
+  ],
+  "backends": {
+    "execution": "KFP DockerRunner",
+    "metadata": "MLMD SQLite",
+    "artifacts": [
+      "filesystem",
+      "s3"
+    ]
+  },
+  "limits": {
+    "active_runs": 1,
+    "task_parallelism": 1,
+    "queue_capacity": 100
+  },
+  "kfp_api": {
+    "version": "2.17.0 v2beta1",
+    "qualification": "documented client subset"
+  },
+  "limitations": [
+    "No loops, accelerators, Kubernetes platform plugins, managed-output URI overrides or artifact payload uploads",
+    "Execution qualification is limited to Linux x86-64; no full KFP parity claim"
+  ]
+}

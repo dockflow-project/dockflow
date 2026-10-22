@@ -6,14 +6,16 @@ support filesystems, S3-compatible stores and KFP typed importers.
 
 Python 3.12–3.13. MIT licensed. Developed with AI assistance.
 
-This is an unpublished development project. Install from a checkout:
+Install with Python 3.12 or newer:
 
 ```bash
-uv sync --all-packages --all-extras
-uv pip install ./packages/artifacts
-# Optional integrations (KFP's urllib3 security override is required):
-uv pip install --overrides tools/runtime-overrides.txt './packages/artifacts[s3,kfp]'
+pip install dockflow-artifacts==0.1.0
+# Optional S3 integration:
+pip install 'dockflow-artifacts[s3]==0.1.0'
 ```
+
+For the optional `kfp` extra, follow the installation guide's explicit urllib3
+override. This library can be installed without the Dockflow CLI or service.
 
 ```python
 from pathlib import Path
@@ -39,9 +41,9 @@ Component scripts can remain independent. A wrapper runs a script and publishes
 its files; the pipeline uses `dockflow_artifacts.kfp.importer_component` to register
 the returned URI as a normal `Model` or `Dataset`. No Dockflow server is required.
 
-[Documentation](../../docs/artifact-library/README.md) covers configuration, publication semantics,
-KFP integration and the public API. [Examples](examples/) use synthetic data.
-[Contributing](../../CONTRIBUTING.md) describes development checks.
+[Documentation](https://github.com/dockflow-project/dockflow/blob/main/docs/artifact-library/README.md) covers configuration, publication semantics,
+KFP integration and the public API. [Examples](https://github.com/dockflow-project/dockflow/blob/main/packages/artifacts/examples/) use synthetic data.
+[Contributing](https://github.com/dockflow-project/dockflow/blob/main/CONTRIBUTING.md) describes development checks.
 
 ```bash
 uv run pytest packages/artifacts/tests
@@ -51,9 +53,8 @@ uv run pyright
 uv build --package dockflow-artifacts --force-pep517
 ```
 
-The repository-root `VERSION` governs the shared Dockflow application version,
-currently `0.1.0.dev0`; package metadata is synchronized by the shared tooling.
+The repository-root `VERSION` governs the shared Dockflow application version;
+package metadata is synchronized by the shared tooling.
 The library is a member of the existing monorepo workspace, composition and
-lifecycle. Macrostates baselines remain separate. There is no finalized release
-provenance or published artifact yet. The root `uv.lock` pins contributor tools,
+lifecycle. Macrostates baselines remain separate. The root `uv.lock` pins contributor tools,
 not downstream users. Run development commands from the repository root.

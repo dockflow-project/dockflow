@@ -8,12 +8,14 @@ Kubernetes. Local requirements are organized into
 [Dockflow Pipelines](053_dockflow-pipelines/README.md), and
 [Dockflow Artifacts](054_dockflow-artifacts/README.md) packages.
 
-The working specification set has been reviewed and adopted as the contract for
-continued bootstrapping. This working acceptance is distinct from release
-finalization: the composition's `specs-0.1.0` remains an unfinalized seed, and no
-finalized specification or implementation baseline, tag or release is claimed.
-The first intended public deliverable is a source development preview under the
-[shared release policy](051_dockflow/004_releases.md).
+The specification set is the accepted contract for the first bounded application
+release. The composition selects `specs-0.1.0`; the accepted implementation scope
+and qualification limits are recorded in the
+[initial release review](../implementation/validation/initial-release.md).
+Reviewed integration finalizes the baseline declarations. Annotated tags and
+versioned distributions are published separately under the
+[shared release policy](051_dockflow/004_releases.md); specification acceptance
+alone does not establish that publication has occurred.
 
 ## Selected packages and reading order
 

@@ -23,6 +23,8 @@ def local_transports(monkeypatch):
 def http_server(respond):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
+            # Drain POST data before closing; unread bytes can reset Windows TCP.
+            self.rfile.read(int(self.headers.get("Content-Length", "0")))
             respond(self)
 
         do_POST = do_GET

@@ -1,0 +1,137 @@
+name: Publish approved release
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: Successful Build release candidate run ID for this exact main commit
+        required: true
+        type: string
+      manifest_sha256:
+        description: Reviewed candidate manifest SHA-256 from that run's summary
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: dockflow-publication
+  cancel-in-progress: false
+
+env:
+  CANDIDATE_RUN: ${{ inputs.candidate_run_id }}
+  MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+
+jobs:
+  verify:
+    if: github.repository == 'dockflow-project/dockflow' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify candidate workflow provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/release.py github --run-id "$CANDIDATE_RUN"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dockflow-release-${{ inputs.candidate_run_id }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - run: python tools/release.py verify --directory candidate --sha256 "$MANIFEST_SHA256" --commit "$GITHUB_SHA" --tags
+      - name: Refuse conflicting existing PyPI files
+        run: python tools/release.py pypi --directory candidate
+
+  publish-cli:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: pypi-cli
+      url: https://pypi.org/project/dockflow-cli/
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dockflow-release-${{ inputs.candidate_run_id }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - run: python tools/release.py verify --directory candidate --sha256 "$MANIFEST_SHA256" --commit "$GITHUB_SHA"
+      - run: python tools/release.py pypi --directory candidate
+      - name: Publish CLI first
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
+        with:
+          packages-dir: candidate/packages/cli/
+          skip-existing: true
+
+  publish-libraries:
+    needs: publish-cli
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [pipelines, artifacts]
+    environment:
+      name: pypi-${{ matrix.package }}
+      url: https://pypi.org/project/dockflow-${{ matrix.package }}/
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dockflow-release-${{ inputs.candidate_run_id }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - run: python tools/release.py verify --directory candidate --sha256 "$MANIFEST_SHA256" --commit "$GITHUB_SHA"
+      - run: python tools/release.py pypi --directory candidate
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
+        with:
+          packages-dir: candidate/packages/${{ matrix.package }}/
+          skip-existing: true
+
+  publish-image-and-record:
+    needs: publish-libraries
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dockflow-release-${{ inputs.candidate_run_id }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - run: python tools/release.py verify --directory candidate --sha256 "$MANIFEST_SHA256" --commit "$GITHUB_SHA" --tags
+      - name: Verify all PyPI uploads
+        run: python tools/release.py pypi --directory candidate --complete
+      - name: Publish the preserved image and release record
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/publish_release_record.py --directory candidate

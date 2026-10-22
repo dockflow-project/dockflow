@@ -14,7 +14,12 @@ Help/version requests are offline. Installing this package alone does not start
 services, install feature modules or contact a registry. The command host reports
 invalid or conflicting plugin registrations rather than silently omitting them.
 
-This package is an unpublished MIT-licensed development implementation.
-In the source repository, see [installation](../../docs/installation.md),
-[CLI usage](../../docs/cli.md) and the [contribution guide](../../CONTRIBUTING.md).
-There is no published-package installation claim in this README.
+Install the command host with Python 3.12 or newer:
+
+```bash
+pip install dockflow-cli==0.1.0
+```
+
+Installing `dockflow-pipelines==0.1.0` also installs this matching host.
+MIT licensed. See [installation](https://github.com/dockflow-project/dockflow/blob/main/docs/installation.md),
+[CLI usage](https://github.com/dockflow-project/dockflow/blob/main/docs/cli.md) and the [contribution guide](https://github.com/dockflow-project/dockflow/blob/main/CONTRIBUTING.md).

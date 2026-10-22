@@ -175,6 +175,11 @@ def main() -> int:
     )
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--out-dir", type=Path, default=ROOT / "dist")
+    parser.add_argument(
+        "--existing",
+        action="store_true",
+        help="Verify existing wheels/sdists without rebuilding the release candidates",
+    )
     arguments = parser.parse_args()
     if not arguments.uv:
         parser.error("Install uv or pass --uv /path/to/uv")
@@ -184,19 +189,20 @@ def main() -> int:
     run([sys.executable, str(ROOT / "tools/version.py")], ROOT)
     # PEP 517 isolation honors the backend compatibility range even when the
     # invoking uv frontend is a newer version with a different built-in backend.
-    run(
-        [
-            uv,
-            "build",
-            "--all-packages",
-            "--force-pep517",
-            "--out-dir",
-            str(out),
-            "--python",
-            arguments.python,
-        ],
-        ROOT,
-    )
+    if not arguments.existing:
+        run(
+            [
+                uv,
+                "build",
+                "--all-packages",
+                "--force-pep517",
+                "--out-dir",
+                str(out),
+                "--python",
+                arguments.python,
+            ],
+            ROOT,
+        )
     wheels = [
         out / f"dockflow_{name}-{version}-py3-none-any.whl"
         for name in ("cli", "pipelines", "artifacts")

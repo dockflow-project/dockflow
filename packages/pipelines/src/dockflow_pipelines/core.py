@@ -95,7 +95,7 @@ def capabilities(settings: Settings | None = None) -> dict:
         },
         "task_identity": "POSIX execution-owner UID/GID with attempt-local HOME unless component supplies HOME",
         "ir_schema_version": "2.1.0",
-        "qualification": "development; see implementation evidence",
+        "qualification": "bounded initial milestone; see version-specific release evidence",
         "features": [
             "compiled_ir",
             "static_dag",
@@ -118,10 +118,13 @@ def capabilities(settings: Settings | None = None) -> dict:
             "task_parallelism": 1,
             "queue_capacity": settings.service["queue_capacity"] if settings else 100,
         },
-        "kfp_api": {"version": "2.17.0 v2beta1", "qualification": "unqualified target"},
+        "kfp_api": {
+            "version": "2.17.0 v2beta1",
+            "qualification": "documented client subset",
+        },
         "limitations": [
             "No loops, accelerators, Kubernetes platform plugins, managed-output URI overrides or artifact payload uploads",
-            "Native platform matrix and reference KFP parity require qualification",
+            "Execution qualification is limited to Linux x86-64; no full KFP parity claim",
         ],
     }
 

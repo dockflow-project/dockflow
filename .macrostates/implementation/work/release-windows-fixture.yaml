@@ -1,0 +1,6 @@
+schema_version: 1
+id: release-windows-fixture
+origin:
+  commit: "5580ac2588bc0c5d248890ea701b22e96c1aef12"
+  specification: "specs-0.1.0"
+  implementation: null
