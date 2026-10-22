@@ -100,13 +100,24 @@ class S3Store:
         # until an explicit publication/verification operation reaches storage.
         try:
             import boto3
+            import certifi
             from botocore.config import Config
+            from botocore.session import get_session
         except ImportError as exc:
             raise ArtifactError(
                 "Install dockflow-artifacts[s3] to use object storage"
             ) from exc
+        options = dict(self.options)
+        verify = options.get("verify")
+        if verify is None or verify is True:
+            # Use the maintained bundle; botocore vendors a separate older copy.
+            options["verify"] = (
+                get_session().get_config_variable("ca_bundle")
+                if verify is None
+                else None
+            ) or certifi.where()
         return boto3.client(
-            "s3", config=Config(s3={"addressing_style": "path"}), **self.options
+            "s3", config=Config(s3={"addressing_style": "path"}), **options
         )
 
     def key(self, key: str) -> str:

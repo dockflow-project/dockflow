@@ -1,4 +1,4 @@
-FROM python:3.13-slim@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f
+FROM python:3.13.17-slim@sha256:fe14fd57a4c0361110eaa0c284112b189750bcb43fb04bb5d1ee7b7744027ccf
 WORKDIR /components
 COPY components/ /components/
 ENV PYTHONDONTWRITEBYTECODE=1

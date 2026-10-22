@@ -53,6 +53,9 @@ docker compose --env-file deploy/.env -f deploy/compose.yaml up -d --wait
 The reference MinIO image is built from the pinned upstream source archive in
 [Minio.Dockerfile](Minio.Dockerfile), with its license retained. It is a local
 development build, not a published Dockflow-maintained upstream container.
+The executor and registry are also built locally using `sidecars.Dockerfile`,
+which replaces their affected certificate stores while retaining registry 2.8.3
+and its storage format. The MinIO builder uses the patched Go toolchain.
 The first build needs network access and may take time. Existing compatible
 images can be reused; `DOCKFLOW_IMAGE` selects the service image name.
 

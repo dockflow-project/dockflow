@@ -114,3 +114,9 @@ Both control directories are relative to the artifact root:
 Neither is the repository-root Dockflow state/database. Back up the whole store.
 Roots containing the earlier `.dockflow-artifacts/` layout are rejected before
 writes; use a fresh root or reset disposable data. No automatic migration occurs.
+
+
+S3 uses maintained `certifi` trust by default. An explicit `verify` certificate
+path takes precedence; when omitted, the SDK's `AWS_CA_BUNDLE` or profile
+`ca_bundle` remains supported. `verify=true` selects certifi explicitly.
+Update custom bundles independently; see [certificate maintenance](../certificate-maintenance.md).

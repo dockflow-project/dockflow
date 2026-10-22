@@ -1,0 +1,6 @@
+schema_version: 1
+id: emsign-ca-remediation
+origin:
+  commit: "55b7ec5da52c02648a1723d9e5cfade6c42e4c51"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.0"

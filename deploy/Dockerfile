@@ -1,19 +1,24 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 ARG WHEEL_SOURCE=source-wheels
 # Ubuntu 24.04 supplies glibc 2.39 required by the qualified MLMD wheel candidate.
-FROM ghcr.io/astral-sh/uv:0.12.24@sha256:3af4716e991d6956a41e573eab705d0ee08500cd829ed30293eb8472f372c65a AS uv
+FROM ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv
 FROM ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac AS dependencies
 ENV DEBIAN_FRONTEND=noninteractive UV_PYTHON_INSTALL_DIR=/opt/python UV_LINK_MODE=copy
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=uv /uv /usr/local/bin/uv
-RUN uv python install 3.13.16
+RUN uv python install 3.13.17
 WORKDIR /opt/dockflow
 COPY pyproject.toml uv.lock .python-version ./
 COPY packages/cli/pyproject.toml packages/cli/README.md packages/cli/LICENSE packages/cli/
 COPY packages/pipelines/pyproject.toml packages/pipelines/README.md packages/pipelines/LICENSE packages/pipelines/
 COPY packages/artifacts/pyproject.toml packages/artifacts/README.md packages/artifacts/LICENSE packages/artifacts/
-RUN uv sync --locked --python 3.13.16 --all-packages --all-extras --no-dev --no-install-workspace
+RUN uv sync --locked --python 3.13.17 --all-packages --all-extras --no-dev --no-install-workspace
+# Botocore still ships the AAA cross-signing root. Align its fallback bundle for
+# direct SDK users too; Dockflow S3 clients explicitly select maintained certifi.
+RUN .venv/bin/python -c "import botocore,certifi,pathlib,shutil; shutil.copyfile(certifi.where(), pathlib.Path(botocore.__file__).with_name('cacert.pem'))"
+COPY tools/check_ca_trust.py /tmp/check_ca_trust.py
+RUN .venv/bin/python /tmp/check_ca_trust.py --runtime --all-bundles --system
 
 FROM dependencies AS source-wheels
 COPY packages/cli/src packages/cli/src
@@ -40,6 +45,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY --from=build /opt/python /opt/python
 COPY --from=build /opt/dockflow/.venv /opt/dockflow/.venv
 COPY LICENSE /usr/share/licenses/dockflow/LICENSE
+COPY tools/check_ca_trust.py /tmp/check_ca_trust.py
+RUN python /tmp/check_ca_trust.py --runtime --all-bundles --system && rm /tmp/check_ca_trust.py
 ARG SOURCE_REVISION=unavailable
 ARG SPECIFICATION=unfinalized
 ARG IMPLEMENTATION=unaccepted-development

@@ -46,6 +46,14 @@ configuration, impact and minimal reproduction with synthetic data. Include
 relevant logs only after removing tokens, credentials and private paths. Security
 updates and supported versions will be documented here when releases exist.
 
+## Certificate trust incident
+
+The current source contains remediation for the October 2026 eMudhra/emSign
+incident. Follow [certificate maintenance](docs/certificate-maintenance.md) to
+upgrade existing environments and rebuild images. The initial 0.1.0 release
+candidate was withdrawn from further publication; its tags and already uploaded
+CLI remain immutable. Source fixes have not yet been released as packages/images.
+
 ## Dependency and image review
 
 The workspace lock and immutable container-image references support repeatable

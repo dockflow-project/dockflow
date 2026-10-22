@@ -2,18 +2,21 @@
 
 [Documentation index](README.md) · Next: [quickstart](quickstart.md)
 
-Install only the capabilities you need from PyPI, or use the locked source
-checkout for development. The first release is 0.1.0; its qualified execution
+Use the locked source checkout for the current security fixes. The initial
+0.1.0 publication stopped after the CLI upload; Pipelines, Artifacts and the
+service image remain unpublished. The PyPI commands below describe the planned
+release and become usable when its matching packages are available. The qualified execution
 platform is Linux x86-64, with Python 3.12–3.13. See the
 [compatibility guide](compatibility.md) for the distinction between base client
 installation and execution support.
 
 ## Requirements
 
-- Python 3.13 is the development default; package metadata requires Python 3.12
+- Python 3.13.17 is the development default; package metadata requires Python 3.12
   or newer. The runtime depends on MLMD wheels, so Python/platform availability
   is narrower than the CLI's pure Python requirements.
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) manages the workspace.
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.5 or newer manages the workspace.
+- Use patched certificate stores and package tools; see [certificate maintenance](certificate-maintenance.md).
 - Direct execution or an execution service needs a running Docker daemon for
   Linux containers. The reference runtime is Linux x86-64. Other runtime
   platforms require their own qualification; metadata alone is not that proof.

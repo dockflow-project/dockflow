@@ -6,6 +6,9 @@ dependencies = []
 
 [tool.uv]
 package = false
+required-version = ">=0.13.5"
+# Security floors apply to installed optional dependencies without adding them.
+constraint-dependencies = ["certifi>=2026.10.19", "grpcio>=1.84.1"]
 # KFP 2.17 pins urllib3==2.7.0. Qualify the security-fixed version explicitly
 # until upstream relaxes its pin; see docs/installation.md.
 override-dependencies = ["urllib3==2.8.0"]
@@ -22,6 +25,7 @@ dockflow-artifacts = { workspace = true }
 dev = [
   "pytest>=9.1.1,<10", "pytest-cov>=6,<7", "ruff>=0.11.13,<0.12",
   "pyright>=1.1.400,<2", "pre-commit>=4.2,<5", "httpx>=0.28.1,<0.29",
+  "cryptography>=50.0.2,<51", # Generate synthetic CA certificates for security tests.
 ]
 
 [tool.ruff]

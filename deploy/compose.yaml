@@ -19,7 +19,11 @@ services:
     restart: "no"
 
   docker-engine:
-    image: docker:29.1.3-dind@sha256:173f284a4299164772a90f52b373e73e087583c0963f1334c9995f190ef6f3f5
+    image: dockflow-docker-engine:ca-fixed
+    build:
+      context: .
+      dockerfile: sidecars.Dockerfile
+      target: engine
     privileged: true
     entrypoint: ["sh", "-c"]
     command:
@@ -76,7 +80,11 @@ services:
     restart: "no"
 
   registry:
-    image: registry:2.8.3@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+    image: dockflow-registry:ca-fixed
+    build:
+      context: .
+      dockerfile: sidecars.Dockerfile
+      target: registry
     ports:
       - "127.0.0.1:5001:5000"
     volumes:
