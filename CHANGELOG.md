@@ -1,15 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
 - Address the eMudhra/emSign CA incident in Python, uv, gRPC, S3 trust defaults,
-  the reference container stack and the publishing runtime.
+  and the reference container stack.
 - Check actual certificate bundles, including embedded pip/ensurepip and
   cross-signing roots, during CI and service image qualification.
 - Preserve explicit custom S3 CA settings and existing registry storage format.
+- Publish through the official PyPA v1.14.3 Trusted Publishing action; remove
+  the custom publisher wrapper. Keep unchanged specification baseline provenance
+  without moving existing tags.
 
 The 0.1.0 publication stopped after the CLI upload. Its vulnerable service
-candidate is withdrawn; these fixes require a new coordinated release.
+candidate is withdrawn. Version 0.1.1 is the coordinated replacement; publication
+remains subject to exact-candidate approval.
 
 ## 0.1.0
 

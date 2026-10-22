@@ -79,6 +79,8 @@ The repository quickstart now uses the patched Python base.
 
 The original 0.1.0 image candidate failed this check and must not be published.
 Only the CLI was uploaded before publication stopped. Existing tags and files
-remain unchanged; these source fixes need a new reviewed release candidate.
-The publishing image preserves PyPA's OIDC and PEP 740 attestations with patched
-Python, pip, certifi and sigstore. No package uploads occur during these checks.
+remain unchanged. The coordinated 0.1.1 candidate contains these fixes.
+Publication uses the official PyPA action v1.14.3, which includes the incident
+fix for its certifi/Sigstore trust path. See the
+[upstream advisory](https://github.com/pypa/gh-action-pypi-publish/security/advisories/GHSA-5xjx-3w67-w9x9).
+No custom publisher or package uploads are involved in these checks.
