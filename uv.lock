@@ -543,7 +543,7 @@ wheels = [
 
 [[package]]
 name = "dockflow-artifacts"
-version = "0.1.0.dev0"
+version = "0.1.0"
 source = { editable = "packages/artifacts" }
 
 [package.optional-dependencies]
@@ -563,7 +563,7 @@ provides-extras = ["s3", "kfp"]
 
 [[package]]
 name = "dockflow-cli"
-version = "0.1.0.dev0"
+version = "0.1.0"
 source = { editable = "packages/cli" }
 dependencies = [
     { name = "typer" },
@@ -574,7 +574,7 @@ requires-dist = [{ name = "typer", specifier = ">=0.27.3,<0.28.0" }]
 
 [[package]]
 name = "dockflow-pipelines"
-version = "0.1.0.dev0"
+version = "0.1.0"
 source = { editable = "packages/pipelines" }
 dependencies = [
     { name = "dockflow-cli" },
@@ -616,7 +616,7 @@ provides-extras = ["runtime", "service", "s3"]
 
 [[package]]
 name = "dockflow-workspace"
-version = "0.1.0.dev0"
+version = "0.1.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]

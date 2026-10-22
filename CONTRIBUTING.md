@@ -201,3 +201,63 @@ to accept unexplained modifications or select newer releases automatically.
 Keep local credentials, environment files, private notes, caches, and generated
 artifacts out of commits. Use a named subdirectory under `tmp/` for disposable
 work; only `tmp/.gitkeep` is tracked.
+
+## Preparing and publishing a release
+
+All three distributions share root `VERSION`. Work on a release branch, update
+that file, run `uv run python tools/version.py --sync`, and refresh `uv.lock`
+without unrelated upgrades. Update the changelog, package documentation and
+generated API reference. Complete the existing specification/implementation
+baseline review and workflow closure before submitting reviewed integration;
+see the [release policy](.macrostates/specs/051_dockflow/004_releases.md).
+
+The initial publication uses three pending PyPI publishers. Each has owner
+`dockflow-project`, repository `dockflow` and workflow filename `publish.yaml`:
+
+| PyPI project | GitHub environment |
+| --- | --- |
+| `dockflow-cli` | `pypi-cli` |
+| `dockflow-pipelines` | `pypi-pipelines` |
+| `dockflow-artifacts` | `pypi-artifacts` |
+
+Distinct environments avoid PyPI's duplicate pending-publisher restriction.
+Configure required maintainer review and allow only `main` in each GitHub
+environment. Publishing uses OIDC; no PyPI API token is stored. GHCR publication
+uses the repository's short-lived `GITHUB_TOKEN`. The first container package
+must be made public and its anonymous pull verified before announcing it.
+
+After reviewed integration and successful CI on that exact main commit:
+
+1. Manually run **Build release candidate (no publication)** on `main`.
+   It builds the three wheels/sdists once, verifies clean installation and
+   independent sdist rebuilding, builds the service using those wheels, and
+   runs a disposable Docker-in-Docker deployment check. It retains the tested
+   image archive, package files, verification receipts and a hash manifest as
+   `dockflow-release-RUN_ID` for 30 days.
+2. Inspect the candidate, receipts and manifest SHA-256 in the run summary.
+   Obtain approval for those exact bytes and the release scope. Create the
+   authorized annotated `v0.1.0`, `specs-0.1.0` and `imp-0.1.0` tags on the
+   reviewed initial-release commit; publish related refs atomically. These
+   initial tags are immutable. Subsequent releases require their own reviewed
+   baseline/source binding rather than moving these tags.
+3. Manually run **Publish approved release** on the same main commit, supplying
+   the candidate run ID and reviewed manifest SHA-256. Approve the protected
+   environments for that candidate. The workflow checks provenance, annotated
+   tags and every file hash, publishes CLI before the other packages, loads and
+   pushes the preserved service image, and creates the shared GitHub release
+   with verification assets. No package or image is rebuilt during publication.
+4. Verify all PyPI file hashes and public installation, the GHCR image digest
+   and anonymous pull, and the release assets before announcing completion.
+
+If publication partly succeeds, rerun **Publish approved release** with the
+same successful candidate run ID and manifest hash. Existing PyPI files, image
+contents and GitHub assets must match; conflicting bytes stop publication.
+Do not rerun the candidate build to recover an upload. Keep the original bundle
+available until the release finishes; an expired/missing candidate is a recovery
+issue, not authorization to replace an already published version.
+
+`tools/release.py` checks bundles without building or publishing. The
+publication script is restricted to the canonical GitHub Actions main context.
+The initial tooling requires all three annotated tags to identify the same
+source commit; a later release reusing older baselines must deliberately extend
+that check under the existing provenance policy.

@@ -1,0 +1,6 @@
+schema_version: 1
+id: pypi-release
+origin:
+  commit: "fc00ff0325483e62505edf694540abbc798576a6"
+  specification: "specs-0.1.0"
+  implementation: null

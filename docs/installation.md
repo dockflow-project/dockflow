@@ -2,9 +2,11 @@
 
 [Documentation index](README.md) · Next: [quickstart](quickstart.md)
 
-This development preview is installed from source. Use a checkout of this
-repository and the checked-in dependency lock. The commands below do not depend
-on published Dockflow packages or service images.
+Install only the capabilities you need from PyPI, or use the locked source
+checkout for development. The first release is 0.1.0; its qualified execution
+platform is Linux x86-64, with Python 3.12–3.13. See the
+[compatibility guide](compatibility.md) for the distinction between base client
+installation and execution support.
 
 ## Requirements
 
@@ -21,6 +23,35 @@ on published Dockflow packages or service images.
 If `uv` is missing, install it using its official installation guide before
 running the commands below. If Docker is missing, install an engine suitable
 for your OS using the [Docker installation guide](https://docs.docker.com/engine/install/).
+
+## Install from PyPI
+
+In a virtual environment, install the remote client:
+
+```bash
+pip install dockflow-pipelines==0.1.0
+dockflow --version
+dockflow pipelines --endpoint http://127.0.0.1:8080 runs list
+```
+
+The matching `dockflow-cli` is installed automatically. For the independent
+artifact library, use `pip install dockflow-artifacts==0.1.0` (or
+`'dockflow-artifacts[s3]==0.1.0'`).
+
+Local execution and serving need the KFP dependency override explained below.
+These commands work without a source checkout:
+
+```bash
+uv venv --python 3.13
+uv pip install \
+  --overrides https://raw.githubusercontent.com/dockflow-project/dockflow/v0.1.0/tools/runtime-overrides.txt \
+  'dockflow-pipelines[runtime,service,s3]==0.1.0'
+```
+
+Add `'dockflow-artifacts[s3,kfp]==0.1.0'` to that same command when authoring
+pipelines that use the artifact library. On Linux/macOS activate with
+`source .venv/bin/activate`; on PowerShell use `.venv\Scripts\Activate.ps1`.
+These commands install software; they do not start services or create storage.
 
 ## Full source environment
 
@@ -74,7 +105,7 @@ covered by this exception.
 ## Select only the needed capabilities
 
 Dockflow has three installable distributions. They share one application version;
-the source preview installs the local workspace members:
+a source checkout installs the local workspace members:
 
 | Distribution / extra | Purpose |
 | --- | --- |

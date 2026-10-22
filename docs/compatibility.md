@@ -11,16 +11,19 @@ dockflow pipelines capabilities
 dockflow pipelines --endpoint http://127.0.0.1:8080 capabilities
 ```
 
-The development profile is `dockflow-kfp-2.17-v1`: KFP SDK 2.17, compiled IR schema
+The initial profile is `dockflow-kfp-2.17-v1`: KFP SDK 2.17, compiled IR schema
 2.1.0, KFP DockerRunner, MLMD/SQLite and filesystem or S3-compatible artifacts.
 SDK version, IR schema and HTTP backend API version are separate identities.
 The current [qualification record](../.macrostates/implementation/main.md)
 describes tested combinations and remaining platform gaps.
 
-The source development preview exposes this implemented profile for evaluation.
-Public source availability does not qualify every intended deployment target.
-Use the locked source installation and retain the limitations below when
-choosing an environment.
+Version 0.1.0 releases this bounded profile. It does not qualify every intended
+deployment target or claim complete KFP parity. Use the
+[installation instructions](installation.md) and retain the limits below when
+choosing an environment. Base-package CI covers Python 3.12/3.13 on Ubuntu 24.04
+x86-64, macOS 14 ARM64 and Windows Server 2022 x86-64. Execution/service
+qualification covers Linux x86-64 with Linux containers, separately from those
+client installation checks.
 
 ## Pipeline definitions
 
@@ -65,11 +68,11 @@ ownership is enforced by an OS lock; arbitrary network-filesystem SQLite sharing
 and distributed fencing are outside this profile.
 
 The intended CLI platform range and actual runtime qualification are distinct.
-The reference execution environment is Linux x86-64 with Python 3.13; Python
-3.12 is the minimum language target. Native ARM64 execution, macOS/Windows
+The reference execution environment is Linux x86-64 with Python 3.12/3.13;
+the service image uses Python 3.13. Native ARM64 execution, macOS/Windows
 runtime combinations and Docker Desktop variants require their own evidence.
 Configured CI jobs and successful cross-builds do not provide that evidence.
 MLMD availability further limits execution environments; the remote client
 does not need MLMD. See the qualification record for tested combinations.
 Docker images execute trusted user code; this profile is not a multi-tenant
-sandbox. External SQL metadata backends are not part of the qualified preview.
+sandbox. External SQL metadata backends are not part of the qualified release.

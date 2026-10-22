@@ -2,27 +2,23 @@
 
 ## Phase and identity
 
-Project phase: **bootstrapping**. The working specification is reviewed and
-adopted for continued implementation; its selected package versions belong to
-the [composition](../specs/composition.yaml). This working acceptance does not
-finalize a project baseline. The composition's `specs-0.1.0` remains an
-unfinalized seed; no finalized specification or implementation baseline exists.
-Git commits identify source snapshots independently of baseline finalization.
-Application identity remains `0.1.0.dev0` from root `VERSION`.
+Project phase: **active**. The Definer accepted the first bounded implementation
+baseline and this phase transition on 2026-10-22. The
+[release declaration](release.yaml) identifies `imp-0.1.0` against `specs-0.1.0`;
+selected specification package versions belong to the
+[composition](../specs/composition.yaml). The
+[initial release review](validation/initial-release.md) records delivered scope,
+qualification evidence and explicit limits.
 
-The selected first-publication scope is an MIT-licensed **source development
-preview**, installed from a checkout. It does not include package/image uploads
-or imply a stable release or full platform qualification. Source publication,
-reviewed integration and baseline finalization remain separate operations.
-Imported specification snapshots are unchanged and integrity-locked.
-
-All delivered workflows through the source-readiness review are closed under the
-Definer's explicit authorization, with their records in
-[workflow history](workflows/history/). Closure accepts their delivered scope;
-it does not invent baseline tags or qualify previously untested targets.
-Future work starts a new workflow. See the
-[readiness receipt](validation/source-publication-readiness.md) for current
-checks and the remaining hosting prerequisite.
+Application version `0.1.0` coordinates all three distributions and the service
+image. Reviewed integration finalizes the accepted baseline declarations;
+annotated tags, exact-candidate approval and registry uploads are separate gates.
+Git commits identify source snapshots independently. The closed
+[release preparation](workflows/history/2026-10-22__15R7ZS__pypi-release.md) records
+acceptance and local qualification. Subsequent CI, integration and publication
+evidence belongs to the hosting system and release assets. Earlier workflows
+remain in [history](workflows/history/). Imported specification snapshots remain
+unchanged.
 
 [User documentation](../../docs/README.md) is the entrypoint for installation,
 authoring, CLI/API/browser use, configuration, deployment and operations.
@@ -168,12 +164,12 @@ real-browser/Docker qualification. Built wheels/sdists must include the static U
 and remain usable without the source tree or Git. Structural specification checks
 do not establish runtime conformance.
 
-Current development qualification remains narrower than the full release target:
-native macOS/Windows, ARM64/native MLMD builds, intended Docker Desktop variants,
+Execution qualification remains narrower than the full release target:
+native macOS/Windows execution, ARM64/native MLMD builds, intended Docker Desktop variants,
 exhaustive crash injection and full KFP parity need separate evidence. Distributed
 network-filesystem locking, hostile multitenancy, GPUs, Kubernetes plugins,
 parallel loops, recurring jobs and artifact payload previews/downloads remain
-outside this delivered profile. No stable application release is claimed.
+outside this delivered profile. The initial versioned release retains these limits; publication remains pending.
 
 Dated evidence and requests live in [validation](validation/) and
 [workflows](workflows/), including architecture, web interface, documentation,
@@ -264,3 +260,26 @@ not infer baseline acceptance or publication. The private-reporting policy is
 selected in [SECURITY.md](../../SECURITY.md); enabling and verifying the hosting
 setting belongs to the public-hosting setup and must be verified before
 announcing the preview.
+
+## Release automation
+
+Root VERSION synchronizes distribution versions, the exact Pipelines→CLI
+requirement, workspace metadata and the service label. Package READMEs use
+absolute public documentation links so their PyPI rendering works independently
+of a checkout. The required KFP/urllib3 override remains an explicit installation
+policy; wheel metadata does not silently patch upstream requirements.
+
+The candidate workflow builds and verifies package artifacts, supplies those
+wheels to the service Dockerfile through a named build context, smoke-tests the
+result, and saves that exact image with a SHA-256 manifest. The publishing
+workflow checks successful canonical-main candidate provenance and the manually
+reviewed manifest hash before protected OIDC jobs. CLI publishes first;
+Pipelines and Artifacts use distinct environments, as required for pending PyPI
+project creation. Image/release publication follows all package uploads.
+
+`tools/release.py` verifies bundle inventories, hashes, exact source/baseline tags
+and existing PyPI file identity. `tools/verify_service_image.py` owns disposable
+engine/volume/image qualification resources. `tools/publish_release_record.py`
+loads the preserved image and refuses conflicting registry/release identities.
+No build step runs with publishing credentials. See CONTRIBUTING for release
+operations and the active workflow for current verification and approval state.

@@ -4,12 +4,17 @@ Dockflow runs compiled Kubeflow Pipelines definitions through Docker, without
 Kubernetes. It adds persistent run history, typed artifacts and lineage,
 verified task reuse, a CLI, a REST API and a browser interface.
 
-**Development preview, installed from source.** It supports a bounded
+**Initial release: 0.1.0.** It supports a bounded
 KFP 2.17 profile, one active Run per project and serial task execution. It is
 intended for trusted components. See [compatibility](docs/compatibility.md) for
 features, limits and qualification boundaries.
 
 ## Get started
+
+For a remote client, install `dockflow-pipelines==0.1.0` from PyPI; it includes
+the shared CLI. For local execution, use the [installation guide](docs/installation.md)
+to apply the required KFP dependency override, or follow the locked source setup
+below. Release changes and limits are in the [changelog](CHANGELOG.md).
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and a running
 Docker engine for Linux containers. From this checkout:
@@ -75,7 +80,6 @@ the [implementation overview](.macrostates/implementation/main.md) records
 qualification evidence. Neither is needed to follow the user tutorial.
 
 Dockflow uses the [MIT License](LICENSE). Imported specification packages retain
-their own license files and attribution. This source preview does not require
-published Python packages or service images; the installation and deployment
-guides use this checkout. Versioned application releases follow a separate
-qualification and publication process.
+their own license files and attribution. The source quickstart remains usable
+without published packages or service images. All three distributions share
+one release version; the artifact library is independently installable.

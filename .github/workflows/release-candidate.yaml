@@ -1,28 +1,63 @@
-name: Review release candidate (no publication)
+name: Build release candidate (no publication)
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
+
+concurrency:
+  group: release-candidate
+  cancel-in-progress: false
 
 jobs:
   review-candidate:
-    environment: release-review
+    if: github.repository == 'dockflow-project/dockflow' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: '0.12.24'
           python-version: '3.13'
       - run: uv sync --locked --all-packages --all-extras
+      - name: Require successful CI on this exact source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yaml/runs?head_sha=$GITHUB_SHA&event=push" \
+            --jq '.workflow_runs | sort_by(.id) | last | .conclusion' > /tmp/ci-conclusion
+          test "$(cat /tmp/ci-conclusion)" = success
+      - name: Verify release source and declarations
+        id: source
+        run: uv run --locked python tools/release.py source --output "$GITHUB_OUTPUT"
       - run: uv run --locked python tools/version.py
-      - run: uv run --locked pytest
       - run: uv run --locked python tools/verify_packages.py
+      - name: Build service using these exact wheels
+        env:
+          VERSION: ${{ steps.source.outputs.version }}
+          SPECIFICATION: ${{ steps.source.outputs.specification }}
+          IMPLEMENTATION: ${{ steps.source.outputs.implementation }}
+        run: |
+          mkdir dist/wheels
+          cp dist/*.whl dist/wheels/
+          docker build --file deploy/Dockerfile --tag dockflow-release-candidate:current \
+            --build-context release-wheels=dist/wheels --build-arg WHEEL_SOURCE=supplied-wheels \
+            --build-arg SOURCE_REVISION="$GITHUB_SHA" --build-arg SPECIFICATION="$SPECIFICATION" \
+            --build-arg IMPLEMENTATION="$IMPLEMENTATION" .
+      - name: Verify the built deployment
+        run: uv run --locked python tools/verify_service_image.py --image dockflow-release-candidate:current
+      - name: Preserve verified artifacts and approval hash
+        run: uv run --locked python tools/release.py bundle --directory dist/candidate --image dockflow-release-candidate:current
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: reviewed-development-candidate
-          path: dist/
-      # Publishing, tags and integration remain separate explicitly authorized
-      # operations after baseline acceptance and native-platform qualification.
+          name: dockflow-release-${{ github.run_id }}
+          path: dist/candidate/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
