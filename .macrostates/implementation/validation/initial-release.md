@@ -118,3 +118,23 @@ publication approval; upload hash verification, public GHCR visibility and
 anonymous pull, and public PyPI installation. Later outcomes belong to the
 hosting system/release receipts. Source-version assignment and local checks
 alone do not satisfy those gates.
+
+## Hosted proposal correction
+
+The first release proposal's branch run 39781526554 passed all nine jobs. The
+PR run 39781585418 passed eight jobs but the Windows/Python 3.13 redirect test
+failed with a connection abort; a single-job retry reproduced the failure.
+The fixture returned before consuming POST data. Its correction drains the
+declared body before responding and retains all redirect/security assertions.
+No production code, dependency, specification or version changes result.
+
+This test-only correction starts at
+5580ac2588bc0c5d248890ea701b22e96c1aef12, before initial-baseline finalization.
+It belongs to the existing candidate's qualification scope. Specification and
+production implementation impact are none; the first-establishment review
+includes the corrected qualification fixture. Hosted checks must qualify the
+updated exact source before integration; earlier failures remain in CI history.
+The correction passed all 82 base-platform tests locally, including the 22 HTTP
+client cases, plus Ruff, formatting, composition integrity and diff checks.
+The Definer explicitly approved closure/submission of the correction on
+2026-10-22. The existing authorization to integrate after passing CI remains.
