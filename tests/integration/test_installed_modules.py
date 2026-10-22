@@ -4,6 +4,8 @@ import subprocess
 import sys
 from importlib import metadata
 
+from rich.text import Text
+
 
 def test_real_pipeline_registration_and_nested_help():
     entries = metadata.entry_points(group="dockflow_cli.modules")
@@ -25,5 +27,6 @@ def test_real_pipeline_registration_and_nested_help():
         text=True,
     )
     assert process.returncode == 0
-    assert "--uri" in process.stdout and "--type" in process.stdout
+    help_text = Text.from_ansi(process.stdout).plain
+    assert "--uri" in help_text and "--type" in help_text
     assert "Traceback" not in process.stderr

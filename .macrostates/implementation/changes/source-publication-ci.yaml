@@ -1,0 +1,23 @@
+schema_version: 1
+id: source-publication-ci
+origin:
+  commit: "565a50481a5be0bbc507b3949737237dc3809e87"
+  specification: "specs-0.1.0"
+  implementation: null
+summary: Make initial CI independent of terminal styling and cached Docker images.
+impact:
+  specification: none
+  implementation: none
+deliverables: []
+requirements:
+  - requirement: Nested help remains available without optional execution dependencies.
+    implementation: Preserve the import guard and compare rendered help in plain and forced-color environments.
+    verification: The base-only installation passes 81 tests under hosted color conditions.
+  - requirement: Docker qualification prepares its explicit immutable image prerequisite.
+    implementation: CI pulls the quickstart base by digest and supplies the fixture tag; contributor instructions match.
+    verification: The complete suite passes 520 tests, including Docker, with the matching image digest.
+evidence:
+  - Original hosted failures are retained in GitHub Actions run 39761725781.
+  - The scoped correction workflow records the local reproduction and verification.
+  - Ruff, formatting, specification integrity and whitespace checks pass.
+gaps: []

@@ -1,0 +1,6 @@
+schema_version: 1
+id: source-publication-ci
+origin:
+  commit: "565a50481a5be0bbc507b3949737237dc3809e87"
+  specification: "specs-0.1.0"
+  implementation: null

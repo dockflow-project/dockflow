@@ -67,7 +67,16 @@ does not replace checking whether vulnerable features are reachable or testing
 an upstream dependency override.
 
 Docker tests execute real trusted task containers against the daemon selected by
-the Docker SDK environment. They require local socket access. API contract tests
+the Docker SDK environment. Before running them, prepare their fixture image
+from the same immutable base used by the quickstart (CI does this explicitly):
+
+```bash
+test_image=$(sed -n 's/^FROM //p' examples/quickstart/Dockerfile)
+docker pull "$test_image"
+docker tag "$test_image" python:3.13-slim
+```
+
+They require local socket access. API contract tests
 also require the test runner's local thread/socket facilities. S3 unit tests use
 a controlled provider fixture; provider integration needs a separately prepared
 service. The reference Compose topology is described in [deployment](docs/deployment.md).

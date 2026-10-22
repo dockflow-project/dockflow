@@ -77,6 +77,11 @@ jobs:
       - run: uv run --locked pyright
       - run: uv run --locked python tools/generate_api_docs.py --check
       - run: node --test packages/pipelines/tests/web/*.test.mjs
+      - name: Prepare Docker test image
+        run: |
+          test_image=$(sed -n 's/^FROM //p' examples/quickstart/Dockerfile)
+          docker pull "$test_image"
+          docker tag "$test_image" python:3.13-slim
       - run: uv run --locked pytest --cov --cov-report=xml
         env:
           DOCKFLOW_TEST_DOCKER: '1'

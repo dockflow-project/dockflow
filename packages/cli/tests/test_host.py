@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from importlib import metadata
@@ -6,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 import typer
 from dockflow_cli.main import create_app, main
+from rich.text import Text
 from typer.testing import CliRunner
 
 
@@ -62,7 +64,8 @@ def test_version_bypasses_discovery(monkeypatch, capsys):
     assert capsys.readouterr().out.startswith("dockflow ")
 
 
-def test_nested_help_does_not_import_execution_dependencies():
+@pytest.mark.parametrize("force_color", [False, True])
+def test_nested_help_does_not_import_execution_dependencies(force_color):
     probe = """
 import sys
 class Guard:
@@ -74,8 +77,18 @@ sys.argv=['dockflow','pipelines','run','--help']
 from dockflow_cli.main import main
 main()
 """
+    environment = os.environ.copy()
+    environment["TERM"] = "xterm-256color" if force_color else "dumb"
+    environment["FORCE_COLOR"] = "1" if force_color else "0"
+    if force_color:
+        environment.pop("NO_COLOR", None)
+    else:
+        environment["NO_COLOR"] = "1"
     result = subprocess.run(
-        [sys.executable, "-c", probe], capture_output=True, text=True
+        [sys.executable, "-c", probe],
+        capture_output=True,
+        text=True,
+        env=environment,
     )
     assert result.returncode == 0, result.stderr
-    assert "--parameter" in result.stdout
+    assert "--parameter" in Text.from_ansi(result.stdout).plain
