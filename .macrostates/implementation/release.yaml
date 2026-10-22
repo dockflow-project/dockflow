@@ -1,5 +1,5 @@
-# First accepted baseline; finalization occurs through reviewed integration.
+# Security maintenance candidate; finalization occurs through reviewed integration.
 schema_version: 2
-version: "imp-0.1.0"
+version: "imp-0.1.1"
 specification: "specs-0.1.0"
 release_date: "2026-10-22"

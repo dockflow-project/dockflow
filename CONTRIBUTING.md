@@ -214,7 +214,7 @@ generated API reference. Complete the existing specification/implementation
 baseline review and workflow closure before submitting reviewed integration;
 see the [release policy](.macrostates/specs/051_dockflow/004_releases.md).
 
-The initial publication uses three pending PyPI publishers. Each has owner
+Publication uses three separate PyPI publishers. Each has owner
 `dockflow-project`, repository `dockflow` and workflow filename `publish.yaml`:
 
 | PyPI project | GitHub environment |
@@ -239,10 +239,11 @@ After reviewed integration and successful CI on that exact main commit:
    `dockflow-release-RUN_ID` for 30 days.
 2. Inspect the candidate, receipts and manifest SHA-256 in the run summary.
    Obtain approval for those exact bytes and the release scope. Create the
-   authorized annotated `v0.1.0`, `specs-0.1.0` and `imp-0.1.0` tags on the
-   reviewed initial-release commit; publish related refs atomically. These
-   initial tags are immutable. Subsequent releases require their own reviewed
-   baseline/source binding rather than moving these tags.
+   authorized annotated application and implementation tags on the reviewed
+   release commit; publish new related refs atomically. For 0.1.1 these are
+   `v0.1.1` and `imp-0.1.1`. Reuse `specs-0.1.0` at its original commit: the
+   verifier requires ancestry and byte-identical specification trees. All
+   existing application and baseline tags remain immutable.
 3. Manually run **Publish approved release** on the same main commit, supplying
    the candidate run ID and reviewed manifest SHA-256. Approve the protected
    environments for that candidate. The workflow checks provenance, annotated
@@ -261,19 +262,18 @@ issue, not authorization to replace an already published version.
 
 `tools/release.py` checks bundles without building or publishing. The
 publication script is restricted to the canonical GitHub Actions main context.
-The initial tooling requires all three annotated tags to identify the same
-source commit; a later release reusing older baselines must deliberately extend
-that check under the existing provenance policy.
+Application and implementation tags bind the exact publication source. An
+unchanged specification baseline can identify an ancestor only when its complete
+`.macrostates/specs` tree equals the candidate's tree. Lightweight tags, unrelated
+history, changed specification bytes and mismatched implementation tags fail.
 
-The publisher runtime is built without publishing credentials from
-`deploy/Publisher.Dockerfile`, preserving PyPA's pinned upload/OIDC/attestation
-code and licenses on patched Python. Only the subsequent protected jobs receive
-OIDC variables. `tools/publish_pypi.py --check-only --packages DIRECTORY` runs
-metadata validation offline and cannot upload. Attestations use a disposable
-copy, leaving the approved candidate unchanged. The image gate checks all
-embedded certificate bundles, including dormant SDK/bootstrap copies.
+Publication uses the official pinned `pypa/gh-action-pypi-publish` v1.14.3 action
+with Trusted Publishing and PEP 740 attestations. This upstream version includes
+the CA incident fix; there is no custom publishing container, wrapper, token
+fallback or alternate upload path. Candidate provenance, hash and collision
+checks run before the protected publishing steps.
 
 Candidate 39787991471 must not be resumed: its image contains affected CA
-bundles. The existing 0.1.0 tags and CLI files are immutable. Prepare a new
-coordinated version and reviewed candidate for subsequent publication; merging
-security maintenance alone does not authorize that publication.
+bundles. The existing 0.1.0 tags and CLI files are immutable. Version 0.1.1 uses a
+new coordinated candidate and needs approval for its exact manifest before
+publication.

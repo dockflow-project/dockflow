@@ -1,0 +1,36 @@
+schema_version: 1
+status: candidate
+integration_ref: origin/main
+integration_target: fc00ff0325483e62505edf694540abbc798576a6
+target_commit: fc00ff0325483e62505edf694540abbc798576a6
+target_tree: 98e086a889b28d305347461150e2266d7a1e5eb3
+baselines:
+  specification: specs-0.1.0
+  implementation: null
+  implementation_specification: null
+records:
+- id: source-publication-ci
+  sha256: af506bac660e499df417cdb1c8bcdbd7d8a216c122d4f2b7db5ff2d50ea87c94
+history_records: []
+declarations:
+  composition_sha256: fffaeaea07f03fde8b366d10ae57962e1f6ec3eb3327a7370c40091a6c99f029
+  release_sha256: null
+candidate:
+  specification: specs-0.1.0
+  implementation: imp-0.1.0
+  implementation_specification: specs-0.1.0
+impact:
+  specification: none
+  implementation: patch
+deliverables:
+- dockflow-cli
+- dockflow-pipelines
+- dockflow-artifacts
+- dockflow-pipelines-image
+release_date: '2026-10-22'
+initial_establishment:
+  specification_was_provisional: true
+  implementation_was_absent: true
+  method: manual first-baseline review under Process 5.1; not an automatic patch increment
+  review: validation/initial-release.md
+  acceptance: explicit Definer acceptance on 2026-10-22; finalization through authorized reviewed integration after CI

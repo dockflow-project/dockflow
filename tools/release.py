@@ -33,6 +33,31 @@ def require(condition: bool, message: str) -> None:
         raise ValueError(message)
 
 
+def verify_tags(version: str, specification: str, implementation: str, commit: str):
+    for tag in (f"v{version}", specification, implementation):
+        require(
+            command("git", "cat-file", "-t", f"refs/tags/{tag}") == "tag",
+            f"Release requires an annotated tag: {tag}",
+        )
+    for tag in (f"v{version}", implementation):
+        require(
+            command("git", "rev-parse", f"refs/tags/{tag}^{{commit}}") == commit,
+            f"Tag differs from publication source: {tag}",
+        )
+    baseline = command("git", "rev-parse", f"refs/tags/{specification}^{{commit}}")
+    # An unchanged contract keeps its original immutable tag. Require both
+    # ancestry and byte-identical specification trees, never just a version label.
+    ancestor = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", baseline, commit], cwd=ROOT
+    )
+    require(ancestor.returncode == 0, "Specification baseline is not an ancestor")
+    require(
+        command("git", "rev-parse", f"{baseline}:.macrostates/specs")
+        == command("git", "rev-parse", f"{commit}:.macrostates/specs"),
+        "Specification tree differs from the reused baseline",
+    )
+
+
 def package_paths(version: str) -> set[str]:
     return {
         f"packages/{name}/dockflow_{name}-{version}{suffix}"
@@ -228,15 +253,7 @@ def verify(
         "Service qualification does not identify the candidate image",
     )
     if tags:
-        for tag in (f"v{version}", data["specification"], data["implementation"]):
-            require(
-                command("git", "cat-file", "-t", f"refs/tags/{tag}") == "tag",
-                f"Release requires an annotated tag: {tag}",
-            )
-            require(
-                command("git", "rev-parse", f"refs/tags/{tag}^{{commit}}") == commit,
-                f"Tag differs from this initial release source: {tag}",
-            )
+        verify_tags(version, data["specification"], data["implementation"], commit)
     return data
 
 

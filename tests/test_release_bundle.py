@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import subprocess
 import urllib.error
 from io import BytesIO
 from pathlib import Path
@@ -156,6 +157,81 @@ def test_annotated_tags_must_bind_exact_source(candidate, monkeypatch):
     )
     with pytest.raises(ValueError, match="Tag differs"):
         release.verify(directory, digest, COMMIT, tags=True)
+
+
+@pytest.fixture
+def tagged_repository(tmp_path, monkeypatch):
+    def git(*args):
+        return subprocess.check_output(
+            ["git", "-c", "commit.gpgsign=false", *args], cwd=tmp_path, text=True
+        ).strip()
+
+    git("init", "--initial-branch=main")
+    git("config", "user.name", "Test contributor")
+    git("config", "user.email", "test@example.invalid")
+    specs = tmp_path / ".macrostates/specs"
+    specs.mkdir(parents=True)
+    (specs / "main.md").write_text("unchanged contract\n")
+    git("add", ".")
+    git("commit", "-m", "Initial contract")
+    baseline = git("rev-parse", "HEAD")
+    git("tag", "-a", "specs-0.1.0", "-m", "Initial specification")
+    (tmp_path / "implementation.py").write_text("# Security maintenance\n")
+    git("add", ".")
+    git("commit", "-m", "Patch implementation")
+    for tag in ("v0.1.1", "imp-0.1.1"):
+        git("tag", "-a", tag, "-m", tag)
+    monkeypatch.setattr(release, "ROOT", tmp_path)
+    return git, baseline
+
+
+def test_patch_release_reuses_unchanged_ancestral_specification(tagged_repository):
+    git, _ = tagged_repository
+    release.verify_tags("0.1.1", "specs-0.1.0", "imp-0.1.1", git("rev-parse", "HEAD"))
+
+
+def test_reused_specification_rejects_changed_tree(tagged_repository):
+    git, _ = tagged_repository
+    (release.ROOT / ".macrostates/specs/main.md").write_text("changed contract\n")
+    git("add", ".")
+    git("commit", "-m", "Change contract")
+    commit = git("rev-parse", "HEAD")
+    for tag in ("v0.1.1", "imp-0.1.1"):
+        git("tag", "-d", tag)
+        git("tag", "-a", tag, "-m", tag)
+    with pytest.raises(ValueError, match="Specification tree differs"):
+        release.verify_tags("0.1.1", "specs-0.1.0", "imp-0.1.1", commit)
+
+
+def test_specification_must_belong_to_release_history(tagged_repository):
+    git, _ = tagged_repository
+    commit = git("rev-parse", "HEAD")
+    git("checkout", "--orphan", "unrelated")
+    git("commit", "-m", "Unrelated history")
+    git("tag", "-d", "specs-0.1.0")
+    git("tag", "-a", "specs-0.1.0", "-m", "Unrelated specification")
+    with pytest.raises(ValueError, match="not an ancestor"):
+        release.verify_tags("0.1.1", "specs-0.1.0", "imp-0.1.1", commit)
+
+
+def test_specification_tag_must_still_be_annotated(tagged_repository):
+    git, baseline = tagged_repository
+    git("tag", "-d", "specs-0.1.0")
+    git("tag", "specs-0.1.0", baseline)
+    with pytest.raises(ValueError, match="annotated tag"):
+        release.verify_tags(
+            "0.1.1", "specs-0.1.0", "imp-0.1.1", git("rev-parse", "HEAD")
+        )
+
+
+def test_implementation_tag_cannot_reuse_older_source(tagged_repository):
+    git, baseline = tagged_repository
+    git("tag", "-d", "imp-0.1.1")
+    git("tag", "-a", "imp-0.1.1", baseline, "-m", "Older implementation")
+    with pytest.raises(ValueError, match="Tag differs"):
+        release.verify_tags(
+            "0.1.1", "specs-0.1.0", "imp-0.1.1", git("rev-parse", "HEAD")
+        )
 
 
 def test_pypi_absence_allowed_before_upload_but_not_after(candidate, monkeypatch):

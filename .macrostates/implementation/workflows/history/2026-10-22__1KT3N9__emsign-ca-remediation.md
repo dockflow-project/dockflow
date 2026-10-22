@@ -50,7 +50,7 @@ The offline regression gate inspects parsed certificate subjects and embedded
 pip/ensurepip stores. The original candidate fails; rebuilt images pass.
 Full Python, frontend, real S3, clean package and service execution checks passed;
 [verification and limits](../../validation/emsign-ca-remediation.md) records the
-evidence. [The pending patch](../../changes/emsign-ca-remediation.yaml) preserves
+evidence. [The pending patch](../../changes/history/emsign-ca-remediation.yaml) preserves
 starting baselines. No specification or release-version change is required.
 
 ## Closure and integration

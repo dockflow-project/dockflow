@@ -1,0 +1,33 @@
+schema_version: 1
+id: release-0.1.1
+origin:
+  commit: 7491beded1b08a3f08f93c2fcfd2bd9deadea601
+  specification: specs-0.1.0
+  implementation: imp-0.1.0
+summary: Prepare coordinated 0.1.1 with official PyPA Trusted Publishing and immutable
+  baseline provenance.
+impact:
+  specification: none
+  implementation: patch
+deliverables:
+- dockflow-cli
+- dockflow-pipelines
+- dockflow-artifacts
+- dockflow-pipelines-image
+requirements:
+- requirement: Use the supported upstream Trusted Publishing action without a custom
+    publishing runtime.
+  implementation: Restore pinned PyPA v1.14.3 steps and remove the custom publisher
+    Dockerfile, wrapper and obsolete tests.
+  verification: Upstream security advisory identifies v1.14.3 as patched; effective
+    certifi/Sigstore bundles are verified offline without uploading.
+- requirement: Keep exact source and immutable specification/implementation provenance
+    for maintenance releases.
+  implementation: Application/implementation tags must identify the candidate commit;
+    reused specification tags must be annotated ancestors with identical specification
+    trees.
+  verification: Real Git regression tests reject modified trees, unrelated history,
+    lightweight specification tags and an older implementation tag.
+evidence:
+- validation/release-0.1.1.md
+gaps: []

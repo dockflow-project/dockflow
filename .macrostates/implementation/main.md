@@ -4,19 +4,18 @@
 
 Project phase: **active**. The Definer accepted the first bounded implementation
 baseline and this phase transition on 2026-10-22. The
-[release declaration](release.yaml) identifies `imp-0.1.0` against `specs-0.1.0`;
+[release declaration](release.yaml) proposes `imp-0.1.1` against `specs-0.1.0`;
 selected specification package versions belong to the
 [composition](../specs/composition.yaml). The
 [initial release review](validation/initial-release.md) records delivered scope,
 qualification evidence and explicit limits.
 
-Application version `0.1.0` remains the last release declaration. Only its CLI
-was uploaded; the initial image candidate was withdrawn after the CA incident.
-The current branch contains pending implementation patch maintenance recorded in
-[the CA change](changes/emsign-ca-remediation.yaml). Finalized tags and the
-uploaded CLI retain their original identities. A future coordinated version and
-reviewed candidate are required for further publication. Reviewed integration finalizes the accepted baseline declarations;
-annotated tags, exact-candidate approval and registry uploads are separate gates.
+Application version `0.1.1` is the coordinated security maintenance candidate.
+Only the earlier CLI 0.1.0 was uploaded; its image candidate was withdrawn.
+The [release plan](release-plan.yaml) collects accepted patch maintenance against
+unchanged `specs-0.1.0`; reviewed integration finalizes `imp-0.1.1`.
+Existing 0.1.0 tags and uploaded files retain their original identities.
+Annotated tags, exact-candidate approval and registry uploads are separate gates.
 Git commits identify source snapshots independently. The closed
 [release preparation](workflows/history/2026-10-22__15R7ZS__pypi-release.md) records
 acceptance and local qualification. Subsequent CI, integration and publication
@@ -193,8 +192,8 @@ upstream metadata/source modification; ordinary pip resolution retains the old
 pin. Dependency audits use the exported lock and CI checks the full third-party
 set. Python 3.13.17, uv 0.13.5 and gRPC 1.84.1 address the CA incident.
 `tools/check_ca_trust.py` verifies the effective certifi/gRPC bundles and
-pip/ensurepip data; service and publisher builds also check dormant SDK and
-system bundles. S3 defaults use maintained certifi, retaining explicit custom
+pip/ensurepip data; service builds also check dormant SDK and system bundles.
+The official publisher uses its upstream patched certifi/Sigstore runtime. S3 defaults use maintained certifi, retaining explicit custom
 CA configuration. Rebuilt executor/registry stores remove the affected roots
 without a registry-major migration. See the [installation instructions](../../docs/installation.md#kfp-dependency-override).
 
@@ -290,8 +289,9 @@ project creation. Image/release publication follows all package uploads.
 and existing PyPI file identity. `tools/verify_service_image.py` owns disposable
 engine/volume/image qualification resources. `tools/publish_release_record.py`
 loads the preserved image and refuses conflicting registry/release identities.
-The publisher runtime is assembled before credentialed jobs, retaining pinned
-PyPA OIDC/attestation code on patched Python with pip 26.2.2. Its wrapper sends
-OIDC variables by environment name and stages a disposable copy for attestations.
-No build step runs with publishing credentials. See CONTRIBUTING for release
-operations and the workflow records for verification and approval state.
+Publication uses the official pinned PyPA v1.14.3 action, whose upstream CA fix
+covers the effective certifi/Sigstore trust path. No custom publisher is retained.
+Application/implementation tags bind the exact candidate commit; an unchanged
+specification tag must be ancestral with an identical specification tree.
+See CONTRIBUTING for release operations and workflow records for verification
+and approval state.

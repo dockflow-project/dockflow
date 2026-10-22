@@ -1,0 +1,6 @@
+schema_version: 1
+id: release-0.1.1
+origin:
+  commit: 7491beded1b08a3f08f93c2fcfd2bd9deadea601
+  specification: specs-0.1.0
+  implementation: imp-0.1.0
