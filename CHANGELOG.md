@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Address the eMudhra/emSign CA incident in Python, uv, gRPC, S3 trust defaults,
+  the reference container stack and the publishing runtime.
+- Check actual certificate bundles, including embedded pip/ensurepip and
+  cross-signing roots, during CI and service image qualification.
+- Preserve explicit custom S3 CA settings and existing registry storage format.
+
+The 0.1.0 publication stopped after the CLI upload. Its vulnerable service
+candidate is withdrawn; these fixes require a new coordinated release.
+
 ## 0.1.0
 
 Initial coordinated release of `dockflow-cli`, `dockflow-pipelines` and

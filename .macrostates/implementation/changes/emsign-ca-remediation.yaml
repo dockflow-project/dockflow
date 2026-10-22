@@ -1,0 +1,27 @@
+schema_version: 1
+id: emsign-ca-remediation
+summary: Remove affected CA trust from build tools, optional SDKs, deployment and publication images.
+origin:
+  commit: "55b7ec5da52c02648a1723d9e5cfade6c42e4c51"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.0"
+impact:
+  specification: none
+  implementation: patch
+deliverables:
+  - dockflow-cli
+  - dockflow-pipelines
+  - dockflow-artifacts
+requirements:
+  - requirement: Review and remediate security defects in locked dependencies and container images before publication.
+    implementation: Patch uv/Python/gRPC, declare optional security floors, refresh container trust, and check embedded certificate stores.
+    verification: The old candidate fails; fixed Python 3.12/3.13 environments and rebuilt service/publisher/sidecars pass offline certificate checks.
+  - requirement: S3 transfers verify TLS and preserve explicitly configured CA choices.
+    implementation: Select maintained certifi by default, keeping explicit paths and artifact SDK environment/profile configuration.
+    verification: Regression cases cover default/custom bundles, and the real provider publication/integrity test passes.
+  - requirement: Publish only verified immutable artifacts through protected credentials.
+    implementation: Build the patched PyPA runtime before OIDC jobs and stage copies for attestations.
+    verification: Tests reject unprotected publication and prevent credential values or changes to the candidate; offline metadata validation passes.
+evidence:
+  - validation/emsign-ca-remediation.md records exact toolchain, image identities, test results and qualification limits.
+gaps: []

@@ -13,7 +13,7 @@ import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ENGINE = "docker:29.1.3-dind@sha256:173f284a4299164772a90f52b373e73e087583c0963f1334c9995f190ef6f3f5"
+ENGINE = "dockflow-docker-engine:ca-fixed"
 
 
 def docker(*args: str, check: bool = True) -> str:
@@ -44,6 +44,10 @@ def main() -> None:
         "--out", type=Path, default=ROOT / "dist/service-verification.json"
     )
     args = parser.parse_args()
+    subprocess.run(
+        [sys.executable, str(ROOT / "tools/check_ca_trust.py"), "--image", args.image],
+        check=True,
+    )
     identity = json.loads(docker("image", "inspect", args.image))[0]
     prefix = f"dockflow-qualification-{uuid.uuid4().hex[:12]}"
     engine, service = f"{prefix}-engine", f"{prefix}-service"
@@ -55,7 +59,25 @@ def main() -> None:
         docker("network", "create", prefix)
         for volume in volumes.values():
             docker("volume", "create", volume)
-        docker("pull", ENGINE)
+        docker(
+            "build",
+            "--file",
+            str(ROOT / "deploy/sidecars.Dockerfile"),
+            "--target",
+            "engine",
+            "--tag",
+            ENGINE,
+            str(ROOT / "deploy"),
+        )
+        subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "tools/check_ca_trust.py"),
+                "--system-image",
+                ENGINE,
+            ],
+            check=True,
+        )
         mounts = [
             item
             for key, target in (
@@ -233,6 +255,7 @@ pull_policy = "never"
             "image_id": identity["Id"],
             "platform": f"{identity['Os']}/{identity['Architecture']}",
             "engine_image": ENGINE,
+            "engine_image_id": json.loads(docker("image", "inspect", ENGINE))[0]["Id"],
             "docker_server": json.loads(
                 docker("version", "--format", "{{json .Server}}")
             )["Version"],

@@ -17,8 +17,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
-          version: '0.12.24'
+          version: '0.13.5'
           python-version: '3.13'
+      - run: uv python install --reinstall 3.13
       - run: uv venv .venv-macrostates --python 3.13
       - run: uv pip install --python .venv-macrostates/bin/python --requirement tools/macrostates/requirements.txt
       - run: .venv-macrostates/bin/macrostates check
@@ -36,10 +37,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
-          version: '0.12.24'
+          version: '0.13.5'
           python-version: ${{ matrix.python }}
           enable-cache: true
+      - run: uv python install --reinstall "${{ matrix.python }}"
       - run: uv sync --locked --all-packages
+      - run: uv run --locked python tools/check_ca_trust.py
       - run: uv run --locked python tools/version.py
       - run: uv run --locked pytest packages/cli/tests packages/pipelines/tests/unit packages/pipelines/tests/test_definitions.py
       - run: uv run --locked python tools/verify_packages.py
@@ -60,10 +63,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
-          version: '0.12.24'
+          version: '0.13.5'
           python-version: ${{ matrix.python }}
           enable-cache: true
+      - run: uv python install --reinstall "${{ matrix.python }}"
       - run: uv sync --locked --all-packages --all-extras
+      - run: uv run --locked python tools/check_ca_trust.py --runtime
       - name: Export locked third-party dependencies
         if: matrix.python == '3.13'
         run: |
@@ -85,6 +90,14 @@ jobs:
       - run: uv run --locked pytest --cov --cov-report=xml
         env:
           DOCKFLOW_TEST_DOCKER: '1'
+      - name: Verify service and publishing trust stores
+        if: matrix.python == '3.13'
+        run: |
+          docker build --pull --file deploy/Dockerfile --tag dockflow-ca-check .
+          uv run --locked python tools/verify_service_image.py --image dockflow-ca-check
+          docker build --pull --file deploy/sidecars.Dockerfile --target registry --tag dockflow-registry:ca-fixed deploy
+          uv run --locked python tools/check_ca_trust.py --system-image dockflow-registry:ca-fixed
+          docker build --pull --file deploy/Publisher.Dockerfile --tag dockflow-pypi-publisher:ca-fixed .
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

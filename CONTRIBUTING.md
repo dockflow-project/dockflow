@@ -1,6 +1,6 @@
 # Contributing
 
-Dockflow is bootstrapping its first implementation. Start with the
+Dockflow has an accepted initial implementation and pending security maintenance. Start with the
 [specification entrypoint](.macrostates/specs/main.md) and the
 [current implementation status](.macrostates/implementation/main.md).
 
@@ -12,13 +12,13 @@ Security concerns follow [SECURITY.md](SECURITY.md).
 
 ## Local setup and checks
 
-Use Python 3.12 or newer for the separate specification-tool bootstrap below.
+Use uv 0.13.5 or newer and patched Python for the separate specification-tool bootstrap below.
 Application development uses a Python 3.13 default with 3.12 compatibility
 under the [shared compatibility and review policy](.macrostates/specs/051_dockflow/002_compatibility.md).
 
 ```bash
-python3 -m venv .venv-macrostates
-.venv-macrostates/bin/python -m pip install -r tools/macrostates/requirements.txt
+uv venv .venv-macrostates --python 3.13.17
+uv pip install --python .venv-macrostates/bin/python -r tools/macrostates/requirements.txt
 .venv-macrostates/bin/macrostates info
 .venv-macrostates/bin/macrostates check
 ```
@@ -34,6 +34,7 @@ Install uv and use the locked workspace for application development:
 
 ```bash
 uv sync --locked --all-packages --all-extras
+uv run python tools/check_ca_trust.py --runtime
 uv run ruff check packages tests tools
 uv run ruff format --check packages tests tools
 uv run ruff check examples/quickstart
@@ -51,6 +52,8 @@ uv run pre-commit install
 The dependency-free frontend tests use Node.js 20 or later only as a development
 tool. Node is not required to install, serve or use Dockflow.
 
+The offline CA check also inspects gRPC and pip/ensurepip bundles, which package
+advisory databases can miss. See [certificate maintenance](docs/certificate-maintenance.md).
 CI audits the exported third-party lock without resolving a different environment.
 Run the same check after dependency updates:
 
@@ -261,3 +264,16 @@ publication script is restricted to the canonical GitHub Actions main context.
 The initial tooling requires all three annotated tags to identify the same
 source commit; a later release reusing older baselines must deliberately extend
 that check under the existing provenance policy.
+
+The publisher runtime is built without publishing credentials from
+`deploy/Publisher.Dockerfile`, preserving PyPA's pinned upload/OIDC/attestation
+code and licenses on patched Python. Only the subsequent protected jobs receive
+OIDC variables. `tools/publish_pypi.py --check-only --packages DIRECTORY` runs
+metadata validation offline and cannot upload. Attestations use a disposable
+copy, leaving the approved candidate unchanged. The image gate checks all
+embedded certificate bundles, including dormant SDK/bootstrap copies.
+
+Candidate 39787991471 must not be resumed: its image contains affected CA
+bundles. The existing 0.1.0 tags and CLI files are immutable. Prepare a new
+coordinated version and reviewed candidate for subsequent publication; merging
+security maintenance alone does not authorize that publication.

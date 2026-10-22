@@ -41,6 +41,7 @@ choose direct execution or a persistent service for your project.
 | [Troubleshooting](troubleshooting.md) | Common failures and targeted diagnostics. |
 | [Contributing](../CONTRIBUTING.md) | Development environment, checks, review and specification workflow. |
 | [Architecture](architecture.md) | Internal boundaries and design. |
+| [Certificate maintenance](certificate-maintenance.md) | Update Python tools, trust stores and existing container deployments. |
 | [Security](../SECURITY.md) | Trust model, deployment boundaries and reporting. |
 
 The [specifications](../.macrostates/specs/main.md) define requirements and their

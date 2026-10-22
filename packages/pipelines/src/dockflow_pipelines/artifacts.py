@@ -284,6 +284,7 @@ class ArtifactStore:
         if self._client is None:
             try:
                 boto3 = importlib.import_module("boto3")
+                certifi = importlib.import_module("certifi")
                 config = importlib.import_module("botocore.config").Config
             except ImportError as exc:
                 raise DockflowError(
@@ -300,10 +301,13 @@ class ArtifactStore:
                 raise DockflowError(
                     "S3 HTTP endpoint requires allow_insecure_http=true"
                 )
+            verify = self.options.get("tls_verify", True)
+            if verify is True:
+                verify = certifi.where()
             self._client = boto3.client(
                 "s3",
                 endpoint_url=endpoint,
-                verify=self.options.get("tls_verify", True),
+                verify=verify,
                 config=config(s3={"addressing_style": "path"}),
             )
         return self._client
