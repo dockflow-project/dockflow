@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-20T09:27:14.215394+00:00",
+  "workflows": [
+    "2026-10-20__0ZX8YK__cli-output-display.md",
+    "2026-10-20__0ZX8YK__local-component-logs.md"
+  ],
+  "branch": "feat/initial-implementation",
+  "source_commit": null,
+  "application_version": "0.1.0.dev0",
+  "local_specification_version": "dockflow-pipelines 1.4.0",
+  "scope": "Human local-run presentation and component log forwarding; persistence, component code, artifact payloads and API contracts unchanged",
+  "environment": {
+    "python": "3.13.16",
+    "platform": "Linux-7.1.13-2-MANJARO-x86_64-with-glibc2.44",
+    "macrostates": "0.5.0"
+  },
+  "source_sha256": {
+    ".macrostates/implementation/main.md": "228c31a2137d7f74f271f5291b9ba78b6d47cdfd92f268f5118cd8a56a260d1d",
+    ".macrostates/specs/053_dockflow-pipelines/009_cli.md": "8b86f0cb7f1836be5977eedea1675ef13cce62632f77acd8be5fd18a417d8308",
+    ".macrostates/specs/053_dockflow-pipelines/011_acceptance.md": "c7b8fffb0515e1d946a95f67ab86ef09486aa69dc46d5360b43f0d48c858113e",
+    ".macrostates/specs/053_dockflow-pipelines/012_review-and-qualification.md": "ef222783bb448ac3f95f86c66a70d02f6319128b1d3ad3afb9c12ccf75a3adcb",
+    ".macrostates/specs/053_dockflow-pipelines/README.md": "9180331318a471ed77e1b23a23c25932eab1b46f2ea983ae7d6b3dea7c99c241",
+    ".macrostates/specs/053_dockflow-pipelines/package.yaml": "32b6f97189f33d2ea6cc1602ba34536d10c0cab25c02318debc585cef1094811",
+    ".macrostates/specs/composition.lock.yaml": "970f457083568f560f333ee66bb65d2ff7aa4858e01601c0dbf8093d72a181e4",
+    ".macrostates/specs/composition.yaml": "74167dd17abdc8b4f0ca479596afdff0a2459eed550f2f870eb91a9f59f1af09",
+    ".macrostates/specs/main.md": "d82ba50aafbcbe7dcd4db272bdf16fd9feaf8450f3a1fdd3d11bc86ebb091e6b",
+    "docs/cli.md": "f3a5e7d1492f6f4953dbff86e347df7d137fe7cfc72f76f1be833faad4414c0f",
+    "packages/pipelines/src/dockflow_pipelines/cli.py": "86b59951c4bacdbc921274babb639b3d9dd6fffd1288b6a96c29a35a06d57ef1",
+    "packages/pipelines/src/dockflow_pipelines/console.py": "29f16b57d31d949f0320a0e91ca834f699d81d43144ee51b520376e8d8c93301",
+    "packages/pipelines/src/dockflow_pipelines/core.py": "56f20941be7a59426e3d63ca752178c236fef81b25e671335035d2f5924c1e0e",
+    "packages/pipelines/src/dockflow_pipelines/engine.py": "6915091b8c4453b665fa10c34e0762d385aad74b276790db3fd95336ef1bc6af",
+    "packages/pipelines/tests/test_console.py": "00569f84c3797e85a4a08b851ff69c6e211d1c7fef681b8953fb14e7f902260c",
+    "packages/pipelines/tests/test_direct_ownership_recovery.py": "9bb4f77a724e6b6e3aaa3ee6fb1264886326bae6c6437f4b6eb49516b672bbd5",
+    "packages/pipelines/tests/test_runtime.py": "d9d6f0ac142f0bcb039aa77d629798e359972aca38b7eaad713923603658db74"
+  },
+  "tests": {
+    "focused": {
+      "path": "tmp/cli-presentation/focused.xml",
+      "sha256": "e6314059359f5469571eab2006c2abd88451a49a9c712b463abeb5ae984d071d",
+      "tests": 46,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    "regression": {
+      "path": "tmp/cli-presentation/regression.xml",
+      "sha256": "c663ed6621445bae427994f63aa91d6cc80fe43a764900f3defa506d670b40bb",
+      "tests": 196,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    "docker": {
+      "path": "tmp/cli-presentation/docker.xml",
+      "sha256": "150cbeae81adce5f67a7e0a41ee26905d4274948f82b490804a1adffe98dc346",
+      "tests": 13,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    "distinct_tests_passed": 209,
+    "note": "Focused suite is a subset of regression; two upstream dependency warnings in integrated suites"
+  },
+  "smoke": {
+    "method": "Actual component Docker image run through rebuilt CLI installed in test-1/.venv; fresh disposable project with reuse disabled",
+    "result": [
+      {
+        "mode": "trimmed",
+        "run_id": "run_fff38942-717b-4419-a496-3ccd6696ccfb",
+        "state": "succeeded",
+        "stdout_characters": 296,
+        "stderr_characters": 18216,
+        "complete_logs_preserved": true
+      },
+      {
+        "mode": "none",
+        "run_id": "run_8e6ee476-f8e9-4b47-a32d-78690a55e131",
+        "state": "succeeded",
+        "stdout_characters": 56,
+        "stderr_characters": 7242,
+        "complete_logs_preserved": true
+      },
+      {
+        "mode": "full",
+        "run_id": "run_6543f7f9-0172-43b5-a368-072a0a5f2954",
+        "state": "succeeded",
+        "stdout_characters": 41859,
+        "stderr_characters": 27485,
+        "complete_logs_preserved": true
+      },
+      {
+        "mode": "machine-json-with-output-none",
+        "run_id": "run_d1f2a579-6cb7-4857-8315-f4a1be17e563",
+        "state": "succeeded",
+        "full_record": true,
+        "component_logs_on_stderr": true
+      },
+      {
+        "mode": "none-failure",
+        "state": "failed",
+        "exit_code": 1,
+        "component_stderr_visible": true
+      }
+    ],
+    "assertions": [
+      "All three human output modes show component traces on stderr",
+      "none hides generated executor-input JSON, task output descriptors and final artifact details",
+      "default trimmed result is 296 characters versus full 41859 characters for the sample dataset training fixture; verbose blocks indicate truncation",
+      "Machine JSON remains complete on stdout, even with output none",
+      "Full retained task logs still contain complete executor input and traces with no display truncation markers",
+      "Failing component diagnostic visible on stderr, run error retained on stdout, exit1"
+    ],
+    "evidence_sha256": {
+      "tmp/cli-presentation/failed.stderr": "7e296732c6f96322b24eefc0df50d35272a06128c6caa2625a061a6366c5817e",
+      "tmp/cli-presentation/failed.stdout": "00d6ff969345486d90108912208fc7425296f416336595b55c66dc2ee5e7478d",
+      "tmp/cli-presentation/fixture.json": "d481bfb9bf29db3ec220139daa1327912fd17ad90f6812998f23ebe9ad1940ea",
+      "tmp/cli-presentation/full-logs.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tmp/cli-presentation/full-logs.stdout": "444629e7d9f4a44f3b6a3ac330f4bf139b4b4830cee1a1beedc2fda6bc864f65",
+      "tmp/cli-presentation/full.stderr": "df04c3fab70da4f4609fe5520506ae2bcf68e2b1b17084e63042d30da46d7c4f",
+      "tmp/cli-presentation/full.stdout": "e30b8ceea861decb783cead3aa66d6940ece92560ebf8ca2746e59a038e879d3",
+      "tmp/cli-presentation/inference-json.stderr": "69370a2a892e90be6179c894b1c4996aba488baad7fcf73acae65bd79ec3eab3",
+      "tmp/cli-presentation/inference-json.stdout": "d42de2fe5188b9b6c3c4098bd21fcc72fae7267683b8948b7d8c5c2613fbf81f",
+      "tmp/cli-presentation/none-logs.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tmp/cli-presentation/none-logs.stdout": "a65befea8168f5af287824257b46a042e7b24be465d38c2cf44f15aa1e6a614d",
+      "tmp/cli-presentation/none-stored.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tmp/cli-presentation/none-stored.stdout": "a189bd4f61018c4aaad4a04ed553cba05d0867181019d9817768c316f67b602a",
+      "tmp/cli-presentation/none.stderr": "b823bb34ce8e6de2d7facc0481b1576761486eff63d4a10ba85c0d92f581cbcb",
+      "tmp/cli-presentation/none.stdout": "9349fd69023a14bf906d36873a24ccf2eb47c8a9c5ceea157e9119d181c4aefe",
+      "tmp/cli-presentation/smoke.json": "e88c7e5aefbd794234a09169a96ba74ef11095e9e0c5a6be56ae2a0c44ffcb41",
+      "tmp/cli-presentation/trimmed-logs.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tmp/cli-presentation/trimmed-logs.stdout": "5854f692eab6d9f4db23dead22cbf6d8d8220cf5ab32ad9be71873d1e4569d26",
+      "tmp/cli-presentation/trimmed-stored.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tmp/cli-presentation/trimmed-stored.stdout": "d9b2335c60cb1ce56b9b5a4a96f5b07bfc5068ec2cee2d30d856a67173232a3c",
+      "tmp/cli-presentation/trimmed.stderr": "dbaee92d8994293ab15116d88566d255c467e5caef3acd1a3024acbb27c28e2e",
+      "tmp/cli-presentation/trimmed.stdout": "d7970ce016fb00aad800eb029169a7fedadf439d6d213ae3b87eba3aa4838047"
+    }
+  },
+  "packages": {
+    "verification_path": "dist/cli-presentation/verification.json",
+    "verification_sha256": "f59c8ddd708d587c018b4c77a0bc7dbbfec57ad9f93f90a98ff8a46d003ea7c3",
+    "result": {
+      "schema_version": 1,
+      "version": "0.1.0.dev0",
+      "python": "3.13.16",
+      "uv": "uv 0.12.24 (x86_64-unknown-linux-gnu)",
+      "platform": {
+        "system": "Linux",
+        "machine": "x86_64",
+        "libc": [
+          "glibc",
+          "2.44"
+        ]
+      },
+      "source": {
+        "commit": null,
+        "branch": "feat/initial-implementation",
+        "dirty": true,
+        "note": "Uncommitted development checkout; no accepted or published baseline"
+      },
+      "clean_install": [
+        "cli-only",
+        "combined-base"
+      ],
+      "runtime_extras_absent_from_base": true,
+      "artifacts": [
+        {
+          "filename": "dockflow_cli-0.1.0.dev0-py3-none-any.whl",
+          "sha256": "74046882d7cbd9efd3d20ac11ab03b97ee4516c145430a403828cf53d5e49f0a",
+          "name": "dockflow-cli",
+          "version": "0.1.0.dev0",
+          "dependencies": [
+            "typer>=0.27.3,<0.28.0"
+          ],
+          "build_backend_generator": "uv 0.11.33"
+        },
+        {
+          "filename": "dockflow_pipelines-0.1.0.dev0-py3-none-any.whl",
+          "sha256": "927203360280a0d0b2744f412880a39b8e8f56662fe79c210b7c3ea22ddc9da6",
+          "name": "dockflow-pipelines",
+          "version": "0.1.0.dev0",
+          "dependencies": [
+            "dockflow-cli==0.1.0.dev0",
+            "typer>=0.27.3,<0.28.0",
+            "pyyaml>=6.0.2,<7",
+            "kfp>=2.17.0,<2.18 ; extra == 'runtime'",
+            "docker>=7.1.0,<8 ; extra == 'runtime'",
+            "ml-metadata>=1.21.0,<2 ; extra == 'runtime'",
+            "boto3>=1.38,<2 ; extra == 's3'",
+            "fastapi>=0.115.12,<0.116 ; extra == 'service'",
+            "uvicorn>=0.34.2,<0.35 ; extra == 'service'",
+            "python-multipart>=0.0.20,<0.1 ; extra == 'service'"
+          ],
+          "build_backend_generator": "uv 0.11.33"
+        },
+        {
+          "filename": "dockflow_cli-0.1.0.dev0.tar.gz",
+          "sha256": "2e98f4e3180cf1d6a1318bf69e2ad0359482d111b03727ee5f29bf723189b6be",
+          "standalone_rebuild": true
+        },
+        {
+          "filename": "dockflow_pipelines-0.1.0.dev0.tar.gz",
+          "sha256": "4fb8dd0aef9b1c025428d68d576b0cd2f31e6e44843bbfda2db64859f3b9ed42",
+          "standalone_rebuild": true
+        }
+      ]
+    },
+    "installed": "Both exact rebuilt wheels reinstalled without dependency changes in <fixture>/.venv; actual smoke uses that installed executable",
+    "source_match": "Four changed runtime modules byte-match final source in built wheel"
+  },
+  "checks": {
+    "ruff": "All lint checks pass; 50 files formatted",
+    "pyright": "0 errors, 0 warnings",
+    "generated_api": "--check current, API unchanged",
+    "specifications": "Macrostates check and verify pass; external snapshots/lock unchanged",
+    "application_version": "tools/version.py valid 0.1.0.dev0"
+  },
+  "limits": [
+    "Captured logs are forwarded after each container exits, not live during execution",
+    "Reused tasks create no new container logs",
+    "Remote run uses final-result modes; remote logs require logs command",
+    "Only recognized KFP metadata display is shortened; arbitrary component messages remain unmodified",
+    "Existing services, existing execution state, component images and historical records untouched; no commit, merge or publication"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

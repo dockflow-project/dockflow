@@ -1,0 +1,28 @@
+name: Review release candidate (no publication)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review-candidate:
+    environment: release-review
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: '0.12.24'
+          python-version: '3.13'
+      - run: uv sync --locked --all-packages --all-extras
+      - run: uv run --locked python tools/version.py
+      - run: uv run --locked pytest
+      - run: uv run --locked python tools/verify_packages.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: reviewed-development-candidate
+          path: dist/
+      # Publishing, tags and integration remain separate explicitly authorized
+      # operations after baseline acceptance and native-platform qualification.

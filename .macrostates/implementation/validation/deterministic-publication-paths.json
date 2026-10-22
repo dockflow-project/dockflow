@@ -1,0 +1,592 @@
+{
+  "recorded_at": "2026-10-21T11:25:54.260224+00:00",
+  "scope": "Deterministic publication IDs, pipeline/exploration context and pipeline-computed step width",
+  "application_version": "0.1.0.dev0",
+  "spec_packages": {
+    "dockflow-artifacts": "2.0.0",
+    "dockflow-pipelines": "4.0.0"
+  },
+  "layout": "<exploration>/<pipeline>/step_<padded-number>__<component>__<publication-id>/<filename>",
+  "step_width": "len(str(number_of_computational_steps)); no fixed default",
+  "verification": {
+    "dockflow_regressions": 440,
+    "example_regressions": 265,
+    "live_seaweedfs_tests": 1,
+    "ruff": "passed",
+    "pyright": "passed",
+    "macrostates": "passed",
+    "api_docs": "current",
+    "shell_syntax": "passed",
+    "setup": "passed",
+    "packages": "clean wheel installations and standalone sdist rebuilds passed",
+    "component_image": "fixture:example-v9"
+  },
+  "local": {
+    "baseline": {
+      "run_id": "run_d512946b-2b15-4bcb-978b-e306e321fdff",
+      "state": "succeeded",
+      "tasks": {
+        "evaluate-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_e2369e2b-d57a-4a29-9f3e-4a8826de1f38"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_4__evaluate__df856839ec52e72ad4551938eb206020b97e6e3c1b1933c341c4b3046495798d/report.json"
+          }
+        },
+        "split-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_8f2a240f-3175-4dcb-8ffd-c2a25aac7ee1"
+          ],
+          "output_parameters": {
+            "inference_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+            "training_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/training.json",
+            "validation_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/validation.json"
+          }
+        },
+        "train-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_16214592-ebd4-4567-9528-2f735a01eaed"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_3__train__ecbab74905c46feedc78f1bc5dde282fcb8d5efaf5a6b0678131fb6a7a080cc0/model.json"
+          }
+        },
+        "validate-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_2e521dd3-b101-4c4d-9ef5-2317e0458615"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_1__validate__e422f8913567d588675cf0c5efa8beeb2593cbcb79822924344b7f684966fbde/dataset.json"
+          }
+        }
+      },
+      "uris": {
+        "inference_data": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+        "model": "<fixture>/data/artifacts/global/sample-training/step_3__train__ecbab74905c46feedc78f1bc5dde282fcb8d5efaf5a6b0678131fb6a7a080cc0/model.json",
+        "validation_report": "<fixture>/data/artifacts/global/sample-training/step_4__evaluate__df856839ec52e72ad4551938eb206020b97e6e3c1b1933c341c4b3046495798d/report.json"
+      }
+    },
+    "repeat": {
+      "run_id": "run_b760c186-3ff2-49ed-9bd0-046341ab232e",
+      "state": "succeeded",
+      "tasks": {
+        "evaluate-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_4__evaluate__df856839ec52e72ad4551938eb206020b97e6e3c1b1933c341c4b3046495798d/report.json"
+          }
+        },
+        "split-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "inference_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+            "training_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/training.json",
+            "validation_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/validation.json"
+          }
+        },
+        "train-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_3__train__ecbab74905c46feedc78f1bc5dde282fcb8d5efaf5a6b0678131fb6a7a080cc0/model.json"
+          }
+        },
+        "validate-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_1__validate__e422f8913567d588675cf0c5efa8beeb2593cbcb79822924344b7f684966fbde/dataset.json"
+          }
+        }
+      },
+      "uris": {
+        "inference_data": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+        "model": "<fixture>/data/artifacts/global/sample-training/step_3__train__ecbab74905c46feedc78f1bc5dde282fcb8d5efaf5a6b0678131fb6a7a080cc0/model.json",
+        "validation_report": "<fixture>/data/artifacts/global/sample-training/step_4__evaluate__df856839ec52e72ad4551938eb206020b97e6e3c1b1933c341c4b3046495798d/report.json"
+      }
+    },
+    "changed_parameters": {
+      "run_id": "run_d9e374b4-2b1b-4149-8aae-5007f2f00b9f",
+      "state": "succeeded",
+      "tasks": {
+        "evaluate-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_dcfb35e9-c7a4-45eb-9f8d-0910226abca1"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_4__evaluate__e96fcd0edfc9208cb5549d90b7fd272fa557de85a9aca5ddbc5fbc044209116a/report.json"
+          }
+        },
+        "split-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "inference_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+            "training_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/training.json",
+            "validation_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/validation.json"
+          }
+        },
+        "train-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_6ae0b7f6-32e2-48d4-9717-757c59b10dd1"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_3__train__a08d6a355d2e27304af6fa7bd6439a6daa9eaebfd20b0896b76c51ab7033eb25/model.json"
+          }
+        },
+        "validate-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_1__validate__e422f8913567d588675cf0c5efa8beeb2593cbcb79822924344b7f684966fbde/dataset.json"
+          }
+        }
+      },
+      "uris": {
+        "inference_data": "<fixture>/data/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+        "model": "<fixture>/data/artifacts/global/sample-training/step_3__train__a08d6a355d2e27304af6fa7bd6439a6daa9eaebfd20b0896b76c51ab7033eb25/model.json",
+        "validation_report": "<fixture>/data/artifacts/global/sample-training/step_4__evaluate__e96fcd0edfc9208cb5549d90b7fd272fa557de85a9aca5ddbc5fbc044209116a/report.json"
+      }
+    },
+    "changed_exploration": {
+      "run_id": "run_a1f68932-0319-4b2a-bc87-a43c50fe1cc0",
+      "state": "succeeded",
+      "tasks": {
+        "evaluate-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_77b82355-d089-4c83-963b-c77e1248c564"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/qualification/sample-training/step_4__evaluate__14f982b7600277b19d98053d112653773f78c1ca24e55887cfb5d474aaf34a3a/report.json"
+          }
+        },
+        "split-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_99e2c565-feb4-401b-94c5-3290c2d6a9cf"
+          ],
+          "output_parameters": {
+            "inference_uri": "<fixture>/data/artifacts/qualification/sample-training/step_2__split__8fbea89cbf7c2e10ba3310c5a1b2cfd17ee6b3e20a18b7a35dd4024468f36f6e/inference_data.json",
+            "training_uri": "<fixture>/data/artifacts/qualification/sample-training/step_2__split__8fbea89cbf7c2e10ba3310c5a1b2cfd17ee6b3e20a18b7a35dd4024468f36f6e/training.json",
+            "validation_uri": "<fixture>/data/artifacts/qualification/sample-training/step_2__split__8fbea89cbf7c2e10ba3310c5a1b2cfd17ee6b3e20a18b7a35dd4024468f36f6e/validation.json"
+          }
+        },
+        "train-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_a33ef7e8-98b2-4f63-84fb-ee791ce6c3ab"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/qualification/sample-training/step_3__train__5c385612c15f9cb8e77d3303bb9ea41a53c52b4b4dc20068988e08c6651ce00e/model.json"
+          }
+        },
+        "validate-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_caab29a5-47c8-40e7-9ccd-a4033bf89873"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/qualification/sample-training/step_1__validate__07e256dcb6ce379bf1d914d1e1cb47470632dc5671ae0afcacbf1a01e1634e2c/dataset.json"
+          }
+        }
+      },
+      "uris": {
+        "inference_data": "<fixture>/data/artifacts/qualification/sample-training/step_2__split__8fbea89cbf7c2e10ba3310c5a1b2cfd17ee6b3e20a18b7a35dd4024468f36f6e/inference_data.json",
+        "model": "<fixture>/data/artifacts/qualification/sample-training/step_3__train__5c385612c15f9cb8e77d3303bb9ea41a53c52b4b4dc20068988e08c6651ce00e/model.json",
+        "validation_report": "<fixture>/data/artifacts/qualification/sample-training/step_4__evaluate__14f982b7600277b19d98053d112653773f78c1ca24e55887cfb5d474aaf34a3a/report.json"
+      }
+    },
+    "different_pipeline": {
+      "run_id": "run_77ad4da7-cfce-4feb-a86e-80e141fa670a",
+      "state": "succeeded",
+      "tasks": {
+        "evaluate-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_40a83890-fc9c-4fad-996f-94a62508a7d4"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training-other/step_4__evaluate__9ce7a8b3f4f75b6021086029d9fecade99b4b7a2b6c5ede8dcdd30857abd0825/report.json"
+          }
+        },
+        "split-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_43f14e57-0c75-4759-a61e-5cc28d5e57e8"
+          ],
+          "output_parameters": {
+            "inference_uri": "<fixture>/data/artifacts/global/sample-training-other/step_2__split__2eb291d861e5abaa8a241999c29d0c637ba768d42cad15f0a8f49f56eee0c317/inference_data.json",
+            "training_uri": "<fixture>/data/artifacts/global/sample-training-other/step_2__split__2eb291d861e5abaa8a241999c29d0c637ba768d42cad15f0a8f49f56eee0c317/training.json",
+            "validation_uri": "<fixture>/data/artifacts/global/sample-training-other/step_2__split__2eb291d861e5abaa8a241999c29d0c637ba768d42cad15f0a8f49f56eee0c317/validation.json"
+          }
+        },
+        "train-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_d2464546-4e23-49f0-a4db-776af3e9a54f"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training-other/step_3__train__e79dc4b19351f47a8110104865673aa81a79d762dc73f08738e7456595042ec9/model.json"
+          }
+        },
+        "validate-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_4ccb9ac1-6aed-45f8-bea0-3cde36a4a639"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training-other/step_1__validate__1d77fd557be91b9453998bb2097b9b1b93a3c54c469e5b5be8f070e81fbe4ded/dataset.json"
+          }
+        }
+      },
+      "uris": {
+        "inference_data": "<fixture>/data/artifacts/global/sample-training-other/step_2__split__2eb291d861e5abaa8a241999c29d0c637ba768d42cad15f0a8f49f56eee0c317/inference_data.json",
+        "model": "<fixture>/data/artifacts/global/sample-training-other/step_3__train__e79dc4b19351f47a8110104865673aa81a79d762dc73f08738e7456595042ec9/model.json",
+        "validation_report": "<fixture>/data/artifacts/global/sample-training-other/step_4__evaluate__9ce7a8b3f4f75b6021086029d9fecade99b4b7a2b6c5ede8dcdd30857abd0825/report.json"
+      }
+    },
+    "different_pipeline_repeat": {
+      "run_id": "run_0fcea178-dbe0-4f0a-8771-91995d71133b",
+      "state": "succeeded",
+      "tasks": {
+        "evaluate-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training-other/step_4__evaluate__9ce7a8b3f4f75b6021086029d9fecade99b4b7a2b6c5ede8dcdd30857abd0825/report.json"
+          }
+        },
+        "split-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "inference_uri": "<fixture>/data/artifacts/global/sample-training-other/step_2__split__2eb291d861e5abaa8a241999c29d0c637ba768d42cad15f0a8f49f56eee0c317/inference_data.json",
+            "training_uri": "<fixture>/data/artifacts/global/sample-training-other/step_2__split__2eb291d861e5abaa8a241999c29d0c637ba768d42cad15f0a8f49f56eee0c317/training.json",
+            "validation_uri": "<fixture>/data/artifacts/global/sample-training-other/step_2__split__2eb291d861e5abaa8a241999c29d0c637ba768d42cad15f0a8f49f56eee0c317/validation.json"
+          }
+        },
+        "train-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training-other/step_3__train__e79dc4b19351f47a8110104865673aa81a79d762dc73f08738e7456595042ec9/model.json"
+          }
+        },
+        "validate-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training-other/step_1__validate__1d77fd557be91b9453998bb2097b9b1b93a3c54c469e5b5be8f070e81fbe4ded/dataset.json"
+          }
+        }
+      },
+      "uris": {
+        "inference_data": "<fixture>/data/artifacts/global/sample-training-other/step_2__split__2eb291d861e5abaa8a241999c29d0c637ba768d42cad15f0a8f49f56eee0c317/inference_data.json",
+        "model": "<fixture>/data/artifacts/global/sample-training-other/step_3__train__e79dc4b19351f47a8110104865673aa81a79d762dc73f08738e7456595042ec9/model.json",
+        "validation_report": "<fixture>/data/artifacts/global/sample-training-other/step_4__evaluate__9ce7a8b3f4f75b6021086029d9fecade99b4b7a2b6c5ede8dcdd30857abd0825/report.json"
+      }
+    },
+    "inference": {
+      "run_id": "run_b9422ed7-34be-49a9-b330-78fab84ee76e",
+      "state": "succeeded",
+      "tasks": {
+        "predict-sample": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_606b66e4-7188-4b1b-bff4-e23885d3de1c"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-inference/step_1__predict__ed90d8d722aeca6a4a1cd47563929e5e534ac2b5501fdd871e35e4db9ee86214/predictions.json"
+          }
+        },
+        "score-predictions": {
+          "disposition": "executed",
+          "attempt_ids": [
+            "attempt_7083b570-cc75-4aea-a7dd-4c8db1bef5e2"
+          ],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-inference/step_2__score__adbbd71a4e223f643f18f4b79b15a45d7fdf55e978d83c53e55a866f68d549af/report.json"
+          }
+        }
+      },
+      "uris": {
+        "predictions": "<fixture>/data/artifacts/global/sample-inference/step_1__predict__ed90d8d722aeca6a4a1cd47563929e5e534ac2b5501fdd871e35e4db9ee86214/predictions.json",
+        "report": "<fixture>/data/artifacts/global/sample-inference/step_2__score__adbbd71a4e223f643f18f4b79b15a45d7fdf55e978d83c53e55a866f68d549af/report.json"
+      }
+    },
+    "inference_repeat": {
+      "run_id": "run_1ac83183-c041-4127-a9ce-fc384255b648",
+      "state": "succeeded",
+      "tasks": {
+        "predict-sample": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-inference/step_1__predict__ed90d8d722aeca6a4a1cd47563929e5e534ac2b5501fdd871e35e4db9ee86214/predictions.json"
+          }
+        },
+        "score-predictions": {
+          "disposition": "reused",
+          "attempt_ids": [],
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-inference/step_2__score__adbbd71a4e223f643f18f4b79b15a45d7fdf55e978d83c53e55a866f68d549af/report.json"
+          }
+        }
+      },
+      "uris": {
+        "predictions": "<fixture>/data/artifacts/global/sample-inference/step_1__predict__ed90d8d722aeca6a4a1cd47563929e5e534ac2b5501fdd871e35e4db9ee86214/predictions.json",
+        "report": "<fixture>/data/artifacts/global/sample-inference/step_2__score__adbbd71a4e223f643f18f4b79b15a45d7fdf55e978d83c53e55a866f68d549af/report.json"
+      }
+    },
+    "changed_dataset": {
+      "run_id": "run_227e7250-ab3f-476c-b201-21a65f90624e",
+      "tasks": {
+        "evaluate-sample": {
+          "disposition": "executed",
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_4__evaluate__c0bfc9e01c680b1eff411018459e8b57a07dfec424f6435d1de2c648413f335c/report.json"
+          }
+        },
+        "split-sample": {
+          "disposition": "executed",
+          "output_parameters": {
+            "inference_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__ae0cf06e3425892fe62aa4da021ff110309cce7c69a060fe25fa364923081ccc/inference_data.json",
+            "training_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__ae0cf06e3425892fe62aa4da021ff110309cce7c69a060fe25fa364923081ccc/training.json",
+            "validation_uri": "<fixture>/data/artifacts/global/sample-training/step_2__split__ae0cf06e3425892fe62aa4da021ff110309cce7c69a060fe25fa364923081ccc/validation.json"
+          }
+        },
+        "train-sample": {
+          "disposition": "executed",
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_3__train__afed069012d047285b2e2f9285a64dc9e96676dba7378c0eda2f1711d5bf2e9f/model.json"
+          }
+        },
+        "validate-sample": {
+          "disposition": "executed",
+          "output_parameters": {
+            "Output": "<fixture>/data/artifacts/global/sample-training/step_1__validate__70c70464a63ab392784ec5600ae14172c073f77a0a928551835deec95c90e588/dataset.json"
+          }
+        }
+      }
+    }
+  },
+  "compose": {
+    "baseline": {
+      "training": {
+        "run_id": "run_bc1060a9-c6ea-4c7c-86eb-38b5e20bec16",
+        "tasks": {
+          "evaluate-sample": "executed",
+          "split-sample": "executed",
+          "train-sample": "executed",
+          "validate-sample": "executed"
+        },
+        "uris": {
+          "inference_data": "s3://fixture/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+          "model": "s3://fixture/artifacts/global/sample-training/step_3__train__ecbab74905c46feedc78f1bc5dde282fcb8d5efaf5a6b0678131fb6a7a080cc0/model.json",
+          "validation_report": "s3://fixture/artifacts/global/sample-training/step_4__evaluate__df856839ec52e72ad4551938eb206020b97e6e3c1b1933c341c4b3046495798d/report.json"
+        }
+      },
+      "inference": {
+        "run_id": "run_b85ffb6e-374e-4661-a88b-1c4bd0724878",
+        "tasks": {
+          "predict-sample": "executed",
+          "score-predictions": "executed"
+        },
+        "uris": {
+          "predictions": "s3://fixture/artifacts/global/sample-inference/step_1__predict__ed90d8d722aeca6a4a1cd47563929e5e534ac2b5501fdd871e35e4db9ee86214/predictions.json",
+          "report": "s3://fixture/artifacts/global/sample-inference/step_2__score__adbbd71a4e223f643f18f4b79b15a45d7fdf55e978d83c53e55a866f68d549af/report.json"
+        }
+      }
+    },
+    "repeat": {
+      "training": {
+        "run_id": "run_a6a3bdd8-0a1a-4d51-87fb-b0234b35daf7",
+        "tasks": {
+          "evaluate-sample": "reused",
+          "split-sample": "reused",
+          "train-sample": "reused",
+          "validate-sample": "reused"
+        },
+        "uris": {
+          "inference_data": "s3://fixture/artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+          "model": "s3://fixture/artifacts/global/sample-training/step_3__train__ecbab74905c46feedc78f1bc5dde282fcb8d5efaf5a6b0678131fb6a7a080cc0/model.json",
+          "validation_report": "s3://fixture/artifacts/global/sample-training/step_4__evaluate__df856839ec52e72ad4551938eb206020b97e6e3c1b1933c341c4b3046495798d/report.json"
+        }
+      },
+      "inference": {
+        "run_id": "run_315e9de3-d8d7-4b4a-a82a-38839301fabb",
+        "tasks": {
+          "predict-sample": "reused",
+          "score-predictions": "reused"
+        },
+        "uris": {
+          "predictions": "s3://fixture/artifacts/global/sample-inference/step_1__predict__ed90d8d722aeca6a4a1cd47563929e5e534ac2b5501fdd871e35e4db9ee86214/predictions.json",
+          "report": "s3://fixture/artifacts/global/sample-inference/step_2__score__adbbd71a4e223f643f18f4b79b15a45d7fdf55e978d83c53e55a866f68d549af/report.json"
+        }
+      }
+    }
+  },
+  "native_kfp": {
+    "baseline": {
+      "model_uri": "minio://mlpipeline/custom-artifacts/global/sample-training/step_3__train__ecbab74905c46feedc78f1bc5dde282fcb8d5efaf5a6b0678131fb6a7a080cc0/model.json",
+      "inference_dataset_uri": "minio://mlpipeline/custom-artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+      "training": {
+        "run_id": "8ffa444c-a72e-4829-8378-8f731a3a6d10",
+        "context_id": 5,
+        "tasks": {
+          "evaluate-sample": {
+            "id": 43,
+            "state": "COMPLETE",
+            "cached_execution_id": null
+          },
+          "train-sample": {
+            "id": 40,
+            "state": "COMPLETE",
+            "cached_execution_id": null
+          },
+          "split-sample": {
+            "id": 33,
+            "state": "COMPLETE",
+            "cached_execution_id": null
+          },
+          "validate-sample": {
+            "id": 30,
+            "state": "COMPLETE",
+            "cached_execution_id": null
+          }
+        }
+      },
+      "inference": {
+        "run_id": "36f56213-ff68-4d08-b45b-1e816cd4105a",
+        "context_id": 6,
+        "tasks": {
+          "score-predictions": {
+            "id": 52,
+            "state": "COMPLETE",
+            "cached_execution_id": null
+          },
+          "predict-sample": {
+            "id": 49,
+            "state": "COMPLETE",
+            "cached_execution_id": null
+          }
+        }
+      }
+    },
+    "repeat": {
+      "model_uri": "minio://mlpipeline/custom-artifacts/global/sample-training/step_3__train__ecbab74905c46feedc78f1bc5dde282fcb8d5efaf5a6b0678131fb6a7a080cc0/model.json",
+      "inference_dataset_uri": "minio://mlpipeline/custom-artifacts/global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+      "training": {
+        "run_id": "ce8fd4b0-4d78-4c43-96fe-21c8b58c026f",
+        "context_id": 7,
+        "tasks": {
+          "evaluate-sample": {
+            "id": 70,
+            "state": "CACHED",
+            "cached_execution_id": "43"
+          },
+          "train-sample": {
+            "id": 67,
+            "state": "CACHED",
+            "cached_execution_id": "40"
+          },
+          "split-sample": {
+            "id": 60,
+            "state": "CACHED",
+            "cached_execution_id": "33"
+          },
+          "validate-sample": {
+            "id": 57,
+            "state": "CACHED",
+            "cached_execution_id": "30"
+          }
+        }
+      },
+      "inference": {
+        "run_id": "37bbf280-93a4-4213-81c2-a5563f036b54",
+        "context_id": 8,
+        "tasks": {
+          "score-predictions": {
+            "id": 79,
+            "state": "CACHED",
+            "cached_execution_id": "52"
+          },
+          "predict-sample": {
+            "id": 76,
+            "state": "CACHED",
+            "cached_execution_id": "49"
+          }
+        }
+      }
+    },
+    "model_type": "system.Model"
+  },
+  "providers": {
+    "evaluate-sample/Output": {
+      "relative_path": "global/sample-training/step_4__evaluate__df856839ec52e72ad4551938eb206020b97e6e3c1b1933c341c4b3046495798d/report.json",
+      "sha256": "307a6448b3f4a2d739977a05b42bd52bb5b1c2e0d40690f87fc2f1e2bcc8b2d0",
+      "compose_sha256": "307a6448b3f4a2d739977a05b42bd52bb5b1c2e0d40690f87fc2f1e2bcc8b2d0",
+      "native_sha256": "307a6448b3f4a2d739977a05b42bd52bb5b1c2e0d40690f87fc2f1e2bcc8b2d0"
+    },
+    "split-sample/inference_uri": {
+      "relative_path": "global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/inference_data.json",
+      "sha256": "9beb8a96350028e24705686805885f8ddc8f6052b97c792d533693b89715bc4e",
+      "compose_sha256": "9beb8a96350028e24705686805885f8ddc8f6052b97c792d533693b89715bc4e",
+      "native_sha256": "9beb8a96350028e24705686805885f8ddc8f6052b97c792d533693b89715bc4e"
+    },
+    "split-sample/training_uri": {
+      "relative_path": "global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/training.json",
+      "sha256": "9e9697d3a3a1ddc1dca11e0193a5906e7c0f7ded9ea1fef8a0ab604c7c41d70d",
+      "compose_sha256": "9e9697d3a3a1ddc1dca11e0193a5906e7c0f7ded9ea1fef8a0ab604c7c41d70d",
+      "native_sha256": "9e9697d3a3a1ddc1dca11e0193a5906e7c0f7ded9ea1fef8a0ab604c7c41d70d"
+    },
+    "split-sample/validation_uri": {
+      "relative_path": "global/sample-training/step_2__split__835fa17b94ef877363f345085d4eb2d6d3ca1d0070a83a2153deb5cc22b3f869/validation.json",
+      "sha256": "107ae9c689d35a20b6587949c63d1d944ff0f6c48f5291da4cd5eafa5d0c0367",
+      "compose_sha256": "107ae9c689d35a20b6587949c63d1d944ff0f6c48f5291da4cd5eafa5d0c0367",
+      "native_sha256": "107ae9c689d35a20b6587949c63d1d944ff0f6c48f5291da4cd5eafa5d0c0367"
+    },
+    "train-sample/Output": {
+      "relative_path": "global/sample-training/step_3__train__ecbab74905c46feedc78f1bc5dde282fcb8d5efaf5a6b0678131fb6a7a080cc0/model.json",
+      "sha256": "cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851",
+      "compose_sha256": "cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851",
+      "native_sha256": "cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851"
+    },
+    "validate-sample/Output": {
+      "relative_path": "global/sample-training/step_1__validate__e422f8913567d588675cf0c5efa8beeb2593cbcb79822924344b7f684966fbde/dataset.json",
+      "sha256": "1a9071f9e675a233b58de008f1082a14bcb53286d63af6b83678af2c7232e0ad",
+      "compose_sha256": "1a9071f9e675a233b58de008f1082a14bcb53286d63af6b83678af2c7232e0ad",
+      "native_sha256": "1a9071f9e675a233b58de008f1082a14bcb53286d63af6b83678af2c7232e0ad"
+    },
+    "predict-sample/Output": {
+      "relative_path": "global/sample-inference/step_1__predict__ed90d8d722aeca6a4a1cd47563929e5e534ac2b5501fdd871e35e4db9ee86214/predictions.json",
+      "sha256": "bded48836011e94087966cffbc36ca22cb4f06046816ca4b49477a36d4e7e584",
+      "compose_sha256": "bded48836011e94087966cffbc36ca22cb4f06046816ca4b49477a36d4e7e584",
+      "native_sha256": "bded48836011e94087966cffbc36ca22cb4f06046816ca4b49477a36d4e7e584"
+    },
+    "score-predictions/Output": {
+      "relative_path": "global/sample-inference/step_2__score__adbbd71a4e223f643f18f4b79b15a45d7fdf55e978d83c53e55a866f68d549af/report.json",
+      "sha256": "20c46971b204184d088fdf45393f157657a24615f23ca4a771241717e4f73032",
+      "compose_sha256": "20c46971b204184d088fdf45393f157657a24615f23ca4a771241717e4f73032",
+      "native_sha256": "20c46971b204184d088fdf45393f157657a24615f23ca4a771241717e4f73032"
+    }
+  },
+  "qualification_notes": [
+    "Initial local repeat overlapped the Compose startup image rebuild; changed Docker image identity correctly invalidated the execution cache. Stable-image repeat passed.",
+    "The convenience sample-demo run helper imports a new managed source each time, changing its dataset_uri. Exact repeated REST submissions reuse every computational step.",
+    "Temporary modified sample dataset subset was removed after verifying input content changes select distinct publication paths.",
+    "Old publications and prior history were retained. No commits, merges, package uploads or external registry publication occurred."
+  ],
+  "services": "stopped after qualification; data retained",
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

@@ -1,0 +1,358 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-19T10:04:17.411048+00:00",
+  "source": {
+    "branch": "feat/initial-implementation",
+    "commit": null,
+    "dirty": true,
+    "accepted_baseline": false
+  },
+  "specification_package": {
+    "name": "dockflow-pipelines",
+    "version": "1.1.0",
+    "impact": "Minor",
+    "project_baseline": "specs-0.1.0-provisional"
+  },
+  "application_version": "0.1.0.dev0",
+  "platform": "Linux x86_64; native Docker and minikube; not a cross-platform release claim",
+  "tests": {
+    "dockflow_cpython_3_13_16": {
+      "passed": 103,
+      "seconds": 22.0,
+      "real_docker": true
+    },
+    "dockflow_cpython_3_12_15": {
+      "passed": 103,
+      "seconds": 20.24,
+      "real_docker": true
+    },
+    "example_cpython_3_13_16": {
+      "passed": 149,
+      "seconds": 5.12
+    }
+  },
+  "checks": [
+    "Ruff lint/format",
+    "Pyright",
+    "shell syntax",
+    "shared version consistency",
+    "Macrostates check/verify",
+    "wheel clean installs",
+    "independent sdist rebuilds",
+    "safe reset preview"
+  ],
+  "deployment": {
+    "registration_ids": {
+      "training": {
+        "pipeline_id": "pipeline_188b3f4a-3497-4ffd-af27-53906ab0a265",
+        "pipeline_version_id": "definition_1f50a9b1-1cd7-4cf8-a35a-831ea5df46ec",
+        "version_name": "sha256-a202f652271398fadab85ae10625396a279bd7ebf3cbd00b93035b0657bd847e"
+      },
+      "inference": {
+        "pipeline_id": "pipeline_7abf9bf6-0356-4a53-bc9f-c259cee39a66",
+        "pipeline_version_id": "definition_b4b5271e-8c18-493b-a50f-0b2cf6f4673e",
+        "version_name": "sha256-c44c64dc31b6a1df1ecdca66956e73ff65eedda499552eb8b0ef22b03e1ab135"
+      }
+    },
+    "version_ids_before_and_after": {
+      "training": [
+        "definition_1f50a9b1-1cd7-4cf8-a35a-831ea5df46ec",
+        "definition_571876b1-f4b5-4fd7-bd28-ce6c503fd5ed",
+        "definition_9acff309-944b-493e-ae31-8836f7d129dc"
+      ],
+      "inference": [
+        "definition_8462c222-60b6-4077-94f2-9bd3790dd67b",
+        "definition_9f8c67d0-5920-4cba-a893-d3a1ba6baedb",
+        "definition_b4b5271e-8c18-493b-a50f-0b2cf6f4673e"
+      ]
+    },
+    "repeat_registration": "unchanged",
+    "service_recreation": "retained registered versions and completed runs",
+    "managed_contents_check": {
+      "valid": true,
+      "project_id": "fixture-example-service",
+      "accepted_sequence": 124,
+      "errors": [],
+      "index_checked": true,
+      "content_verified": true,
+      "availability": [
+        {
+          "artifact_id": "artifact_af0f36ad-e417-45a6-977e-395136de7cd9",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_c6bfdd23-7352-4e64-b25a-5f2a7afbb277",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_2307072e-6596-4c3c-8a91-cfbc04f66120",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_26a90cdd-5f39-4573-b73d-ee58f95c03df",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_2ee7746a-e53b-4ecd-84d2-40894e36c37a",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_6f4b3919-1573-4c61-8389-9f0131171c40",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_771cc8b8-32cc-4fc2-ba25-09196fa0e5fd",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_c538c958-3b4c-4d68-b60b-30afb7704571",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_47578968-95e3-4449-aacc-6e5b7511db38",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_52994584-c0a8-48ae-a855-1f5ff789f991",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        },
+        {
+          "artifact_id": "artifact_a9a55538-96be-4c00-93f8-07cd4554eab8",
+          "availability": "available",
+          "verified": true,
+          "reason": null
+        }
+      ]
+    },
+    "registry_image": "registry:5000/fixture@sha256:d25404a48300853ceb7f8ff692864bca35db58725dd444f8456c98f51afb08d4",
+    "inner_image_id": "sha256:d25404a48300853ceb7f8ff692864bca35db58725dd444f8456c98f51afb08d4",
+    "component_definition_mount": false,
+    "service_image_id": "sha256:ccf27f68ca4f860440da7e420f233f5a794cf2d28e9c56cdab6131b2450bf3c0",
+    "service_mounts": [
+      {
+        "type": "volume",
+        "destination": "/execution",
+        "read_write": true
+      },
+      {
+        "type": "volume",
+        "destination": "/docker-socket",
+        "read_write": true
+      },
+      {
+        "type": "bind",
+        "destination": "/config/dockflow.toml",
+        "read_write": false
+      },
+      {
+        "type": "bind",
+        "destination": "/inputs",
+        "read_write": false
+      },
+      {
+        "type": "volume",
+        "destination": "/state",
+        "read_write": true
+      }
+    ],
+    "project_package_in_service": false
+  },
+  "runs": {
+    "local": {
+      "backend": "dockflow-direct",
+      "source_artifact": "artifact_24c5b1c4-5c08-4df4-9674-1000502a02fb",
+      "training": {
+        "run_id": "run_7d315979-805b-4792-bf5f-bf66b5088f6d",
+        "state": "succeeded",
+        "outputs": {
+          "inference_data": "artifact_f243893e-285f-4c3a-9be5-20228703416c",
+          "model": "artifact_82333cbe-6db9-4ed3-8538-84932f207707",
+          "validation_report": "artifact_b48f71c8-a490-43bc-8a1c-51a48736276e"
+        }
+      },
+      "inference": {
+        "run_id": "run_4b8c9820-9876-44e5-a3fa-cb9cc7512997",
+        "state": "succeeded",
+        "outputs": {
+          "predictions": "artifact_b7cf3ad7-2895-4579-b43f-2cd56af53a2c",
+          "report": "artifact_b3e4ce24-36e5-468d-8864-51f43b0ac47d"
+        }
+      }
+    },
+    "compose": {
+      "backend": "dockflow-service",
+      "source_artifact": "artifact_af0f36ad-e417-45a6-977e-395136de7cd9",
+      "training": {
+        "run_id": "run_2b3e4dfc-3834-490a-94d7-170c3d0546de",
+        "state": "succeeded",
+        "outputs": {
+          "inference_data": "artifact_2307072e-6596-4c3c-8a91-cfbc04f66120",
+          "model": "artifact_6f4b3919-1573-4c61-8389-9f0131171c40",
+          "validation_report": "artifact_c538c958-3b4c-4d68-b60b-30afb7704571"
+        }
+      },
+      "inference": {
+        "run_id": "run_7a5d4831-db41-48e3-8e2d-8e876bbbcd03",
+        "state": "succeeded",
+        "outputs": {
+          "predictions": "artifact_47578968-95e3-4449-aacc-6e5b7511db38",
+          "report": "artifact_a9a55538-96be-4c00-93f8-07cd4554eab8"
+        }
+      },
+      "registrations": {
+        "training": {
+          "pipeline_id": "pipeline_188b3f4a-3497-4ffd-af27-53906ab0a265",
+          "pipeline_version_id": "definition_1f50a9b1-1cd7-4cf8-a35a-831ea5df46ec",
+          "version_name": "sha256-a202f652271398fadab85ae10625396a279bd7ebf3cbd00b93035b0657bd847e"
+        },
+        "inference": {
+          "pipeline_id": "pipeline_7abf9bf6-0356-4a53-bc9f-c259cee39a66",
+          "pipeline_version_id": "definition_b4b5271e-8c18-493b-a50f-0b2cf6f4673e",
+          "version_name": "sha256-c44c64dc31b6a1df1ecdca66956e73ff65eedda499552eb8b0ef22b03e1ab135"
+        }
+      }
+    },
+    "kfp": {
+      "backend": "native-kfp",
+      "training_run_id": "b39840e8-25a0-4111-be8c-c4258b6bf666",
+      "inference_run_id": "444afc88-2292-4aa3-a46e-4343b949031b",
+      "inference_state": "SUCCEEDED",
+      "model_uri": "minio://mlpipeline/v2/artifacts/sample-training/b39840e8-25a0-4111-be8c-c4258b6bf666/train-sample/e3023de8-6c60-4abb-8f0e-415c8ea54197/model",
+      "inference_dataset_uri": "minio://mlpipeline/v2/artifacts/sample-training/b39840e8-25a0-4111-be8c-c4258b6bf666/split-sample/7ea75ba8-eb6a-4ccc-bdcb-3b2681119ce3/inference_data",
+      "registrations": {
+        "training": {
+          "pipeline_id": "65291e02-0955-4318-87e6-e5bc79a4a9e6",
+          "pipeline_version_id": "4e4b0dbc-4b90-44a1-a47e-0201c6ab2b57",
+          "version_name": "sha256-f7bf420bb31c5fcc5d24f59f35f37b320efb2df337137a0b57d7142968d2876b"
+        },
+        "inference": {
+          "pipeline_id": "39671d30-85d7-4b03-aa26-2acdd394497e",
+          "pipeline_version_id": "f5c44735-cab8-4163-be5d-8a7efc03f5ba",
+          "version_name": "sha256-b1d6b82c401d9f8c2b93d951dda42e30f6f8678478009a4c383857fef7b8f78a"
+        }
+      }
+    }
+  },
+  "output_sha256": {
+    "local": {
+      "training.inference_data": "9beb8a96350028e24705686805885f8ddc8f6052b97c792d533693b89715bc4e",
+      "training.model": "cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851",
+      "training.validation_report": "307a6448b3f4a2d739977a05b42bd52bb5b1c2e0d40690f87fc2f1e2bcc8b2d0",
+      "inference.predictions": "bded48836011e94087966cffbc36ca22cb4f06046816ca4b49477a36d4e7e584",
+      "inference.report": "20c46971b204184d088fdf45393f157657a24615f23ca4a771241717e4f73032"
+    },
+    "compose": {
+      "training.inference_data": "9beb8a96350028e24705686805885f8ddc8f6052b97c792d533693b89715bc4e",
+      "training.model": "cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851",
+      "training.validation_report": "307a6448b3f4a2d739977a05b42bd52bb5b1c2e0d40690f87fc2f1e2bcc8b2d0",
+      "inference.predictions": "bded48836011e94087966cffbc36ca22cb4f06046816ca4b49477a36d4e7e584",
+      "inference.report": "20c46971b204184d088fdf45393f157657a24615f23ca4a771241717e4f73032"
+    },
+    "kfp": {
+      "training.model": "cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851",
+      "training.inference_data": "9beb8a96350028e24705686805885f8ddc8f6052b97c792d533693b89715bc4e",
+      "training.validation_report": "307a6448b3f4a2d739977a05b42bd52bb5b1c2e0d40690f87fc2f1e2bcc8b2d0",
+      "inference.predictions": "bded48836011e94087966cffbc36ca22cb4f06046816ca4b49477a36d4e7e584",
+      "inference.report": "20c46971b204184d088fdf45393f157657a24615f23ca4a771241717e4f73032"
+    }
+  },
+  "equal_backends": [
+    "local",
+    "compose",
+    "kfp"
+  ],
+  "registration_retry": {
+    "compose": "same IDs and counts",
+    "native_kfp": "same IDs and version counts"
+  },
+  "packages": [
+    {
+      "filename": "dockflow_cli-0.1.0.dev0-py3-none-any.whl",
+      "sha256": "c962155f497a25f0f9155be1f829d62a1275fee269bc9cc61ce2de7e67bd4738",
+      "name": "dockflow-cli",
+      "version": "0.1.0.dev0",
+      "dependencies": [
+        "typer>=0.27.3,<0.28.0"
+      ],
+      "build_backend_generator": "uv 0.11.33"
+    },
+    {
+      "filename": "dockflow_pipelines-0.1.0.dev0-py3-none-any.whl",
+      "sha256": "c734e6f4914840eee892a74c473081358ced29ae2db4d7a2e7834b33b60bb7ed",
+      "name": "dockflow-pipelines",
+      "version": "0.1.0.dev0",
+      "dependencies": [
+        "dockflow-cli==0.1.0.dev0",
+        "typer>=0.27.3,<0.28.0",
+        "pyyaml>=6.0.2,<7",
+        "kfp>=2.17.0,<2.18 ; extra == 'runtime'",
+        "docker>=7.1.0,<8 ; extra == 'runtime'",
+        "ml-metadata>=1.21.0,<2 ; extra == 'runtime'",
+        "boto3>=1.38,<2 ; extra == 's3'",
+        "fastapi>=0.115.12,<0.116 ; extra == 'service'",
+        "uvicorn>=0.34.2,<0.35 ; extra == 'service'",
+        "python-multipart>=0.0.20,<0.1 ; extra == 'service'"
+      ],
+      "build_backend_generator": "uv 0.11.33"
+    },
+    {
+      "filename": "dockflow_cli-0.1.0.dev0.tar.gz",
+      "sha256": "7377baf66fb8c235c4388eaba783c77be1d4c5d69c49740c0a7d320686911918",
+      "standalone_rebuild": true
+    },
+    {
+      "filename": "dockflow_pipelines-0.1.0.dev0.tar.gz",
+      "sha256": "6f7d8ea5891e9a4b996ad6ab055acc76566c1372211a02d4585b0f600a386a3a",
+      "standalone_rebuild": true
+    }
+  ],
+  "source_sha256": {
+    "packages/pipelines/src/dockflow_pipelines/executor.py": "1b1d6ccbba52ed70b72d2e15fc7b1dc63ace26b0fc1950357996cddf460c3ecd",
+    "packages/pipelines/src/dockflow_pipelines/service.py": "6e37f5c6643a8841da01248a655b777da5f20e487f349744d6b5f61d2c2a0778",
+    "packages/pipelines/src/dockflow_pipelines/canonical.py": "d4633592fb3e5cc37b8060583617dd6f6af162239fef76988bb2cd3dece081f5",
+    "packages/pipelines/src/dockflow_pipelines/reuse.py": "0cfc42c25339af51762ae5f33f3d3da67c065f3d65e86c8ef3f4293e75cad091",
+    "packages/pipelines/src/dockflow_pipelines/client.py": "ef8f62abb8223d18643c6d645ee0a424595737eeff84fd17065004474dbb4183",
+    "packages/pipelines/src/dockflow_pipelines/operations.py": "ab637de995d278f692984fb9a27ddcae7af83190653ca78a85d29209064a419a",
+    "packages/pipelines/src/dockflow_pipelines/kfp_api.py": "90b9117efe864c1b784e5bc0259dd571e86ef1e3c7aa6f85510e7b971ee2f36a",
+    "packages/pipelines/src/dockflow_pipelines/core.py": "0843197fc7d6bb52f9d3f6627a6558c1e8f1f80affc9dad357192c06ced28ebc",
+    "packages/pipelines/src/dockflow_pipelines/__init__.py": "64a580d8c415e8b1f75f349d3b545f8808910674a5c601a4ebb8f3437e5522a2",
+    "packages/pipelines/src/dockflow_pipelines/openapi.py": "6bb2dd6434ec92b3349aa6257076998abd1d27b63a6448e1a2175c120f31867b",
+    "packages/pipelines/src/dockflow_pipelines/engine.py": "660e2f7ea2d8130ffb75c10c37556152bb96aaa7a4b1aedae95c1c84b9c9e7f0",
+    "packages/pipelines/src/dockflow_pipelines/config.py": "87071686e13d07db426cbcf25681de9562c272687325a913f24e8f51aa7384f1",
+    "packages/pipelines/src/dockflow_pipelines/errors.py": "e417a406c4428a14c4b6dc66396a4f044d5bfdbd21aa9a3a194e6ff5b6368743",
+    "packages/pipelines/src/dockflow_pipelines/definitions.py": "8bbb62e50aac0771bbf36c112277de3738f5eac6eb8b2790eb1875834e1af562",
+    "packages/pipelines/src/dockflow_pipelines/artifacts.py": "125f76aca5949b8161c7060ea04562d8d7b3c89699ed629ba2196739a4afc167",
+    "packages/pipelines/src/dockflow_pipelines/metadata.py": "be4eed327dee8a546ea7e4b70e4187f4542ec5ba5dd67af1c1726cf12f209099",
+    "packages/pipelines/src/dockflow_pipelines/cli.py": "27f18b1a1575ffc874c74e340c47a0c9a30779c9db140460d564546fdb875cce",
+    "packages/pipelines/pyproject.toml": "96efd996800bc476e7b403f67fff1a58bf7524464d668b07def79a0727b6051c",
+    "uv.lock": "89c96b8944272cd5fa362f18870e4e7361f6dd0eefd26a4569416b966c630d9f"
+  },
+  "final_services": {
+    "compose": "running, matching initial state",
+    "native_kfp": "stopped; owned forwards stopped; profile/history/artifacts retained"
+  },
+  "data_deleted": false,
+  "images_pushed": "loopback local development registry only",
+  "commit_merge_or_public_release": false,
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

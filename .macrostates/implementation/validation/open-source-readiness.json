@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "reviewed_at_utc": "2026-10-19T22:35:51.078743+00:00",
+  "review_display_date": "2026-10-20",
+  "source": {
+    "branch": "feat/initial-implementation",
+    "commit": null,
+    "state": "unborn development checkout; concurrent implementation continues"
+  },
+  "files": {
+    ".gitignore": "12fc33b54ece308dbbccfd9afe5b3faf268322bb31e5273fab97278c9b5d897f",
+    ".dockerignore": "2272068b2bc712dc529516c3889b40548d311245b1866e45ec6d12038a0fa03a",
+    "deploy/.dockerignore": "deb4765967dd673e367e185244113771bb1480e0bc89fd4ccfc1091e7e5d5559",
+    "SECURITY.md": "cd29bd4b23e8fb58f4fc075d041750e9d0d053a655f3d24c1a6cc22bbfc55715",
+    "tmp/reviews/roadmap.md": "df55a8edb5bd1282884ee2c8357eca40e75e47fdbfd06bca2557b1732c77ba74",
+    "tmp/reviews/open-source-readiness.md": "14a2ef69f0dabad7d7d43a4eee0e7b7ee67f43813224a898ac13e69fa7603fe6"
+  },
+  "reports": {
+    "roadmap": "tmp/reviews/roadmap.md",
+    "readiness": "tmp/reviews/open-source-readiness.md",
+    "persistence": "Ignored assessment reports, separate from product documentation"
+  },
+  "checks": {
+    "targeted_secret_and_path_scan": "tracked plus untracked nonignored candidate text; no confirmed secret/private dependency/required personal path; synthetic ownership-redaction URL reviewed",
+    "git_ignore": "runtime, coverage and deployment inputs excluded; safe templates retained",
+    "docker_context_pattern_cases": {
+      "root": 18,
+      "deploy_minio": 7
+    },
+    "license": "root/member MIT and imported notices inspected; pinned MinIO AGPL license reviewed",
+    "history": "unborn; no commit history"
+  },
+  "limitations": [
+    "No comprehensive entropy-based secret scanner or CVE/container audit",
+    "No publication, account configuration or namespace ownership verification",
+    "Native platform qualification is not established by this review",
+    "Historical evidence outside repository preserved and identified"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

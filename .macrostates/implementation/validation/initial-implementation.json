@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-17T22:45:08.085310+00:00",
+  "source": {
+    "branch": "feat/initial-implementation",
+    "commit": null,
+    "dirty": true,
+    "note": "Unborn repository; SHA256 inventory binds the local candidate without inventing a commit",
+    "files": {
+      ".dockerignore": "d71ab0c938d0d291b19e0b0dd36b42e22d7c088df5400274095f69fc0ba4e924",
+      ".github/workflows/ci.yaml": "f518c160f8f7b096eb5f77923e43f59260c48e83b45e522a01680bb2b67837c4",
+      ".github/workflows/release-candidate.yaml": "336b577a0f8d3244ce82c75626f316c15c48a1bd5fd281228b412bee36aeac69",
+      ".pre-commit-config.yaml": "2f30d6b89af1afc53845050c11e2e2f2e1011e9c2e341bd18b672b146b01793d",
+      ".python-version": "2d82946ffb2ecf549699ebb86ecbbe663bbc19d53c49c681a1a425f003f80ddb",
+      "VERSION": "8a17b37dcf1ab3d12780d7c303ab86b53bb629b60ea08b1af481e452bf38a351",
+      "deploy/.env.example": "51114d069abfe9470ef742bf0b702e690719a39489c1a4b83a30ba7858eb0e42",
+      "deploy/Dockerfile": "c68f9fb75fd7a0fb4bcba22457d414624e771f44acb8dafb66f21a1042c68275",
+      "deploy/Minio.Dockerfile": "3f06835167a051320de4198298264f6bfaab8b6faf082a6711dc573de99f0e3f",
+      "deploy/README.md": "a80736cdecdddbce4bf8def030db4a6dda28a6cfb5e98d476f25c1c6f4c2e86f",
+      "deploy/compose.yaml": "42a9f1839c641b53939cc4f474da2567f83f3afcdc373c71a5fc64ad00692158",
+      "deploy/dockflow.example.toml": "bcdf6f10258c192fc651d222dfae594cfa32c6c641ae6f2d3afaa99e3b44b81f",
+      "packages/cli/LICENSE": "b885c413ad1d337d0b1d95d49b81e1176b70d19cb4d8546ca9d6a93e2f71d6d2",
+      "packages/cli/README.md": "80a8c8f5c9041478b802627fa68498a348652aa8984c34bccf8147a7489f5c0d",
+      "packages/cli/pyproject.toml": "a035e6366ce77bd9437fb2e6c1fe1279a91b2acd58234f020328f2f8358b8456",
+      "packages/cli/src/dockflow_cli/__init__.py": "8e5ee4ec93fbcab5aa1bc7252d4f061c061b344318c5bbee7e60c0a3e6832907",
+      "packages/cli/src/dockflow_cli/main.py": "c153e28bcf0a2f985ec7b5640abfe88421be26f62fb27ced0bacc316c6d23ff1",
+      "packages/cli/tests/test_host.py": "cdea33d2fdf2c81dee4c843e2c638d2a56b9b7703f49f7d3c14f8bc05e30eaf2",
+      "packages/pipelines/LICENSE": "b885c413ad1d337d0b1d95d49b81e1176b70d19cb4d8546ca9d6a93e2f71d6d2",
+      "packages/pipelines/README.md": "0919db1a24b74eed6a8e63a98097e13909fb5f52c9ce7241d838ed51374be71e",
+      "packages/pipelines/pyproject.toml": "cb03915fc131935eb4958ad6fcd5d03f2abc9cd3447452337df7384f566ff7fd",
+      "packages/pipelines/src/dockflow_pipelines/__init__.py": "64a580d8c415e8b1f75f349d3b545f8808910674a5c601a4ebb8f3437e5522a2",
+      "packages/pipelines/src/dockflow_pipelines/artifacts.py": "125f76aca5949b8161c7060ea04562d8d7b3c89699ed629ba2196739a4afc167",
+      "packages/pipelines/src/dockflow_pipelines/canonical.py": "d4633592fb3e5cc37b8060583617dd6f6af162239fef76988bb2cd3dece081f5",
+      "packages/pipelines/src/dockflow_pipelines/cli.py": "a893e2ae27e2e6514c8938fed02ba9ee5c0fdbe034cf8d2aab4755e11ff1adee",
+      "packages/pipelines/src/dockflow_pipelines/client.py": "ef8f62abb8223d18643c6d645ee0a424595737eeff84fd17065004474dbb4183",
+      "packages/pipelines/src/dockflow_pipelines/config.py": "87071686e13d07db426cbcf25681de9562c272687325a913f24e8f51aa7384f1",
+      "packages/pipelines/src/dockflow_pipelines/core.py": "44219806656c5491d16c14a713ec727fd823f1cf9a6ac4501ac27b1b4d5e83df",
+      "packages/pipelines/src/dockflow_pipelines/definitions.py": "8bbb62e50aac0771bbf36c112277de3738f5eac6eb8b2790eb1875834e1af562",
+      "packages/pipelines/src/dockflow_pipelines/engine.py": "660e2f7ea2d8130ffb75c10c37556152bb96aaa7a4b1aedae95c1c84b9c9e7f0",
+      "packages/pipelines/src/dockflow_pipelines/errors.py": "e417a406c4428a14c4b6dc66396a4f044d5bfdbd21aa9a3a194e6ff5b6368743",
+      "packages/pipelines/src/dockflow_pipelines/executor.py": "1b1d6ccbba52ed70b72d2e15fc7b1dc63ace26b0fc1950357996cddf460c3ecd",
+      "packages/pipelines/src/dockflow_pipelines/kfp_api.py": "6c22ca8a3a8689e125b44cd0b064c52c8902591650d9426dcd2da5d54947225d",
+      "packages/pipelines/src/dockflow_pipelines/metadata.py": "aa07c2a61dee98ecd59462c54e3599788a03d2cce89081c993115cb928c53a31",
+      "packages/pipelines/src/dockflow_pipelines/openapi.py": "86201665a86bacb2ec3817508b6f9341d4609244d7d1ee619d79e89dcedd6009",
+      "packages/pipelines/src/dockflow_pipelines/operations.py": "774547fda7f73505abafa74794866350b5db8a6d50128df1f43506517b775ae4",
+      "packages/pipelines/src/dockflow_pipelines/reuse.py": "0cfc42c25339af51762ae5f33f3d3da67c065f3d65e86c8ef3f4293e75cad091",
+      "packages/pipelines/src/dockflow_pipelines/service.py": "79e357319ff19bae159d7b822cda5083136395ce2fe443a8839516df4eb8820a",
+      "packages/pipelines/tests/integration/test_persistence.py": "093aa96ebf91dac2ad15f80bb4fffbf3505a0dabc5d0b92ad9118710a4b4a3d3",
+      "packages/pipelines/tests/integration/test_s3_artifacts.py": "e053adb8c4b8039416004b94bba03c216d4241d73df119d253c08211cbad3307",
+      "packages/pipelines/tests/test_definitions.py": "a38526622c21cd56aaf75a0cdb8b57b4e066c4e579e0f1ff009e7de561289aac",
+      "packages/pipelines/tests/test_interfaces.py": "446ef2c6a611a34802c3c6286d5f96b54ba34f1f8d5e04e82f217bf5e1be16bf",
+      "packages/pipelines/tests/test_runtime.py": "ebf326046d5566374e60054540a5eb8375dcbafaf49d2cf6ebe29a7e731605f9",
+      "packages/pipelines/tests/test_service_runtime.py": "f152e7554a9e419373a309d0f19a47ff11e1b13e28006b10da012dfb13345462",
+      "packages/pipelines/tests/unit/test_canonical.py": "5c44f01708194e66773aef286b48e645e4ce52c8a8ead76ab4fcdef13ee33b8e",
+      "pyproject.toml": "3a9f5e31b787c29c12f4106e348f4f8d213c0cc545c6ad4645661f574de11d58",
+      "tests/integration/test_installed_modules.py": "0e9c8357c0faee100729a30804d81e26d7f441fc8390c46a136cb9dbc18a0c29",
+      "tools/backup.py": "37b365516dfd1e8ec209414ca69a510f567f8254047ade7cc85681acb98bfd83",
+      "tools/macrostates/requirements.txt": "f6977e8e6fdcc9b4b8fe1931f73a3e75166c1454d6a990592df8ee2a68a48910",
+      "tools/verify_packages.py": "4a2f31b27472f51dec275a9f8a27e9afbc5ed337e9f4f67319d3b7047543830d",
+      "tools/version.py": "86adbd45a066a1b9cc223648ccfd8bb606cf50ac9f7f10f29919075259c78e0e",
+      "uv.lock": "e2c57087814085fbaef084ee82f3bb1c13b4c4da18099ba587afb580be5dfb45"
+    }
+  },
+  "tests": {
+    "CPython 3.13.16": {
+      "passed": 67,
+      "warnings": 2,
+      "seconds": 16.58
+    },
+    "CPython 3.12.15": {
+      "passed": 67,
+      "warnings": 2,
+      "seconds": 16.79
+    },
+    "ruff": "passed",
+    "format": "passed",
+    "pyright": "0 errors, 0 warnings",
+    "macrostates": "passed; public staged candidate also passed",
+    "public_candidate_files": 151
+  },
+  "environment": {
+    "system": "Linux",
+    "machine": "x86_64",
+    "libc": [
+      "glibc",
+      "2.44"
+    ],
+    "kfp": "2.17.0",
+    "ml_metadata": "1.21.0",
+    "docker_sdk": "7.2.0",
+    "typer": "0.27.3",
+    "docker_engine": "29.7.2",
+    "compose": "5.5.1"
+  },
+  "packages": {
+    "schema_version": 1,
+    "version": "0.1.0.dev0",
+    "python": "3.13.16",
+    "uv": "uv 0.12.24 (x86_64-unknown-linux-gnu)",
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "libc": [
+        "glibc",
+        "2.44"
+      ]
+    },
+    "source": {
+      "commit": null,
+      "branch": "feat/initial-implementation",
+      "dirty": true,
+      "note": "Uncommitted development checkout; no accepted or published baseline"
+    },
+    "clean_install": [
+      "cli-only",
+      "combined-base"
+    ],
+    "runtime_extras_absent_from_base": true,
+    "artifacts": [
+      {
+        "filename": "dockflow_cli-0.1.0.dev0-py3-none-any.whl",
+        "sha256": "c962155f497a25f0f9155be1f829d62a1275fee269bc9cc61ce2de7e67bd4738",
+        "name": "dockflow-cli",
+        "version": "0.1.0.dev0",
+        "dependencies": [
+          "typer>=0.27.3,<0.28.0"
+        ],
+        "build_backend_generator": "uv 0.11.33"
+      },
+      {
+        "filename": "dockflow_pipelines-0.1.0.dev0-py3-none-any.whl",
+        "sha256": "7fe8d1a302cb27efc6a8e96c27aeef88489c8c20431a4cd89d2332a4e1cde64f",
+        "name": "dockflow-pipelines",
+        "version": "0.1.0.dev0",
+        "dependencies": [
+          "dockflow-cli==0.1.0.dev0",
+          "typer>=0.27.3,<0.28.0",
+          "pyyaml>=6.0.2,<7",
+          "kfp>=2.17.0,<2.18 ; extra == 'runtime'",
+          "docker>=7.1.0,<8 ; extra == 'runtime'",
+          "ml-metadata>=1.21.0,<2 ; extra == 'runtime'",
+          "boto3>=1.38,<2 ; extra == 's3'",
+          "fastapi>=0.115.12,<0.116 ; extra == 'service'",
+          "uvicorn>=0.34.2,<0.35 ; extra == 'service'"
+        ],
+        "build_backend_generator": "uv 0.11.33"
+      },
+      {
+        "filename": "dockflow_cli-0.1.0.dev0.tar.gz",
+        "sha256": "7377baf66fb8c235c4388eaba783c77be1d4c5d69c49740c0a7d320686911918",
+        "standalone_rebuild": true
+      },
+      {
+        "filename": "dockflow_pipelines-0.1.0.dev0.tar.gz",
+        "sha256": "1d357f6befa964e20917c781b1013ba355a1cc8cc272114b80488626d2acd040",
+        "standalone_rebuild": true
+      }
+    ]
+  },
+  "example": {
+    "dataset": "sample classification dataset",
+    "source_sha256": "6be6b1203f3d51df0b553a70e57b8a723cd405683958204f96d23d7cd6aea659",
+    "training_rows": 106,
+    "validation_rows": 36,
+    "inference_rows": 36,
+    "validation_accuracy": 0.9444444444444444,
+    "inference_accuracy": 0.9722222222222222,
+    "verified_modes": [
+      "direct Dockflow DockerRunner",
+      "Dockflow REST/SeaweedFS/DinD Compose",
+      "native KFP 2.17/minikube"
+    ],
+    "payloads_equal_across_modes": [
+      "model",
+      "inference_data",
+      "validation_report",
+      "predictions",
+      "inference_report"
+    ],
+    "final_service_image": "sha256:3223a7c50972c18a7d58e192f64f69565663e3b11a065a967cfb7dfcd676fbdf",
+    "services_stopped": true,
+    "state_preserved": true
+  },
+  "limits": [
+    "Native macOS/Windows, ARM64/native MLMD builds and Docker Desktop targets not qualified in this session",
+    "Exhaustive crash/platform A01–A24 release matrix remains unqualified; no accepted implementation baseline",
+    "No tags, commits, pushes, merges or publication performed"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

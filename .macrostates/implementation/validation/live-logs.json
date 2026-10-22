@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-20T09:56:30.157865+00:00",
+  "workflows": [
+    "2026-10-20__114QVJ__live-task-logs.md",
+    "2026-10-20__114QVJ__trace-colors.md"
+  ],
+  "application_version": "0.1.0.dev0",
+  "specification_version": "dockflow-pipelines 1.5.0",
+  "source_commit": null,
+  "branch": "feat/initial-implementation",
+  "environment": {
+    "python": "3.13.16",
+    "platform": "Linux-7.1.13-2-MANJARO-x86_64-with-glibc2.44",
+    "docker_sdk": "7.2.0",
+    "docker_engine": "29.7.2",
+    "kfp": "2.17.0"
+  },
+  "images": {
+    "fixture:example-v5": "sha256:5b75236fc1728f5621a4b8a1be48e60db667af28f50ec345c9658a49a4b461c1",
+    "dockflow-pipelines:development": "sha256:b3b2feb554e559380a0066c81d764c9553a4235f3218129c37b2dae8df101ec9"
+  },
+  "source_sha256": {
+    ".macrostates/specs/053_dockflow-pipelines/001_pipelines.md": "e6504c9c4e3a112983c8c967ae80175c040390bbffadb6120beffee864f835c8",
+    ".macrostates/specs/053_dockflow-pipelines/002_local-execution.md": "d05138bc6660264eba66da97c22e1a45d98d4ad384c21ba81aaaf134ff113f44",
+    ".macrostates/specs/053_dockflow-pipelines/003_configuration-and-backends.md": "8366481cabb76322aa434a5987dd6a46a593da2a6d09b5a967dd1725740049ff",
+    ".macrostates/specs/053_dockflow-pipelines/004_kfp-compatibility.md": "6c4be5c3cde722d8a9544a625ef2cbc2f48ce1f16cb6b820340441f4417e7db0",
+    ".macrostates/specs/053_dockflow-pipelines/005_execution-and-lifecycle.md": "6e85d7b33c4eb0a491bd7c169cf10fd84f9f0842bd04c16836b11e81bca9e447",
+    ".macrostates/specs/053_dockflow-pipelines/006_artifacts.md": "b161cb655ffa40bb98565b57094a566f288e240745331ada342eabbc06e719c8",
+    ".macrostates/specs/053_dockflow-pipelines/007_metadata-and-recovery.md": "97f04725bb13958ddf1a31bf7870facc52b21e0ca7367adb9aa34fa1aaedd3e1",
+    ".macrostates/specs/053_dockflow-pipelines/008_reuse-and-selection.md": "a19f390c370ef2837ab524e41f8d3635923ecbd5e44e4a86413e4a90b6d40065",
+    ".macrostates/specs/053_dockflow-pipelines/009_cli.md": "c408b286b61166849186a2e6b186a836c0d57bcf40fc246d90acdf704a6cbeea",
+    ".macrostates/specs/053_dockflow-pipelines/010_service-api.md": "30900045bd3a16f2b3ba122065898376c9b9c58eadd5f0ea9c7e07b04b613025",
+    ".macrostates/specs/053_dockflow-pipelines/011_acceptance.md": "12038aa44c9be7c27dee0a0883927111dad0852cbd4733ad1f59243e7d19ced0",
+    ".macrostates/specs/053_dockflow-pipelines/012_review-and-qualification.md": "0701fa5ad68050a699be4133f5dbe0b56393cf773417d1d0c15f1f2c229d934b",
+    ".macrostates/specs/053_dockflow-pipelines/013_web-interface.md": "288d96349bcda80bcec00a7bce311cc010638b76b392e19650a655e32bacc0d6",
+    ".macrostates/specs/053_dockflow-pipelines/README.md": "17bf3d9b8b7152150270205db17e47635a5eca68e9a3647d6f3c18a69c33f9fc",
+    ".macrostates/specs/053_dockflow-pipelines/package.yaml": "d016702cab1e5643f3be41afb937def45c97c1aceadeab0da69d1535d95e1dce",
+    ".macrostates/specs/composition.lock.yaml": "970f457083568f560f333ee66bb65d2ff7aa4858e01601c0dbf8093d72a181e4",
+    ".macrostates/specs/composition.yaml": "d912a5bc5095de0b611a1521e960265387ca036b03ea72a90753f9707926e4d0",
+    ".macrostates/specs/main.md": "54f361765e6348117e76ca645a98f0e3ac39745e361c624bfb38454c3667b0b5",
+    "docs/api.md": "6a9c596025f3726b9ccbc733753da0a16e9d4ea86207f134ecf3d162504bedc9",
+    "docs/cli.md": "847590f6fb8f38a9d108a6b738a0582abc72f93eff7c4f03a36598c9e38b4842",
+    "docs/ui.md": "cc29a1cd536e156acd544e9959a84b6f15243af3bd579279c27bfa5785d9ee04",
+    "packages/pipelines/src/dockflow_pipelines/__init__.py": "64a580d8c415e8b1f75f349d3b545f8808910674a5c601a4ebb8f3437e5522a2",
+    "packages/pipelines/src/dockflow_pipelines/artifacts.py": "125f76aca5949b8161c7060ea04562d8d7b3c89699ed629ba2196739a4afc167",
+    "packages/pipelines/src/dockflow_pipelines/canonical.py": "d4633592fb3e5cc37b8060583617dd6f6af162239fef76988bb2cd3dece081f5",
+    "packages/pipelines/src/dockflow_pipelines/cli.py": "86b59951c4bacdbc921274babb639b3d9dd6fffd1288b6a96c29a35a06d57ef1",
+    "packages/pipelines/src/dockflow_pipelines/client.py": "ef8f62abb8223d18643c6d645ee0a424595737eeff84fd17065004474dbb4183",
+    "packages/pipelines/src/dockflow_pipelines/config.py": "87071686e13d07db426cbcf25681de9562c272687325a913f24e8f51aa7384f1",
+    "packages/pipelines/src/dockflow_pipelines/console.py": "fb53f5f446eae22d48e539c3c884ba56c6dc127e49a39bafa2f6f5ca5f715229",
+    "packages/pipelines/src/dockflow_pipelines/container_logs.py": "1f5f2ca8e296c68fde512dcbc7b228b6231ef11c8523d245750f9e70fc45207f",
+    "packages/pipelines/src/dockflow_pipelines/core.py": "56f20941be7a59426e3d63ca752178c236fef81b25e671335035d2f5924c1e0e",
+    "packages/pipelines/src/dockflow_pipelines/definitions.py": "8bbb62e50aac0771bbf36c112277de3738f5eac6eb8b2790eb1875834e1af562",
+    "packages/pipelines/src/dockflow_pipelines/engine.py": "1637aa932a909010e680599ac3f8dd5f290a5833a900798283258b7c1aebcf4f",
+    "packages/pipelines/src/dockflow_pipelines/errors.py": "e417a406c4428a14c4b6dc66396a4f044d5bfdbd21aa9a3a194e6ff5b6368743",
+    "packages/pipelines/src/dockflow_pipelines/executor.py": "433d728201c93da41294533ac5a44e4dd98a452e86dc4b5487fa56411ad97047",
+    "packages/pipelines/src/dockflow_pipelines/kfp_api.py": "90b9117efe864c1b784e5bc0259dd571e86ef1e3c7aa6f85510e7b971ee2f36a",
+    "packages/pipelines/src/dockflow_pipelines/metadata.py": "d674e9395fa87672a47309dd67877585036145de2bd3b4a9946b4ad75b6a416f",
+    "packages/pipelines/src/dockflow_pipelines/mlmd_index.py": "c114e98f4bc5dcc74c11d78251877d605b90c957bcc60b113312651f75fde58e",
+    "packages/pipelines/src/dockflow_pipelines/openapi.py": "69ac8f39e12d7aeca61d7357e956c0b4d918e988c6cba17b8a4e7a8a019ae1d3",
+    "packages/pipelines/src/dockflow_pipelines/operations.py": "ab637de995d278f692984fb9a27ddcae7af83190653ca78a85d29209064a419a",
+    "packages/pipelines/src/dockflow_pipelines/ownership.py": "54ec42b3dcb2b25c08012b458e6a888f8c36918e391c31a1a3496fa036fa3878",
+    "packages/pipelines/src/dockflow_pipelines/records.py": "ae4aa92ef35ec14547d24752d059fdf068fe07d95e5c65f6954e1b50e13f6cc5",
+    "packages/pipelines/src/dockflow_pipelines/reuse.py": "0cfc42c25339af51762ae5f33f3d3da67c065f3d65e86c8ef3f4293e75cad091",
+    "packages/pipelines/src/dockflow_pipelines/service.py": "d79f436f9713d5af30fd6af173eaf9f7ce94f2567957cc1afc2c20c5d6ddc93d",
+    "packages/pipelines/src/dockflow_pipelines/static/api-docs.js": "c17adddfe94d1080ee508cfc729d458c1fafd8191faffe291b3953b2cb08b2b0",
+    "packages/pipelines/src/dockflow_pipelines/static/api.js": "d3ad71310f75402bb985281e8da514506ceb314c44695d6d2f3852b5fbac4066",
+    "packages/pipelines/src/dockflow_pipelines/static/app.js": "cd17eb9cbd6a19e5f4c52387a3ff704d5c1417f26f208019b89955162e08292d",
+    "packages/pipelines/src/dockflow_pipelines/static/dom.js": "71b93b4e4a423a9efbf770b34cb5f72235864c2cbe981d1a75ca9d9a3bdb2e18",
+    "packages/pipelines/src/dockflow_pipelines/static/forms.js": "72b669b30defa2168aa8ff7c0c04020b5357a6f2517a14c8d2b614aaa06212ee",
+    "packages/pipelines/src/dockflow_pipelines/static/graph.js": "d6b83496a4c980d9254cd9dd3020bb765fa41b555e16d56068f426ad764087c1",
+    "packages/pipelines/src/dockflow_pipelines/static/json.js": "7d2dea45d6d0d3cbbca9b35417b31a89656b568f7e5f520cc9ef1f6e2151be13",
+    "packages/pipelines/src/dockflow_pipelines/static/logs.js": "81a889752dd6119ea1008243db26b609426fbe3c67acfd9052f0aadae05d8ee0",
+    "packages/pipelines/src/dockflow_pipelines/static/views.js": "a65bd8febe76763084d745aa041091b0b31f933dd1a019c62cd939c6e9d55b8b",
+    "packages/pipelines/src/dockflow_pipelines/web.py": "79e6a4d04cf153abf76de9f53889610af8d148fcd98ba0ee7ab7d889b245b742",
+    "packages/pipelines/tests/integration/test_ownership.py": "68043de00038f5299301188ab6ebed084456c59bbe5e1160106b53a811664941",
+    "packages/pipelines/tests/integration/test_persistence.py": "093aa96ebf91dac2ad15f80bb4fffbf3505a0dabc5d0b92ad9118710a4b4a3d3",
+    "packages/pipelines/tests/integration/test_runtime_boundaries.py": "85f44e79c72030eaafb5979cbd7a26ccb0f79e6689883957b859424fd3bac6fe",
+    "packages/pipelines/tests/integration/test_s3_artifacts.py": "e053adb8c4b8039416004b94bba03c216d4241d73df119d253c08211cbad3307",
+    "packages/pipelines/tests/test_console.py": "4d36e9d975c996a77095ffaf3988af8da393d7835ae40cf1e0e9ccf0ddb95858",
+    "packages/pipelines/tests/test_container_logs.py": "eba5823a7eeeb6f28b2aaeff5b1624ce3dc0a729036dec2daa12184806f1fc0b",
+    "packages/pipelines/tests/test_definitions.py": "a38526622c21cd56aaf75a0cdb8b57b4e066c4e579e0f1ff009e7de561289aac",
+    "packages/pipelines/tests/test_direct_ownership_recovery.py": "c3a27dbf08a362266cdd39a0b7a4f12554cd796e84496b3ce85c31f5806f8356",
+    "packages/pipelines/tests/test_interfaces.py": "68e8b40ddc9a93b9a1790e6899921ff7a5d6d02f37b2a49eaa896a56fe7b9214",
+    "packages/pipelines/tests/test_owner_bind_mount.py": "a0251b9ad5e72893cc0abb09b127a9b44e223378bcfa5fb66d51fc4ef1209279",
+    "packages/pipelines/tests/test_registration.py": "5a70c0957e03d4ea6b4e71429876b6e5560a59742b770041d26e4dae3fc2fc5f",
+    "packages/pipelines/tests/test_runtime.py": "7e4dec5177218eb146b99baa19125fe741731059c5088004970f528443aaa8de",
+    "packages/pipelines/tests/test_service_runtime.py": "e78406bb842ab6e2d9702f67acceac720729b289518fb4ea2031bbcac0f753de",
+    "packages/pipelines/tests/test_web.py": "541ea9edd5015820b7f0e6c67dcb9b1ae4d6b770a9a35d3c6caa4e6294c4d250",
+    "packages/pipelines/tests/unit/test_canonical.py": "5c44f01708194e66773aef286b48e645e4ce52c8a8ead76ab4fcdef13ee33b8e",
+    "packages/pipelines/tests/web/api.test.mjs": "c30d863ac6e6bc535961f91bdbb66c74d4447176d676ee019ddfaefb5d21ea77",
+    "packages/pipelines/tests/web/graph.test.mjs": "ab4d90275ca179aa5186306cf7d117da8deeda7cd1b836b9b0a6375ce830d035",
+    "packages/pipelines/tests/web/json.test.mjs": "1d0b5ab147e59b164532258f472fcf7778f14b2ab116b256916aaf5ceade4605",
+    "packages/pipelines/tests/web/logs.test.mjs": "e93532551fa473f939cc27493b184ff6e96a908461b6d5e075488e763340ba4f",
+    "packages/pipelines/tests/web/parameters.test.mjs": "ab3cb60cee266fb9299b848fffe05fea2499a27631798faac39ca0c69853fba3",
+    "tools/verify_packages.py": "994124bebba334c129b06ad22d4033105c7da540e24983a42fb74c6d581bb39d"
+  },
+  "validation": {
+    "non_provider_tests": 207,
+    "docker_tests": 15,
+    "example_tests": 233,
+    "focused_tests": 57,
+    "final_console_tests": 21,
+    "node_test_files": 5,
+    "ruff": "pass",
+    "pyright": "0 errors",
+    "api_docs": "current",
+    "macrostates_check_verify": "pass",
+    "docker_notes": "Final 14 tests passed with unraisable warnings treated as errors; interruption test fixture incorrectly used DockerClient as context manager. Corrected to explicit close; isolated rerun passed. No final unraisable warning.",
+    "initial_findings": "Fixed Docker attach response cleanup and KFP status colors on redirected output; corrected isolated smoke external-root fixture."
+  },
+  "packages": {
+    "schema_version": 1,
+    "version": "0.1.0.dev0",
+    "python": "3.13.16",
+    "uv": "uv 0.12.24 (x86_64-unknown-linux-gnu)",
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "libc": [
+        "glibc",
+        "2.44"
+      ]
+    },
+    "source": {
+      "commit": null,
+      "branch": "feat/initial-implementation",
+      "dirty": true,
+      "note": "Uncommitted development checkout; no accepted or published baseline"
+    },
+    "clean_install": [
+      "cli-only",
+      "combined-base"
+    ],
+    "runtime_extras_absent_from_base": true,
+    "artifacts": [
+      {
+        "filename": "dockflow_cli-0.1.0.dev0-py3-none-any.whl",
+        "sha256": "74046882d7cbd9efd3d20ac11ab03b97ee4516c145430a403828cf53d5e49f0a",
+        "name": "dockflow-cli",
+        "version": "0.1.0.dev0",
+        "dependencies": [
+          "typer>=0.27.3,<0.28.0"
+        ],
+        "build_backend_generator": "uv 0.11.33"
+      },
+      {
+        "filename": "dockflow_pipelines-0.1.0.dev0-py3-none-any.whl",
+        "sha256": "c3a67d22d2f867a6a5d26bce101d9cc441b1f7ece72be1a266f659d3631b1516",
+        "name": "dockflow-pipelines",
+        "version": "0.1.0.dev0",
+        "dependencies": [
+          "dockflow-cli==0.1.0.dev0",
+          "typer>=0.27.3,<0.28.0",
+          "pyyaml>=6.0.2,<7",
+          "kfp>=2.17.0,<2.18 ; extra == 'runtime'",
+          "docker>=7.1.0,<8 ; extra == 'runtime'",
+          "ml-metadata>=1.21.0,<2 ; extra == 'runtime'",
+          "boto3>=1.38,<2 ; extra == 's3'",
+          "fastapi>=0.115.12,<0.116 ; extra == 'service'",
+          "uvicorn>=0.34.2,<0.35 ; extra == 'service'",
+          "python-multipart>=0.0.20,<0.1 ; extra == 'service'"
+        ],
+        "build_backend_generator": "uv 0.11.33"
+      },
+      {
+        "filename": "dockflow_cli-0.1.0.dev0.tar.gz",
+        "sha256": "2e98f4e3180cf1d6a1318bf69e2ad0359482d111b03727ee5f29bf723189b6be",
+        "standalone_rebuild": true
+      },
+      {
+        "filename": "dockflow_pipelines-0.1.0.dev0.tar.gz",
+        "sha256": "8988b11de0c3367e2464d522e88d4f011fbb3c5fe96fb8c71bdb2b14c44b8b31",
+        "standalone_rebuild": true
+      }
+    ]
+  },
+  "installed_smoke": {
+    "config": "tmp/live-logs/execution-d3d59b5d/dockflow.toml",
+    "training_run": "run_d6922ce1-f039-4d40-88be-9766260f2213",
+    "inference_run": "run_4b9bf804-0e98-489d-a275-d8832237aa0b",
+    "terminal_traceprint_colors": true,
+    "redirected_plain_text": true,
+    "machine_json_valid": true,
+    "retained_colors_and_metadata": true
+  },
+  "evidence_sha256": {
+    "tmp/live-logs/training.stdout": "e0e7342ac48002c08ef07bc385ece2dd50c6a3620fccbce3161f431d30bcb77e",
+    "tmp/live-logs/tests.log": "4c609479cdd01f14ab667b16d8fdf89c25c24f2858d60b458242dfce44c9a1c1",
+    "tmp/live-logs/training.stderr": "2becf8c20439e8f2d285ac435582250ded23171bb45e7520f079376a65b9a1bf",
+    "tmp/live-logs/inference.stdout": "4d53e5479e53d8a15fe90b9e697b6f2e34ff6d546d6a9ac41cea3776119638f4",
+    "tmp/live-logs/service-image.log": "7a4691026f61d00ddf65c086237651330a5605e35d9c7593a46a0fb7157ffde3",
+    "tmp/live-logs/interruption.log": "d0deb4e52e1bd4074ae74959d4a2ebfad828b825df07c466351f28c4ce29b9f8",
+    "tmp/live-logs/smoke.py": "945f5c83db48e36383e4c2fa12056ea448ea2b70af173cc524742c5cd8063f63",
+    "tmp/live-logs/docker.log": "89fada6b04f08f51fd9683cc2a414020d5c70224aec662a8873a1c2332a229df",
+    "tmp/live-logs/packages.log": "1c0a2ab09b03a8ddf36f6a44c606f4356f53fd406a901852bd2ff5a20a4db8cd",
+    "tmp/live-logs/retained.stdout": "046e2f6a22a51110bef5dbaf276a4cc310b230699e90c7b8a208ece66ba10485",
+    "tmp/live-logs/retained.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tmp/live-logs/inference.stderr": "0098dc0e35194810abf36b536c7d060d49e76f1e72016f340a28296bee57aebc",
+    "tmp/live-logs/smoke.json": "af36b1dd3583884606a508afb89110a70bf81b6bef3e8cc795871969ebcbe639",
+    "tmp/live-logs/images.log": "13e1c6e8de443689f85949a37a95a3bea346df6ecb9a1757c9c7a082c4daf607"
+  },
+  "limits": [
+    "Linux x86_64 development qualification only",
+    "No native KFP/Compose redeployment; running services untouched",
+    "Browser logs use manual refresh; no SSE/WebSocket or automatic browser follow",
+    "No commit, merge, push, publication or accepted baseline",
+    "Components must flush output; foreground console flushes partial lines at task completion"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

@@ -1,0 +1,728 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-19T11:28:28.277782+00:00",
+  "source": {
+    "branch": "feat/initial-implementation",
+    "commit": null,
+    "accepted_baseline": false,
+    "example_independent_git_history": false,
+    "files_sha256": {
+      "bin/benchmark.sh": "c4ec4650b2587eaa0d27b8913cb49154c880ddd00190d54b10ac52f6a599d910",
+      "bin/benchmark.py": "5cfad7dde84dd9ec29c1e10d2ff8f23652c767fa7a99e8937291895e7546b250",
+      "bin/benchmark_metrics.py": "c96ae6036d43329ce400379376b4970daee06c8af28c08b287e2d9bbf2227a82",
+      "src/fixture_components/cli.py": "555fc34eed7316c15a4fa85186b8b82c65123d36d2b223ceccb8aa1209b7eb72",
+      "tests/test_benchmark.py": "0e727128e034f78d816c4c76596d235d095cf63128d71dec84e7953fbc76df28",
+      "tests/test_benchmark_metrics.py": "29f532646f87c445106a506d53d6f5887f55cf680e8176e00a514616cf12c2fc",
+      "tests/test_benchmark_workload.py": "b3b8aa2d3c44c7d39e794c9c5f2753408105c37f10280932e61d4141278f4841",
+      "tests/test_registration.py": "0580fe604a55cf08e20097d47874c2353e418a4baa71366cf1977f58d7e27393"
+    }
+  },
+  "specification_version": "specs-0.1.0-provisional",
+  "pipelines_specification_package": "1.1.1",
+  "application_version": "0.1.0.dev0",
+  "version_change": false,
+  "command": "./bin/benchmark.sh --runs 1 --output .runtime/benchmarks/2026-10-19-comparison-final",
+  "cpu_model_from_proc_cpuinfo": "13th Gen Intel(R) Core(TM) i7-1360P",
+  "results": {
+    "schema_version": 1,
+    "created_at": "2026-10-19T11:18:52.807370+00:00",
+    "status": "complete",
+    "settings": {
+      "runs": 1,
+      "idle_seconds": 30,
+      "warmup_seconds": 30,
+      "interval": 1
+    },
+    "initial_serving_state": {
+      "compose": true,
+      "kfp": false,
+      "forward": false
+    },
+    "host": {
+      "platform": "Linux-7.1.13-2-MANJARO-x86_64-with-glibc2.44",
+      "cpu_model": "",
+      "load_average_before": [
+        2.2548828125,
+        2.24609375,
+        2.169921875
+      ],
+      "NCPU": 16,
+      "MemTotal": 33238286336,
+      "ServerVersion": "29.7.2",
+      "KernelVersion": "7.1.13-2-MANJARO",
+      "CgroupVersion": "2",
+      "Driver": "overlay2",
+      "load_average_after": [
+        2.0673828125,
+        2.1767578125,
+        2.1865234375
+      ]
+    },
+    "inputs": {
+      "data/external/sample.data": "6be6b1203f3d51df0b553a70e57b8a723cd405683958204f96d23d7cd6aea659",
+      "orchestration/kfp/compiled/training.yaml": "f7bf420bb31c5fcc5d24f59f35f37b320efb2df337137a0b57d7142968d2876b",
+      "orchestration/kfp/compiled/inference.yaml": "b1d6b82c401d9f8c2b93d951dda42e30f6f8678478009a4c383857fef7b8f78a"
+    },
+    "backends": {
+      "compose": {
+        "targets": [
+          {
+            "id": "3e98224290f821ffdd4bea62ef6d7e8990c238386f896472d32fb23c13a1954a",
+            "name": "fixture-dockflow-1",
+            "image_id": "sha256:ccf27f68ca4f860440da7e420f233f5a794cf2d28e9c56cdab6131b2450bf3c0",
+            "started_at": "2026-10-19T11:19:21.934579537Z",
+            "limits": {
+              "Memory": 0,
+              "NanoCpus": 0,
+              "CpuQuota": 0,
+              "CpuPeriod": 0,
+              "CpusetCpus": ""
+            }
+          },
+          {
+            "id": "02e6e7a10926dacb132045eec2083ef9334833f45d4e3f37d88a85b552840477",
+            "name": "fixture-docker-engine-1",
+            "image_id": "sha256:3c952beec7a22df0c66c8f92b18d92a0f745b177a83d90221552a516b3fc512a",
+            "started_at": "2026-10-19T11:19:09.584068468Z",
+            "limits": {
+              "Memory": 0,
+              "NanoCpus": 0,
+              "CpuQuota": 0,
+              "CpuPeriod": 0,
+              "CpusetCpus": ""
+            }
+          },
+          {
+            "id": "a51be48c163984fb034b74f73d2c681eb0abd10d61e36b2129a2251718983433",
+            "name": "fixture-seaweedfs-1",
+            "image_id": "sha256:d7dedc5732b5b6d788448cc2c085ead381767151fa86d158625975297041160d",
+            "started_at": "2026-10-19T11:19:05.080998611Z",
+            "limits": {
+              "Memory": 0,
+              "NanoCpus": 0,
+              "CpuQuota": 0,
+              "CpuPeriod": 0,
+              "CpusetCpus": ""
+            }
+          },
+          {
+            "id": "e3719bfb84f6a0d41aeb2041d9e17ae5213ea4ff806bad28d1faad0d5da68800",
+            "name": "fixture-registry-1",
+            "image_id": "sha256:26b2eb03618e749084668eaff68cff8f81dda12d06ac641be7a6398b82a6f25b",
+            "started_at": "2026-10-19T11:19:04.243121664Z",
+            "limits": {
+              "Memory": 0,
+              "NanoCpus": 0,
+              "CpuQuota": 0,
+              "CpuPeriod": 0,
+              "CpusetCpus": ""
+            }
+          }
+        ],
+        "idle": {
+          "elapsed_seconds": 30.011081658,
+          "sampling_duration_seconds": 30.011081658,
+          "cpu_seconds": 6.405474,
+          "cpu_mean_percent": 21.3436958820593,
+          "memory_mean_bytes": 298421310.6480692,
+          "memory_peak_bytes": 305840128,
+          "memory_charged_mean_bytes": 303582270.6480692,
+          "memory_charged_peak_bytes": 311001088,
+          "samples": 31
+        },
+        "trials": [
+          {
+            "elapsed_seconds": 16.504219831,
+            "sampling_duration_seconds": 16.504219831,
+            "cpu_seconds": 14.025683,
+            "cpu_mean_percent": 84.98240537038568,
+            "memory_mean_bytes": 436289177.3395061,
+            "memory_peak_bytes": 517464064,
+            "memory_charged_mean_bytes": 443462898.6130752,
+            "memory_charged_peak_bytes": 526217216,
+            "samples": 18,
+            "workload_seconds": 16.49728934400082,
+            "receipt": {
+              "backend": "dockflow-service",
+              "source_artifact": "artifact_71eb70cb-0a61-4ed4-9ee5-6197bd298974",
+              "training": {
+                "run_id": "run_d863c4c4-5ac5-425e-8269-2933795f4592",
+                "state": "succeeded",
+                "outputs": {
+                  "inference_data": "artifact_500c3a5f-dc97-49b0-8eb0-a4fba24b7afc",
+                  "model": "artifact_32f96d51-9be6-45dd-98d2-11d85f465a91",
+                  "validation_report": "artifact_ed1d6b1c-e7f2-46c8-bd2c-90fe1ceac7f9"
+                }
+              },
+              "inference": {
+                "run_id": "run_f2cef8af-28e6-43c2-91e8-493d3b98477f",
+                "state": "succeeded",
+                "outputs": {
+                  "predictions": "artifact_fe0eb822-ce2e-4e38-bcd7-73393b2c44cb",
+                  "report": "artifact_186b72e6-f70f-4f47-85cb-bd869b4bb75f"
+                }
+              },
+              "cache_policy": "disabled",
+              "name_prefix": "benchmark:51d09040083f4fef9e36488b678e2985:trial:1",
+              "task_execution": {
+                "training": {
+                  "evaluate-sample": {
+                    "task_id": "task_c62928ba-467b-491b-b67c-b1b59b753a08",
+                    "state": "succeeded",
+                    "disposition": "executed",
+                    "attempt_ids": [
+                      "attempt_d7961704-3b1f-4e5c-a560-d779b92c9a75"
+                    ]
+                  },
+                  "split-sample": {
+                    "task_id": "task_7f230fa8-3093-4d19-b565-3c8dabe3f4cf",
+                    "state": "succeeded",
+                    "disposition": "executed",
+                    "attempt_ids": [
+                      "attempt_749f267c-03a1-4862-9cbb-18341daea5b7"
+                    ]
+                  },
+                  "train-sample": {
+                    "task_id": "task_c0378eea-4c5d-4ed0-8898-52d972798c75",
+                    "state": "succeeded",
+                    "disposition": "executed",
+                    "attempt_ids": [
+                      "attempt_08e03930-647f-47f2-89f3-7dcc8825574b"
+                    ]
+                  },
+                  "validate-sample": {
+                    "task_id": "task_24e9fe97-52b3-4fe8-9c4c-9e48609208c6",
+                    "state": "succeeded",
+                    "disposition": "executed",
+                    "attempt_ids": [
+                      "attempt_fcfe6948-8e8a-4a94-848c-adcdcef1e7dc"
+                    ]
+                  }
+                },
+                "inference": {
+                  "predict-sample": {
+                    "task_id": "task_410bd01a-5716-48af-a189-527cc5908b52",
+                    "state": "succeeded",
+                    "disposition": "executed",
+                    "attempt_ids": [
+                      "attempt_ad7682bd-8fa0-40bc-9d66-1a094178831f"
+                    ]
+                  },
+                  "score-predictions": {
+                    "task_id": "task_8c7c394e-7186-4d88-b70c-01fed6ea7fd4",
+                    "state": "succeeded",
+                    "disposition": "executed",
+                    "attempt_ids": [
+                      "attempt_1cb0f060-4cf2-4b9b-9ff0-f1302960d976"
+                    ]
+                  }
+                }
+              },
+              "registrations": {
+                "training": {
+                  "pipeline_id": "pipeline_188b3f4a-3497-4ffd-af27-53906ab0a265",
+                  "pipeline_version_id": "definition_36d30bd7-7ee2-4521-ab4f-855401001f4f",
+                  "version_name": "sha256-6458a09f88ff7531b9b585f355a34d45aecd2be495937133ca9d30447fc53d54"
+                },
+                "inference": {
+                  "pipeline_id": "pipeline_7abf9bf6-0356-4a53-bc9f-c259cee39a66",
+                  "pipeline_version_id": "definition_23bc274f-db43-4f60-909d-7e2ffe90a393",
+                  "version_name": "sha256-8db4deca5a563c63939c7de0d646ca8c6647705742330eedeb863a2f8c7d92ea"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "kfp": {
+        "targets": [
+          {
+            "id": "f55ac62dab092850367f418e8fd1e39631b7647770a09381e6631c63f7997eae",
+            "name": "fixture",
+            "image_id": "sha256:2c31ef2958e59afcdb5b130e7f33c2c6c1a53f7f38d915c0e1c57f36d05b2da8",
+            "started_at": "2026-10-19T11:21:01.417548406Z",
+            "limits": {
+              "Memory": 8589934592,
+              "NanoCpus": 0,
+              "CpuQuota": 0,
+              "CpuPeriod": 0,
+              "CpusetCpus": ""
+            }
+          }
+        ],
+        "idle": {
+          "elapsed_seconds": 30.008601175,
+          "sampling_duration_seconds": 30.008601175,
+          "cpu_seconds": 8.955515,
+          "cpu_mean_percent": 29.843160458478117,
+          "memory_mean_bytes": 1982221951.2336903,
+          "memory_peak_bytes": 2002546688,
+          "memory_charged_mean_bytes": 2049890815.014872,
+          "memory_charged_peak_bytes": 2070216704,
+          "samples": 31
+        },
+        "trials": [
+          {
+            "elapsed_seconds": 172.016012751,
+            "sampling_duration_seconds": 172.016012751,
+            "cpu_seconds": 94.52436,
+            "cpu_mean_percent": 54.95090746977594,
+            "memory_mean_bytes": 2150553364.4297705,
+            "memory_peak_bytes": 2304057344,
+            "memory_charged_mean_bytes": 2339870269.8524137,
+            "memory_charged_peak_bytes": 2698952704,
+            "samples": 172,
+            "workload_seconds": 172.01108311200005,
+            "receipt": {
+              "backend": "native-kfp",
+              "training_run_id": "335ac853-6187-403c-8309-323d58ff029f",
+              "inference_run_id": "0a675319-3a4d-4c73-84e5-0f897d534b5f",
+              "inference_state": "SUCCEEDED",
+              "model_uri": "minio://mlpipeline/v2/artifacts/sample-training/335ac853-6187-403c-8309-323d58ff029f/train-sample/3b1b6a78-dd62-4005-8f27-cf37b08556be/model",
+              "inference_dataset_uri": "minio://mlpipeline/v2/artifacts/sample-training/335ac853-6187-403c-8309-323d58ff029f/split-sample/6f1b66f7-b769-42a6-8bea-aafa7ac95af5/inference_data",
+              "registrations": {
+                "training": {
+                  "pipeline_id": "bb6e063c-9303-4279-8f50-03f8b8179985",
+                  "pipeline_version_id": "52e4cc92-d08f-4d0d-a15a-3434ec309e1c",
+                  "version_name": "sha256-278e9b88bc5a7ae7e6cbface8e296c5c075a64bfbfb98b962e85f5fe80c4c8ed"
+                },
+                "inference": {
+                  "pipeline_id": "47e4df10-8cb4-454c-8769-e20dd3403928",
+                  "pipeline_version_id": "8edfac98-9087-450b-84d4-2eb0d8db60c6",
+                  "version_name": "sha256-084467732015f69a54a615b14f112c3b5ccff7ec26a98054ca829279c75be51f"
+                }
+              },
+              "cache_policy": "disabled",
+              "name_prefix": "benchmark:51d09040083f4fef9e36488b678e2985:trial:1",
+              "task_execution": {
+                "training": {
+                  "train-sample": {
+                    "task_id": "4646a5a7-1609-41c4-9f80-989c115b5cbb",
+                    "state": "SUCCEEDED",
+                    "state_history": [
+                      "RUNNING",
+                      "SUCCEEDED"
+                    ],
+                    "execution_id": null,
+                    "pod_name": null,
+                    "mlmd_execution_id": 33,
+                    "mlmd_state": "COMPLETE"
+                  },
+                  "evaluate-sample": {
+                    "task_id": "6d6f5eb8-397e-49cd-a404-9e33db51fe31",
+                    "state": "SUCCEEDED",
+                    "state_history": [
+                      "RUNNING",
+                      "SUCCEEDED"
+                    ],
+                    "execution_id": null,
+                    "pod_name": null,
+                    "mlmd_execution_id": 34,
+                    "mlmd_state": "COMPLETE"
+                  },
+                  "validate-sample": {
+                    "task_id": "70ebb313-29b7-4acd-8c0e-dac58e105f4d",
+                    "state": "SUCCEEDED",
+                    "state_history": [
+                      "RUNNING",
+                      "SUCCEEDED"
+                    ],
+                    "execution_id": null,
+                    "pod_name": null,
+                    "mlmd_execution_id": 31,
+                    "mlmd_state": "COMPLETE"
+                  },
+                  "split-sample": {
+                    "task_id": "af921cb1-ae2b-4c00-95b9-ca609ae9e28c",
+                    "state": "SUCCEEDED",
+                    "state_history": [
+                      "RUNNING",
+                      "SUCCEEDED"
+                    ],
+                    "execution_id": null,
+                    "pod_name": null,
+                    "mlmd_execution_id": 32,
+                    "mlmd_state": "COMPLETE"
+                  }
+                },
+                "inference": {
+                  "score-predictions": {
+                    "task_id": "09a9e1df-ff88-4724-9588-87268159ba5f",
+                    "state": "SUCCEEDED",
+                    "state_history": [
+                      "RUNNING",
+                      "SUCCEEDED"
+                    ],
+                    "execution_id": null,
+                    "pod_name": null,
+                    "mlmd_execution_id": 39,
+                    "mlmd_state": "COMPLETE"
+                  },
+                  "predict-sample": {
+                    "task_id": "373af0a3-0c12-409b-ac72-560c23020e38",
+                    "state": "SUCCEEDED",
+                    "state_history": [
+                      "RUNNING",
+                      "SUCCEEDED"
+                    ],
+                    "execution_id": null,
+                    "pod_name": null,
+                    "mlmd_execution_id": 38,
+                    "mlmd_state": "COMPLETE"
+                  }
+                }
+              },
+              "pipeline_aliases": {
+                "training": "sample-benchmark-training",
+                "inference": "sample-benchmark-inference"
+              },
+              "mlmd_contexts": {
+                "training": {
+                  "context_id": 8,
+                  "run_id": "335ac853-6187-403c-8309-323d58ff029f"
+                },
+                "inference": {
+                  "context_id": 9,
+                  "run_id": "0a675319-3a4d-4c73-84e5-0f897d534b5f"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "versions": {
+      "kfp": "2.17.0",
+      "docker": "7.2.0",
+      "dockflow-cli": "0.1.0.dev0",
+      "dockflow-pipelines": "0.1.0.dev0"
+    },
+    "component_image": "sha256:997983e7252800c25036ef4f7827428e8102479d810f510d430e4ae6cc078a5f",
+    "unrelated_containers": [
+      {
+        "name": "dockflow-attempt_23a7b2d5-593e-40aa-a6c2-b52f2a3e5e84",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_d44a8551-e08a-47ad-9b9f-aa94f5d85da9",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_bb820ee6-c3cd-4c2b-a94b-4ac2815cdc0b",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_d0e3c9fd-b92c-49f7-ad81-8b72d24cfb79",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_e4cb3e3b-75d7-4dc1-905a-aff6c5b7b252",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_4d888b2b-d08f-4699-9c26-f4bed6456ba3",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_a8cb87cf-d4ce-4e71-949c-21e2d3984659",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_b2b046b7-66b4-4048-9845-98c53dcf1153",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_fdda790a-c1e2-4c8a-af2d-09e51359c330",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_4831ffca-7beb-4531-afea-4572c1b0d1cb",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_7001e7ad-451c-4f56-a5b5-5bf38ba22af8",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_ff9d6042-49bf-41dd-87e9-c86466020ff3",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_41c1bbc7-2c5d-4041-b548-fe3ebd003ca7",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_bb44c265-0a8a-4153-9592-e270c3e9dfc0",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_95c7c6e9-9ae2-4cb1-9154-312c45bde826",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_890934cd-4f91-4aff-a642-9993122192c8",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_239aec12-b2ee-4aee-b200-2005e3199a4d",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_ad08ef33-10bf-480f-b101-f0f5fccd959a",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_c671df96-a061-45db-b655-7d5fee0a6004",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_2fb8ba63-3116-4463-89cd-15359e0dafac",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_bbc03f77-c7e9-475e-a922-b87dd2dac410",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_bef9f1bd-4843-45d8-bb44-29b201dac251",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_cf2cba5b-3d3a-4049-9e10-f5c2c283d1f5",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_8bc33c3c-d96d-43fa-9527-120d5542465a",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_86012475-f513-46cd-9db9-a182973e4b3c",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_d32c26b7-9919-40f3-9010-ca9cd9bef329",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_506fd305-c0fd-4592-9916-b5c57c70e1ac",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_0cbb2baf-ff31-4d98-8891-a5da7acd1250",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_23666b7e-698d-47b5-88f9-9919f890dba5",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_661532c9-5363-46d1-bfd6-4df577d26e10",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_994fe4bd-802c-4e57-8792-dd621bf0ad18",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_67133621-6025-442e-9303-7595005c5d83",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_a5f7f508-2c36-4e24-ab6a-3214a0ff1b76",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_4f921043-3f6e-482a-aed0-d40e4ad28eb6",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_f103cb79-9455-4c53-9848-49b3814558e8",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_b8c003aa-dd58-4fea-86b2-f3bb52c2ec75",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_59df7a0d-dd0e-4703-9085-3b28d0c2573b",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_64c5c2c9-e811-46c5-bc9a-77683a0c2348",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_521fec1d-7465-4cc5-bd1a-f369e0cdd0d7",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_7ed7958e-3b0d-46db-a338-5cd3d7df0c04",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_82324774-6f07-4e46-8bfb-97f7f8acf96b",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_9738503b-16f0-4465-bc22-75c087bb174a",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_7c2685a1-e98f-48bb-9cee-52360d803570",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_19c6fa79-becb-4d1e-b8fe-d26fa182af0a",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_04d3f8c4-c970-4b59-9018-f9ff8f2b3483",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_62973861-8adc-4e35-94eb-3f3e32f758ea",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_a95c8d18-3f79-4893-84c4-fba9222967db",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_50f681e0-c227-45c4-99b6-be2f100a7d91",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_4d6874ae-1d6f-40f2-88c8-4811b18f7ae5",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_715470e4-6782-4cae-90a9-5115648cc436",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_f0271fca-c5ca-487d-aeca-2452b13b64f2",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_0d7b3524-15c7-4585-a78e-7ba5f4230eda",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_6e325af3-84a6-4939-933f-2fa9a286fd8f",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_45654c9b-69c8-4f5c-9ebb-57921e38c1ae",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_e161b500-a079-473a-ab5b-f2f14f2921f9",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_6d0d4b0a-5422-48ce-9837-29643307e196",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_685d7db8-b297-46ea-a104-71d14f6c3970",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_4a2260e9-515e-4131-9eb3-70bfd3cac308",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_1d3ec56d-89d7-41a7-a38c-3808c9944e61",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_1ab3a2c5-d07c-493c-904b-b429f98b738f",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_6392b215-ded0-49ae-b2bb-dc03916421e0",
+        "status": "exited"
+      },
+      {
+        "name": "dockflow-attempt_0cbda78e-b86d-4e0e-b06e-fa50466eb77c",
+        "status": "exited"
+      },
+      {
+        "name": "portainer",
+        "status": "restarting"
+      }
+    ],
+    "restoration_errors": [],
+    "finished_at": "2026-10-19T11:27:13.601251+00:00"
+  },
+  "evidence_directory": "<fixture>/.runtime/benchmarks/2026-10-19-comparison-final",
+  "evidence_sha256": {
+    "compose-idle.jsonl": "d32240b79f85e857b5f5bcbe3fa0e99ce9cfb48627922f0e684a2cf5d635d3bb",
+    "compose-trial-1.jsonl": "6b69171f9f4c36c93c62770a7b3757bac93e823e5c54b4b9b9beca58deb9080c",
+    "compose-trial-1.log": "c7667a1efc3ec61b679f4fb3c9a27ad074cb69ad0d7a1ba88f3b878ac5206c82",
+    "final-state.json": "c2c89a4c891efc7e174a607c738ca614b88c154764ab54bb875a1da16f0c4f28",
+    "kfp-idle.jsonl": "4b2b19024a8a24bcf3f44bfdb03fdf2a6e8135af3a9477859bfbc02f6cda35d6",
+    "kfp-trial-1.jsonl": "2dbcb2fb660caeb3e3c11ecb797ea36454a7f465d2cffbf065b92785fb07364d",
+    "kfp-trial-1.log": "6f906eafa889ccfb998d01aef4c6786b35d092fda9a8a2e7268a3a851c2b6db5",
+    "lifecycle.log": "7651458657f2789b1635fdf11bdfc355f95d1202529528c80714dbeebcf9f158",
+    "report.md": "888e7a1695892a8dbbbb7a6ab49c0797b5b4c90e16227a1b5490579ce9e09bd6",
+    "results.json": "8fb44985f0ecf0ebd9ad87a1acee17c7c3ccda98a339bcb12d551a7d9d315e23"
+  },
+  "final_verification": {
+    "serving_state": {
+      "compose": true,
+      "kfp": false,
+      "forward": false
+    },
+    "metadata": {
+      "valid": true,
+      "project_id": "fixture-example-service",
+      "accepted_sequence": 1130,
+      "errors": [],
+      "index_checked": true,
+      "content_verified": true
+    },
+    "available_verified_artifacts": 124,
+    "retained_run_states": {
+      "run_2b3e4dfc-3834-490a-94d7-170c3d0546de": "succeeded",
+      "run_7a5d4831-db41-48e3-8e2d-8e876bbbcd03": "succeeded",
+      "run_bdcacb07-fd69-4954-9278-7cf6ed919bbd": "succeeded"
+    }
+  },
+  "checks": {
+    "example_pytest": {
+      "passed": 232,
+      "command": ".venv/bin/pytest -q"
+    },
+    "ruff_lint_format": "passed",
+    "shell_syntax": "passed",
+    "independent_raw_metric_recomputation": "passed; all four phases match at 1e-12 relative tolerance, 4 Compose targets / 1 minikube target, no missing samples or CPU resets",
+    "fresh_workload_execution": "four training and two inference component executions per backend verified",
+    "macrostates": {
+      "version": "0.5.0",
+      "check": "passed",
+      "verify": "passed"
+    },
+    "benchmark_help": "passed"
+  },
+  "qualification": {
+    "measured_scope": "Dockflow Compose versus standalone KFP on Docker-driver minikube",
+    "final_pairs_per_backend": 1,
+    "default_pairs_per_backend": 3,
+    "rejected_attempts": [
+      "2026-10-19-comparison",
+      "2026-10-19-comparison-r2",
+      "2026-10-19-comparison-r3"
+    ],
+    "rejected_attempts_included_in_final_metrics": false,
+    "limitations": [
+      "Single host and one tiny sample dataset workload pair per backend; no confidence interval or production scalability claim.",
+      "Warm images and operating-system caches; fixed backend order; existing histories retained.",
+      "Startup/build/install and common host Docker/client/port-forward processes excluded.",
+      "Whole minikube node includes Kubernetes overhead; full Kubeflow suite is not measured.",
+      "No equal-resource-limit claim; native node has 8GiB memory limit and no Docker CPU quota; Compose is uncapped.",
+      "Unrelated Portainer container was restarting; host activity may affect time."
+    ]
+  },
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

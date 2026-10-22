@@ -1,0 +1,8 @@
+# Keep authored text portable and preserve canonical snapshot bytes on checkout.
+* text=auto eol=lf
+/.macrostates/specs/000_meta/** -text
+/.macrostates/specs/001_process/** -text
+/.macrostates/specs/010_repository-1/** -text
+/.macrostates/specs/011_docker-1/** -text
+/.macrostates/specs/020_python-1/** -text
+/.macrostates/specs/030_python-project-1/** -text

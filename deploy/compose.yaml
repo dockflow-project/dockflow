@@ -1,0 +1,117 @@
+name: ${COMPOSE_PROJECT_NAME:-dockflow-reference}
+
+x-service-image: &service-image
+  image: ${DOCKFLOW_IMAGE:-dockflow-pipelines:development}
+  platform: linux/amd64
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+
+services:
+  initialize:
+    image: ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+    user: "0:0"
+    command: ["sh", "-c", "chown 10001:10001 /state /execution /docker-socket"]
+    volumes:
+      - dockflow-state:/state
+      - dockflow-execution:/execution
+      - docker-socket:/docker-socket
+    restart: "no"
+
+  docker-engine:
+    image: docker:29.1.3-dind@sha256:173f284a4299164772a90f52b373e73e087583c0963f1334c9995f190ef6f3f5
+    privileged: true
+    entrypoint: ["sh", "-c"]
+    command:
+      - "addgroup -g 10001 dockflow 2>/dev/null || true; exec dockerd --host=unix:///docker-socket/docker.sock --group=dockflow --insecure-registry=registry:5000"
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    volumes:
+      - docker-socket:/docker-socket
+      - dockflow-execution:/execution
+      - docker-state:/var/lib/docker
+      - docker-containerd:/var/lib/containerd
+    healthcheck:
+      test: ["CMD", "docker", "--host=unix:///docker-socket/docker.sock", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  minio:
+    image: dockflow-minio:source-9e49d5e7
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Minio.Dockerfile
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set local MinIO credentials in deploy/.env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set local MinIO credentials in deploy/.env}
+    command: ["server", "/data", "--console-address", ":9001"]
+    volumes:
+      - artifacts:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+    restart: unless-stopped
+
+  bucket:
+    <<: *service-image
+    entrypoint: ["python", "-c"]
+    command:
+      - "import boto3,os; s=boto3.client('s3',endpoint_url='http://minio:9000'); b=os.environ['MINIO_BUCKET']; s.create_bucket(Bucket=b) if b not in [x['Name'] for x in s.list_buckets()['Buckets']] else None"
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?Set local credentials}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?Set local credentials}
+      AWS_DEFAULT_REGION: us-east-1
+      MINIO_BUCKET: ${MINIO_BUCKET:-dockflow}
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+  registry:
+    image: registry:2.8.3@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+    ports:
+      - "127.0.0.1:5001:5000"
+    volumes:
+      - registry-data:/var/lib/registry
+    restart: unless-stopped
+
+  dockflow:
+    <<: *service-image
+    environment:
+      DOCKER_HOST: unix:///docker-socket/docker.sock
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?Set local credentials}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?Set local credentials}
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "127.0.0.1:${DOCKFLOW_PORT:-8080}:8080"
+    volumes:
+      - ${DOCKFLOW_CONFIG:-./dockflow.toml}:/config/dockflow.toml:ro
+      - ${DOCKFLOW_DEFINITIONS:-./definitions}:/definitions:ro
+      - ${DOCKFLOW_INPUTS:-./inputs}:/inputs:ro
+      - dockflow-state:/state
+      - dockflow-execution:/execution
+      - docker-socket:/docker-socket
+    depends_on:
+      bucket:
+        condition: service_completed_successfully
+      docker-engine:
+        condition: service_healthy
+    stop_grace_period: 45s
+    restart: unless-stopped
+
+volumes:
+  dockflow-state:
+  dockflow-execution:
+  docker-socket:
+  docker-state:
+  docker-containerd:
+  artifacts:
+  registry-data:

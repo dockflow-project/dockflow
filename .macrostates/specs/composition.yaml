@@ -1,0 +1,100 @@
+schema_version: 1
+project:
+  name: dockflow
+  entrypoint: main.md
+  version: specs-0.1.0
+packages:
+- name: meta
+  version: 3.0.0
+  path: 000_meta
+  entrypoint: README.md
+  source:
+    type: git-archive
+    repository: https://github.com/Macrostates/macrostates-meta.git
+    tag: v3.0.0
+- name: process
+  version: 5.1.0
+  path: 001_process
+  entrypoint: README.md
+  source:
+    type: git-archive
+    repository: https://github.com/Macrostates/macrostates-process.git
+    tag: v5.1.0
+- name: repository-1
+  version: 4.0.0
+  path: 010_repository-1
+  entrypoint: README.md
+  source:
+    type: git-archive
+    repository: https://github.com/Macrostates/macrostates-repository-1.git
+    tag: v4.0.0
+- name: docker-1
+  version: 3.0.0
+  path: 011_docker-1
+  entrypoint: README.md
+  source:
+    type: git-archive
+    repository: https://github.com/Macrostates/macrostates-docker-1.git
+    tag: v3.0.0
+- name: python-1
+  version: 2.1.1
+  path: 020_python-1
+  entrypoint: README.md
+  source:
+    type: git-archive
+    repository: https://github.com/Macrostates/macrostates-python-1.git
+    tag: v2.1.1
+- name: python-project-1
+  version: 3.0.0
+  path: 030_python-project-1
+  entrypoint: README.md
+  source:
+    type: git-archive
+    repository: https://github.com/Macrostates/macrostates-python-project-1.git
+    tag: v3.0.0
+- name: dockflow
+  version: 0.5.0
+  path: 051_dockflow
+  entrypoint: README.md
+  source:
+    type: local
+- name: dockflow-cli
+  version: 0.2.1
+  path: 052_dockflow-cli
+  entrypoint: README.md
+  source:
+    type: local
+- name: dockflow-pipelines
+  version: 4.1.1
+  path: 053_dockflow-pipelines
+  entrypoint: README.md
+  source:
+    type: local
+- name: dockflow-artifacts
+  version: 2.1.1
+  path: 054_dockflow-artifacts
+  entrypoint: README.md
+  source:
+    type: local
+authority_order:
+- meta
+- process
+- dockflow
+- dockflow-cli
+- dockflow-pipelines
+- dockflow-artifacts
+- python-project-1
+- python-1
+- docker-1
+- repository-1
+reading_order:
+- meta
+- process
+- repository-1
+- docker-1
+- python-1
+- python-project-1
+- dockflow
+- dockflow-cli
+- dockflow-pipelines
+- dockflow-artifacts

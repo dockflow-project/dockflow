@@ -1,0 +1,5 @@
+# KFP 2.17 requires urllib3==2.7.0. This security override is qualified by
+# Dockflow's KFP API/upload and DockerRunner tests; remove after upstream fixes
+# its pin. Keep aligned with [tool.uv].override-dependencies in pyproject.toml.
+# For standalone installs: uv pip install --overrides tools/runtime-overrides.txt ...
+urllib3==2.8.0

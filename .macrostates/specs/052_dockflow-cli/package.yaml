@@ -1,0 +1,12 @@
+name: dockflow-cli
+version: 0.2.1
+versioned_at: 2026-10-21 15:51
+description: Dockflow shared executable, module discovery, and CLI registration requirements.
+entrypoint: README.md
+dependencies:
+  - name: dockflow
+    version: 0.2.0
+    constraint: at_least
+  - name: python-project-1
+    version: 3.0.0
+    constraint: at_least

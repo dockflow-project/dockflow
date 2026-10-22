@@ -1,0 +1,17 @@
+{
+  "dataset": "data/external/sample/subset.data",
+  "dataset_sha256": "312fce1000096c54ffcb727fff276e3686be726052827ed81d4f98ccd39aeed3",
+  "component_image": "fixture:example-v6",
+  "training_run": "run_dccd6c67-52d2-40df-b5a9-a4dede0e2e86",
+  "inference_run": "run_0479d8c5-b176-48e0-b8dc-6ea5748c5c60",
+  "split_rows": [
+    30,
+    10,
+    10
+  ],
+  "classes": [
+    "1"
+  ],
+  "example_tests_passed": 248,
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

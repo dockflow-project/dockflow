@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  specifications:
+    name: Specification composition and imported integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: '0.12.24'
+          python-version: '3.13'
+      - run: uv venv .venv-macrostates --python 3.13
+      - run: uv pip install --python .venv-macrostates/bin/python --requirement tools/macrostates/requirements.txt
+      - run: .venv-macrostates/bin/macrostates check
+
+  base-packages:
+    name: Base packages / ${{ matrix.os }} / Python ${{ matrix.python }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14, windows-2022]
+        python: ['3.12', '3.13']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: '0.12.24'
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - run: uv sync --locked --all-packages
+      - run: uv run --locked python tools/version.py
+      - run: uv run --locked pytest packages/cli/tests packages/pipelines/tests/unit packages/pipelines/tests/test_definitions.py
+      - run: uv run --locked python tools/verify_packages.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: packages-${{ matrix.os }}-py${{ matrix.python }}
+          path: dist/
+
+  linux-runtime:
+    name: Linux runtime / Python ${{ matrix.python }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.12', '3.13']
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: '0.12.24'
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - run: uv sync --locked --all-packages --all-extras
+      - name: Export locked third-party dependencies
+        if: matrix.python == '3.13'
+        run: |
+          mkdir -p tmp/security
+          uv export --locked --all-packages --all-extras --no-emit-workspace --no-hashes --output-file tmp/security/requirements.txt
+      - name: Audit locked dependencies
+        if: matrix.python == '3.13'
+        run: uvx --from pip-audit==2.10.1 pip-audit --requirement tmp/security/requirements.txt --no-deps --disable-pip
+      - run: uv run --locked ruff check .
+      - run: uv run --locked ruff format --check .
+      - run: uv run --locked pyright
+      - run: uv run --locked python tools/generate_api_docs.py --check
+      - run: node --test packages/pipelines/tests/web/*.test.mjs
+      - run: uv run --locked pytest --cov --cov-report=xml
+        env:
+          DOCKFLOW_TEST_DOCKER: '1'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: runtime-evidence-py${{ matrix.python }}
+          path: coverage.xml

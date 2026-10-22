@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-19T19:40:52.234705+00:00",
+  "source": {
+    "branch": "feat/initial-implementation",
+    "commit": null,
+    "accepted_baseline": false,
+    "files_sha256": {
+      "packages/pipelines/src/dockflow_pipelines/metadata.py": "00f19d1c56489cdccd749f4255e374b8e9b13cb410028cc0dd14db3bd55d34a2",
+      "packages/pipelines/src/dockflow_pipelines/cli.py": "8682a2ba9f0306fdb62c189a99c845fda06629d1d48e1425ea4e42bdc0bc3abe",
+      "packages/pipelines/src/dockflow_pipelines/openapi.py": "cf6cf4efb1f4f90cfdf633fa69d9ae9a196b3b797421bda991d814eb36334e9e",
+      "packages/pipelines/tests/integration/test_ownership.py": "6f58df70a06485b1897120a576ce688bdda1340be9a14983623ddb9db9e6292b",
+      "packages/pipelines/tests/test_direct_ownership_recovery.py": "511e0a4f86685e9b0ccc252547bd0b9bca648e2aaab9b4b5a40faa9d93be6be0",
+      "packages/pipelines/tests/test_interfaces.py": "68e8b40ddc9a93b9a1790e6899921ff7a5d6d02f37b2a49eaa896a56fe7b9214",
+      "packages/pipelines/tests/test_owner_bind_mount.py": "a0251b9ad5e72893cc0abb09b127a9b44e223378bcfa5fb66d51fc4ef1209279",
+      "docs/persistence.md": "c2b794133799d29f26bfb26b50130f48356e27da86678ea421556ff2cf5bc1e0",
+      "deploy/README.md": "e0b7a9406a786363ee03a9a3417dc2d9aed9dc74fa5dfd16af8fbabe5e5c9a5f",
+      ".macrostates/implementation/main.md": "62aae786082743103f647729d2e25597e3f097f6ee7abdbc1582d08a9893e55d",
+      ".macrostates/specs/main.md": "3c1a0e19532346a2a85af88b923cb0e5f1f9f98b642942ee09c67b8431f1dcb4",
+      ".macrostates/specs/composition.yaml": "985b16249feaeeb7c550582a50088b56391ef12149c9b6988fe675675197ceb6",
+      ".macrostates/specs/053_dockflow-pipelines/001_pipelines.md": "fd655c8099a68eed9172a3dd87b3cc3381c56c645cebb8065c6e6dbc9c23cac9",
+      ".macrostates/specs/053_dockflow-pipelines/002_local-execution.md": "d05138bc6660264eba66da97c22e1a45d98d4ad384c21ba81aaaf134ff113f44",
+      ".macrostates/specs/053_dockflow-pipelines/003_configuration-and-backends.md": "8366481cabb76322aa434a5987dd6a46a593da2a6d09b5a967dd1725740049ff",
+      ".macrostates/specs/053_dockflow-pipelines/004_kfp-compatibility.md": "6c4be5c3cde722d8a9544a625ef2cbc2f48ce1f16cb6b820340441f4417e7db0",
+      ".macrostates/specs/053_dockflow-pipelines/005_execution-and-lifecycle.md": "5139985f0efe2156125354e39d402afe20917b0fe8432b8ece546702be9d3027",
+      ".macrostates/specs/053_dockflow-pipelines/006_artifacts.md": "b161cb655ffa40bb98565b57094a566f288e240745331ada342eabbc06e719c8",
+      ".macrostates/specs/053_dockflow-pipelines/007_metadata-and-recovery.md": "97f04725bb13958ddf1a31bf7870facc52b21e0ca7367adb9aa34fa1aaedd3e1",
+      ".macrostates/specs/053_dockflow-pipelines/008_reuse-and-selection.md": "a19f390c370ef2837ab524e41f8d3635923ecbd5e44e4a86413e4a90b6d40065",
+      ".macrostates/specs/053_dockflow-pipelines/009_cli.md": "dae4ad3a093facbee304e7af10ad70b18af75b89a1ebc12fa6ac38e2f8feb091",
+      ".macrostates/specs/053_dockflow-pipelines/010_service-api.md": "7bf20d122ab04e8c950ce46cd7f29f59843ffaba76a3464cdae82f9d92cf3380",
+      ".macrostates/specs/053_dockflow-pipelines/011_acceptance.md": "4fdcd9a7d442df74fb28af2ea42789b8537fc9b9688f24b70350da98405e3e12",
+      ".macrostates/specs/053_dockflow-pipelines/012_review-and-qualification.md": "0e7b4adc022b39d2a9165b9d15de3230b1fe50675ff33917fa81d1bf8abf78b0",
+      ".macrostates/specs/053_dockflow-pipelines/README.md": "77bba7b7fa6503d3c0672bf8874267040f45be11fae58769ead6abf0ec3447b0",
+      ".macrostates/specs/053_dockflow-pipelines/package.yaml": "a8d008c03e2cd59996a081a0ea10bd55ba399be03090b3fd7d4c05bb53c630c8",
+      "packages/pipelines/src/dockflow_pipelines/service.py": "f0d24ed0ca958ece90b60e0ffb28ae9c9e2e3f777acd1e6dd80e384f7e53b995"
+    }
+  },
+  "specification": {
+    "project_baseline": "specs-0.1.0-provisional",
+    "pipelines_package_before": "1.1.1",
+    "pipelines_package_after": "1.2.0",
+    "impact": "Minor: additive owner-instance diagnostics and clarified shared-state/recovery contract",
+    "external_lock_sha256": "970f457083568f560f333ee66bb65d2ff7aa4858e01601c0dbf8093d72a181e4",
+    "external_lock_unchanged": true
+  },
+  "application_version": "0.1.0.dev0",
+  "application_version_changed": false,
+  "runtime": {
+    "python": "3.13.16",
+    "host_platform": "Linux-7.1.13-2-MANJARO-x86_64-with-glibc2.44",
+    "docker_bind_mount_image": "python:3.13-slim",
+    "image_preexisting": true,
+    "image_pulled": false,
+    "docker_bind_mount_image_id": "sha256:ce3ff9524414289fc922d9d5dc1de87abc77a39ff2ff5007435839f2af1d7569"
+  },
+  "owner_contract": {
+    "enforcement": "nonblocking OS lock on stable owner.lock inode",
+    "diagnostic_schema": 1,
+    "fields": [
+      "schema_version",
+      "owner_id",
+      "hostname",
+      "pid",
+      "mode",
+      "project_id",
+      "acquired_at",
+      "endpoint"
+    ],
+    "owner_id": "canonical UUIDv4 per coordinator acquisition; retained for nested shared-coordinator contexts",
+    "machine_label": "hostname in execution environment, not globally unique physical-machine identity",
+    "contention": "CONFLICT409 with bounded validated owner metadata and explicit endpoint guidance",
+    "lock_failure": "UNAVAILABLE503 with failed operation and errno; no unlocked writes",
+    "metadata_authority": false,
+    "lease_expiry_or_pid_takeover": false,
+    "direct_recovery": "Before catalog persistence or admission, refuse retained nonterminal/queued Runs, unresolved attempts or index reconciliation; explicit service reconciliation/drain required",
+    "service_recovery": "Only after all uncertain attempts reconcile successfully, clear run recovery holds; preserve terminal outcomes and queued history, retaining flags when confirmation fails."
+  },
+  "validation": {
+    "commands": [
+      ".venv/bin/pytest -m 'not docker and not s3' -q -o faulthandler_timeout=30 --junitxml=tmp/shared-state-owner/non-docker.xml",
+      "DOCKFLOW_TEST_DOCKER=1 .venv/bin/pytest packages/pipelines/tests/test_owner_bind_mount.py packages/pipelines/tests/test_service_runtime.py -q -o faulthandler_timeout=45 --junitxml=tmp/shared-state-owner/docker-service.xml",
+      ".venv/bin/ruff check packages tests tools",
+      ".venv/bin/ruff format --check packages tests tools",
+      ".venv/bin/pyright",
+      ".venv/bin/python tools/version.py",
+      ".venv-macrostates/bin/macrostates check",
+      ".venv-macrostates/bin/macrostates verify"
+    ],
+    "regression": {
+      "tests": 155,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tmp/shared-state-owner/non-docker.xml",
+      "sha256": "61654ae543023b735142c613bc7db73db74af51905bb616842ee0853a9971486"
+    },
+    "ruff_lint": "passed",
+    "ruff_format": "passed, 35 Python files",
+    "pyright": "0 errors, 0 warnings",
+    "version_consistency": "passed",
+    "macrostates": {
+      "version": "0.5.0",
+      "check": "passed",
+      "verify": "passed"
+    },
+    "upstream_warnings": [
+      "Starlette/AnyIO BlockingPortal deprecation",
+      "KFP SDK compatibility FutureWarning"
+    ],
+    "covered": [
+      "real subprocess local/service contention before control/index mutation",
+      "actual host/container bind mount at different absolute paths and PID namespaces",
+      "stable inode and fresh owner UUID after clean release and abrupt owner death",
+      "legacy, malformed, invalid UTF-8, unsupported schema and oversized diagnostic contents",
+      "nonsecret owner whitelist and credential-free endpoints",
+      "symlink/directory/FIFO lock refusal and unsupported/I/O failures",
+      "shared-coordinator nested and simultaneous thread contexts",
+      "live API owner versus direct CLI and inverse service-startup refusal",
+      "direct admission blocked after owner death with unconfirmed retained attempt",
+      "fresh/terminal histories remain eligible for direct execution",
+      "confirmed service recovery clears terminal Run holds while preserving outcomes/error/finished_at",
+      "unreachable daemon/unconfirmed stop and partial recovery preserve Run hold until successful retry",
+      "actual Docker service worker execution, official KFP client and service restart"
+    ],
+    "sandbox_note": "An initial API TestClient run stalled under restricted socket/thread facilities and was terminated only in disposable test state; the elevated local regression run completed successfully.",
+    "docker_integration": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tmp/shared-state-owner/docker-service.xml",
+      "sha256": "86b75124a1ac8dd9c6483960e2864bfb7c1418bb5c4cc2703e3c9921adedb883"
+    },
+    "unique_tests_passed": 157
+  },
+  "scope_preservation": {
+    "dockflow_test_1_changed": false,
+    "existing_state_migrated_or_reset": false,
+    "existing_serving_processes_changed": false,
+    "dependency_lock_changed": false,
+    "commit_merge_publication": false
+  },
+  "limitations": [
+    "Qualified actual OS locking on native Linux x86-64/Python3.13 and one Linux Docker bind mount; native Windows/macOS and Python3.12 were not rerun in this refinement.",
+    "No distributed lease/fencing or arbitrary network-filesystem SQLite sharing guarantee.",
+    "Deleting/replacing a live lock inode or non-cooperating direct SQLite writes are outside the supported contract.",
+    "No migration/combination of existing independent project histories; fresh configurations must select consistent identity, storage, recorded paths and permissions.",
+    "Existing S3 reference Compose remains unchanged; repository-backed filesystem serving is a supported configuration requiring appropriate mounts/service dependencies.",
+    "No release or complete cross-platform qualification is claimed."
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

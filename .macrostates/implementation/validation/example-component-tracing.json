@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-20T09:10:32.480064+00:00",
+  "workflow": "2026-10-20__0Z2HAB__example-component-tracing.md",
+  "scope": "Component tracing qualification; Dockflow runtime/source dependencies unchanged",
+  "package": {
+    "name": "python-traceprint",
+    "version": "0.1.2",
+    "source": "https://pypi.org/project/python-traceprint/0.1.2/",
+    "extra": "components",
+    "runtime_imports": "Only the six standalone component programs import traceprint; wrappers inherit pipeline-defined environment"
+  },
+  "context": {
+    "pipeline": "KFP task set_env_variable TRACEPRINT_INITIAL_LABELS=sample/training or sample/inference",
+    "component": "Global tracer imports inherited context; adds only stage and operation spans, never sample",
+    "standalone": "No pipeline prefix unless caller supplies TRACEPRINT_INITIAL_LABELS",
+    "output": "Explicit print(file=tracer, flush=True), colors disabled, no global stream interception"
+  },
+  "source_sha256": {},
+  "tests": {
+    "command": "<fixture>/.venv/bin/pytest <fixture>/tests -q --junitxml=tmp/component-tracing/example-tests.xml",
+    "junit_sha256": "5e512764baf1f9f43d3a6db0d3923cc33b9ba45a30c79d6ddc7af16daedf4dc6",
+    "tests": 232,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "coverage": "Existing standalone graph retains all eight artifact hashes and evaluation metrics; failure paths preserve arbitrary parent trace context and reject sample dataset prefix; 232 example tests pass"
+  },
+  "image": {
+    "tag": "fixture:example-v4",
+    "id": "sha256:ccf34c4ff224e531d2393c94e7ffa56783f6b0f770174100ac0415a9d8945ced",
+    "build_log": "tmp/component-tracing/image-build.log",
+    "sha256": "fd0d2a1aee748d0e357f7108af5ea12b09ec0105f5cacec8c348815a95081785",
+    "published": false
+  },
+  "actual_execution": {
+    "isolation": "Fresh temporary Dockflow project with filesystem artifacts and reuse disabled; existing example/service data untouched",
+    "training": {
+      "run_id": "run_f2da8e4f-b350-46be-bb16-d59be6323e3a",
+      "state": "succeeded",
+      "stages": [
+        "validate",
+        "split",
+        "train",
+        "evaluate"
+      ],
+      "prefix": "sample/training"
+    },
+    "inference": {
+      "run_id": "run_d4e5fe35-18fa-4cab-aa35-fec0b65fa980",
+      "state": "succeeded",
+      "stages": [
+        "predict",
+        "score"
+      ],
+      "prefix": "sample/inference"
+    },
+    "retained_logs": "All six expected inherited paths confirmed via dockflow pipelines logs; no ANSI colors; entire log page drained",
+    "evidence": {
+      "tmp/component-tracing/example-tests.xml": "5e512764baf1f9f43d3a6db0d3923cc33b9ba45a30c79d6ddc7af16daedf4dc6",
+      "tmp/component-tracing/image-build.log": "fd0d2a1aee748d0e357f7108af5ea12b09ec0105f5cacec8c348815a95081785",
+      "tmp/component-tracing/inference-logs.json": "b06bc764957d7d09c895ff2cc94c4e6f96c4c8c4e7798caaab9726e80c564bc8",
+      "tmp/component-tracing/inference-logs.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tmp/component-tracing/inference-traces.txt": "3c947b31212b8b5ba0046a4bf1864e546206663b1666033d41001bc60851ea53",
+      "tmp/component-tracing/inference.json": "99d5a1ec9c5d8cff2ced04cf39c99afabdd202fb6e9d4466c11e3bd30ad9fec0",
+      "tmp/component-tracing/inference.stderr": "0cc1303c3bd3c5a00b683cc732ad680ebb20afa6679d6bec6628bc5215fc7513",
+      "tmp/component-tracing/training-logs.json": "eea11c4423cb420173937e28eec4d3fa36d304d814a99bfa01f3a286235ad344",
+      "tmp/component-tracing/training-logs.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tmp/component-tracing/training-traces.txt": "abf8780eefb2b5f6a69068592a19cf11cae24b6049b44481a1301bf7704d1a42",
+      "tmp/component-tracing/training.json": "3195320aacc2ad8ee8a81167a1b7b306bae59288dbafef2c073e488a42ee1de6",
+      "tmp/component-tracing/training.stderr": "11bf5bdc289b034665c61bf9f441db7da1e7c41448db7cb343c5aa0e23c301e9"
+    }
+  },
+  "other_checks": [
+    "Ruff check passed across example components/orchestration/src/tests/bin; 26 files already formatted",
+    "uv lock --check --offline passed; only traceprint plus its optional metadata added, no dependency upgrades",
+    "All six compiled computational executors carry correct pipeline environment; three importer executors remain unchanged"
+  ],
+  "limits": [
+    "No Compose or native minikube service restart, registry push or native KFP execution; existing start helpers load the prepared image on next invocation",
+    "No application/specification version or baseline changes, commit, merge or publication"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

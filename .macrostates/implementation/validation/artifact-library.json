@@ -1,0 +1,490 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-20T17:17:02.117974+00:00",
+  "application_version": "0.1.0.dev0",
+  "platform": "Linux x86_64 / Python 3.13.16 / Docker / KFP SDK and native backend 2.17.0",
+  "scope": "Monorepo artifact library, trusted task mounts, sample dataset custom publication in three execution modes",
+  "checks": {
+    "dockflow_regressions": {
+      "passed": 363,
+      "deselected_docker_and_s3": 16,
+      "upstream_warnings": 2
+    },
+    "example_regressions": {
+      "passed": 250
+    },
+    "real_seaweedfs": {
+      "passed": 1,
+      "covers": [
+        "concurrent identical publication",
+        "conflicting publication",
+        "interrupted directory publication and retry",
+        "tamper detection"
+      ]
+    },
+    "packaging": "Three wheels and sdists; isolated CLI-only, Artifacts-only and combined installs; every sdist independently rebuilt",
+    "static": [
+      "Ruff lint/format in both projects",
+      "Pyright",
+      "version consistency",
+      "generated API documentation",
+      "Macrostates composition/inventories",
+      "Compose config",
+      "shell syntax"
+    ],
+    "setup": "bin/setup.sh and bin/images.sh --rebuild-service completed"
+  },
+  "backends": {
+    "local": {
+      "training": {
+        "run_id": "run_79614ce9-c1a9-45e4-9dd0-4265a883c685",
+        "state": "succeeded",
+        "outputs": {
+          "inference_data": "artifact_b069a014-9a07-450a-852a-fac968c033ad",
+          "model": "artifact_32ef0ba2-1090-44b0-8aaf-fe0eeac444f0",
+          "validation_report": "artifact_c23c74fe-ec01-4f4f-8442-b3750876bd9a"
+        }
+      },
+      "inference": {
+        "run_id": "run_a19afc72-ff8a-4304-8e6d-bccd02e46497",
+        "state": "succeeded",
+        "outputs": {
+          "predictions": "artifact_1fe523e4-9e15-4e16-a04e-db6325f04560",
+          "report": "artifact_3e2d7d52-392a-4748-aad3-335f732675ce"
+        }
+      },
+      "model": {
+        "uri": "file://<example-root>/data/artifacts/sample/models/cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851/model.json",
+        "type": {
+          "schema_title": "system.Model",
+          "schema_version": "0.0.1"
+        },
+        "ownership": "reference"
+      },
+      "metadata_check": {
+        "valid": true,
+        "project_id": "fixture-example",
+        "accepted_sequence": 559,
+        "errors": [],
+        "index_checked": true,
+        "content_verified": true,
+        "availability": [
+          {
+            "artifact_id": "artifact_61c63efb-235b-4c2e-96f4-c5cf866fa80a",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_690587ff-9724-4803-b89f-acbc80229598",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_5af0a3dd-b641-4625-86c5-30903743554e",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_18398af1-0938-48b3-af3a-d1c31f68ef50",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_af3d5746-6fdb-4681-8c64-70937429a061",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_ee7155a5-3663-4700-91a5-1fe0c1a97cf1",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_001435f9-2bd4-4b53-8210-8839ba9a87ba",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_de87251b-f2f9-4124-8d09-4729c4bd0678",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_f22b47c8-016b-4afb-a77b-e6e0d9dfc7a7",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_8e1cd1fe-8ad8-4555-b80d-23847963b642",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_4eadf467-d4b3-45c2-a4bf-d77c5d5110cc",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_e1482b2f-19e3-4994-b425-0273d9894f23",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_8b6574be-a650-4ac7-acf8-18a6dac0166c",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_17fdf38a-a6f9-4196-b5e2-8043645750e0",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_6bb5c651-818e-424b-8ef0-b160f2d27844",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_e9dd2c14-8232-4fd9-8315-b6c6cd2cecdc",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_7f1f2db9-1db4-4018-ba6d-fbeb84fdb715",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_5d6dbe99-fec2-4497-a9ac-4606022dc5dc",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_c4db4053-ad89-4798-8864-2a3a2ea459ea",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_12ddd563-8f1f-4aa3-b166-0ad493bfb9d2",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_b069a014-9a07-450a-852a-fac968c033ad",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_32ef0ba2-1090-44b0-8aaf-fe0eeac444f0",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_7fca954b-0c12-4dab-bd2d-29e8d3724511",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_c23c74fe-ec01-4f4f-8442-b3750876bd9a",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_1fe523e4-9e15-4e16-a04e-db6325f04560",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_fe7ebfbd-bf3c-421f-9625-3c083a8e43b3",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_3e2d7d52-392a-4748-aad3-335f732675ce",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_75932e96-8dc8-4c30-a9ca-dc58e302af9b",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_e544b937-bd0e-40eb-b21e-e7c9f29c7a17",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_b69fd461-d933-47b5-808e-8d18f5ae1b98",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          }
+        ]
+      },
+      "verified_publications": 8
+    },
+    "compose": {
+      "training": {
+        "run_id": "run_82c02fb2-914a-422a-a41c-d02975f7dc5b",
+        "state": "succeeded",
+        "outputs": {
+          "inference_data": "artifact_dc912bf3-0be4-4d4c-97b0-7aad56e40f3f",
+          "model": "artifact_b8ca3ee1-82b8-4ef8-ab83-a7086c5a2d06",
+          "validation_report": "artifact_32afa8d8-d843-4e97-81c4-e319587697e1"
+        }
+      },
+      "inference": {
+        "run_id": "run_eb68abc2-9214-4aa5-bea9-87a98de32163",
+        "state": "succeeded",
+        "outputs": {
+          "predictions": "artifact_4f24b9f5-2217-404b-b85e-78422c6f460b",
+          "report": "artifact_48d36ab7-b482-4c11-80df-8cb2e34f5f25"
+        }
+      },
+      "model": {
+        "uri": "s3://fixture/artifacts/sample/models/cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851/model.json",
+        "type": {
+          "schema_title": "system.Model",
+          "schema_version": "0.0.1"
+        },
+        "ownership": "reference"
+      },
+      "metadata_check": {
+        "valid": true,
+        "project_id": "fixture-example-service",
+        "accepted_sequence": 243,
+        "errors": [],
+        "index_checked": true,
+        "content_verified": true,
+        "availability": [
+          {
+            "artifact_id": "artifact_09671043-18bc-404d-b412-df4a9e411c9f",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_451cb8e4-afe4-4324-a656-127d314bd44f",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_3304804e-3d3b-49e7-b249-5c2e675ab2f4",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_6a573017-19d1-42bb-bb83-58bb58f7a85d",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_d530e458-f514-415c-a40f-77984af7d991",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_dc912bf3-0be4-4d4c-97b0-7aad56e40f3f",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_b8ca3ee1-82b8-4ef8-ab83-a7086c5a2d06",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_1cff19c5-920a-41ca-b97f-838a9eddcd54",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_32afa8d8-d843-4e97-81c4-e319587697e1",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_4f24b9f5-2217-404b-b85e-78422c6f460b",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_f7e9c0fd-ff0a-49cb-9179-c4de10c09467",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          },
+          {
+            "artifact_id": "artifact_48d36ab7-b482-4c11-80df-8cb2e34f5f25",
+            "availability": "available",
+            "verified": true,
+            "reason": null
+          }
+        ]
+      },
+      "verified_publications": 8
+    },
+    "native_kfp": {
+      "training_run_id": "3364567c-ae4d-447c-830d-c814b4ccbee9",
+      "inference_run_id": "9abe31df-990c-40f6-919b-d6f8121ec7e7",
+      "state": "succeeded",
+      "typed_model_uri": "minio://mlpipeline/custom-artifacts/sample/models/cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851/model.json",
+      "computations": {
+        "training": {
+          "evaluate-sample": {
+            "mlmd_execution_id": 25,
+            "mlmd_state": "COMPLETE"
+          },
+          "train-sample": {
+            "mlmd_execution_id": 22,
+            "mlmd_state": "COMPLETE"
+          },
+          "split-sample": {
+            "mlmd_execution_id": 15,
+            "mlmd_state": "COMPLETE"
+          },
+          "validate-sample": {
+            "mlmd_execution_id": 12,
+            "mlmd_state": "COMPLETE"
+          }
+        },
+        "inference": {
+          "score-predictions": {
+            "mlmd_execution_id": 34,
+            "mlmd_state": "COMPLETE"
+          },
+          "predict-sample": {
+            "mlmd_execution_id": 31,
+            "mlmd_state": "COMPLETE"
+          }
+        }
+      },
+      "verified_publications": 8
+    }
+  },
+  "publications": [
+    {
+      "relative_path": "sample/datasets/1a9071f9e675a233b58de008f1082a14bcb53286d63af6b83678af2c7232e0ad/validated.json",
+      "sha256": "1a9071f9e675a233b58de008f1082a14bcb53286d63af6b83678af2c7232e0ad",
+      "type": "system.Dataset",
+      "identical_in_all_backends": true
+    },
+    {
+      "relative_path": "sample/datasets/seed-42/107ae9c689d35a20b6587949c63d1d944ff0f6c48f5291da4cd5eafa5d0c0367/validation.json",
+      "sha256": "107ae9c689d35a20b6587949c63d1d944ff0f6c48f5291da4cd5eafa5d0c0367",
+      "type": "system.Dataset",
+      "identical_in_all_backends": true
+    },
+    {
+      "relative_path": "sample/datasets/seed-42/9beb8a96350028e24705686805885f8ddc8f6052b97c792d533693b89715bc4e/inference_data.json",
+      "sha256": "9beb8a96350028e24705686805885f8ddc8f6052b97c792d533693b89715bc4e",
+      "type": "system.Dataset",
+      "identical_in_all_backends": true
+    },
+    {
+      "relative_path": "sample/datasets/seed-42/9e9697d3a3a1ddc1dca11e0193a5906e7c0f7ded9ea1fef8a0ab604c7c41d70d/training.json",
+      "sha256": "9e9697d3a3a1ddc1dca11e0193a5906e7c0f7ded9ea1fef8a0ab604c7c41d70d",
+      "type": "system.Dataset",
+      "identical_in_all_backends": true
+    },
+    {
+      "relative_path": "sample/models/cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851/model.json",
+      "sha256": "cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851",
+      "type": "system.Model",
+      "identical_in_all_backends": true
+    },
+    {
+      "relative_path": "sample/predictions/bded48836011e94087966cffbc36ca22cb4f06046816ca4b49477a36d4e7e584/predictions.json",
+      "sha256": "bded48836011e94087966cffbc36ca22cb4f06046816ca4b49477a36d4e7e584",
+      "type": "system.Dataset",
+      "identical_in_all_backends": true
+    },
+    {
+      "relative_path": "sample/reports/20c46971b204184d088fdf45393f157657a24615f23ca4a771241717e4f73032/inference.json",
+      "sha256": "20c46971b204184d088fdf45393f157657a24615f23ca4a771241717e4f73032",
+      "type": "system.Dataset",
+      "identical_in_all_backends": true
+    },
+    {
+      "relative_path": "sample/reports/307a6448b3f4a2d739977a05b42bd52bb5b1c2e0d40690f87fc2f1e2bcc8b2d0/evaluation.json",
+      "sha256": "307a6448b3f4a2d739977a05b42bd52bb5b1c2e0d40690f87fc2f1e2bcc8b2d0",
+      "type": "system.Dataset",
+      "identical_in_all_backends": true
+    }
+  ],
+  "native_metrics": {
+    "inference.json": {
+      "accuracy": 0.9722222222222222,
+      "rows": 36
+    },
+    "evaluation.json": {
+      "accuracy": 0.9444444444444444,
+      "rows": 36
+    }
+  },
+  "notes": [
+    "Native KFP 2.17 importers do not resolve taskOutputParameter directly; the adapter emits an ordinary nested graph with a parent URI input. No KFP fork or backend patch.",
+    "Native inference used the exact successful training run after fixing nested MLMD output lookup. MLMD confirms all six computational tasks COMPLETE without cached_execution_id.",
+    "Initial failed qualification runs are retained; no history reset was needed.",
+    "Qualification services were initially stopped and are stopped again after validation; data and local images are retained.",
+    "Final images were rebuilt after host-helper and optional authoring-helper refinements. Component business scripts and Publisher storage implementation are unchanged from the successful container runs.",
+    "No Git initialization, commit, merge, external image publication or package upload.",
+    "Filesystem behavior qualified on Linux; no Windows/macOS filesystem runtime qualification; no automatic garbage collection or conditional multipart upload."
+  ],
+  "final_local_images": {
+    "fixture:example-v7": "sha256:44b3f7a7454b470d89656980680b04e224d11bfb1e7a2f7afc6c18848f734278",
+    "dockflow-pipelines:development": "sha256:bceec37eadc05f14fddddbe11aa241a6bfd88eae8463c465b9ca4c9a50e9ca1a"
+  },
+  "source_sha256": {
+    "packages/artifacts/src/dockflow_artifacts/__init__.py": "d49295d5918ee07414e4511b2fedd478e83e915c1559d4cac1cd595a70637c1e",
+    "packages/artifacts/src/dockflow_artifacts/_paths.py": "8d378269f14736ef486f6afdf66f60dd0042aa5d8a4bedc9d93f19005031325a",
+    "packages/artifacts/src/dockflow_artifacts/_storage.py": "0a0f2f27db0aee591160fc86489dad3dd897fcb9b2ea41d4733dba35c7d7fe84",
+    "packages/artifacts/src/dockflow_artifacts/errors.py": "689abf7973ebf9c8e279bf2feaece441a8aa9355b10bbfb804499591172f1b6d",
+    "packages/artifacts/src/dockflow_artifacts/kfp.py": "b5c58fcdc3f7ed576808a716e87d3591a26ee4a21ac9dabf729b089298f6a6a6",
+    "packages/artifacts/src/dockflow_artifacts/publication.py": "b6ca6662e225a930590585f1c6e72509e4f247a8afa17484650a8e18bca2292f",
+    "packages/artifacts/pyproject.toml": "7aeb1934715e117f5db456f0d58ac70966ec89dd2d60f1daf5962d2fdbc02da9",
+    "packages/pipelines/src/dockflow_pipelines/config.py": "948be66354850877f99510eb0b06a8d9552bd7b00f6e84fbebecfc2667c23fb5",
+    "packages/pipelines/src/dockflow_pipelines/executor.py": "21533cbbb3d1dc825bf59d955b9ce0c91d3403450cca28ff30125cf51d687ab2",
+    "tools/verify_packages.py": "be8b506562dde82a1a9e958bf41af9ff86f9445a0c1e21e83d793bbf5418c014"
+  },
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

@@ -1,0 +1,19 @@
+name: python-project-1
+version: 3.0.0
+versioned_at: 2026-10-13 16:10
+description: Reusable Python project conventions.
+entrypoint: README.md
+dependencies:
+- name: meta
+  version: 2.2.0
+  constraint: at_least
+- name: process
+  version: 5.0.0
+  constraint: at_least
+- name: python-1
+  version: 2.1.1
+  constraint: at_least
+optional_dependencies:
+- name: docker-1
+  version: 3.0.0
+  constraint: at_least

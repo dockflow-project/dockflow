@@ -1,0 +1,13 @@
+name: repository-1
+version: 4.0.0
+versioned_at: 2026-10-13 16:08
+description: Reusable source repository conventions.
+entrypoint: README.md
+dependencies:
+- name: meta
+  version: 2.2.0
+  constraint: at_least
+optional_dependencies:
+- name: process
+  version: 5.0.0
+  constraint: at_least

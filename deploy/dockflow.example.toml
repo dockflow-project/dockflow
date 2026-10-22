@@ -1,0 +1,27 @@
+schema_version = 1
+
+[project]
+id = "replace-with-stable-consuming-project-id"
+root = "/project"
+
+[definitions.pipelines]
+# training = "/definitions/training.yaml"
+
+[state]
+directory = "/state"
+
+[execution]
+work_directory = "/execution"
+task_parallelism = 1
+
+[artifacts]
+backend = "s3"
+endpoint = "http://minio:9000"
+bucket = "dockflow"
+prefix = "artifacts"
+allow_insecure_http = true
+external_roots = ["/inputs"]
+
+[service]
+host = "0.0.0.0"
+port = 8080

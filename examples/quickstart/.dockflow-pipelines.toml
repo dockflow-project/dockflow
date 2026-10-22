@@ -1,0 +1,21 @@
+schema_version = 1
+
+[project]
+id = "dockflow-quickstart"
+root = "."
+
+[definitions.pipelines]
+statistics = "orchestration/kfp/compiled/statistics.yaml"
+
+[state]
+directory = ".dockflow"
+
+[execution]
+work_directory = "work"
+
+[artifacts]
+backend = "filesystem"
+root = "artifacts"
+
+[images]
+pull_policy = "never"

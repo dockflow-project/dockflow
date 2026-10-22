@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "validated_at": "2026-10-19T22:53:29.692447+00:00",
+  "workflow": "2026-10-19__2CYRYD__documentation.md",
+  "branch": "feat/initial-implementation",
+  "source_commit": null,
+  "application_version": "0.1.0.dev0",
+  "files": {
+    "CONTRIBUTING.md": "8762324515caff8bb9aaf5c162509230444aa6da0cdf20fb2dc13be6fc297351",
+    "README.md": "7fbf9ccded069f98b0959547cee5f9430afd80733a0d1f780cb719197a5a69cd",
+    "deploy/.env.example": "45858742d4566c818ac2a375c63a52dcbef1ded088e5678862ab437be5a231bd",
+    "deploy/README.md": "27e62e75c03fecb3cc0d27e3c526fd30aef1ca2f00c2248d85eb747f7d01f633",
+    "docs/README.md": "c3016d550372be7142730d4175c823b3629168735004ee2cffadf1ba2f5c9cb1",
+    "docs/api.md": "02a4496b841db73c3427240c42b8cb18602cafd0d507674fa4191bc361a3f397",
+    "docs/artifacts.md": "218da22a3f9713ac325b22d088557c03bc7ef8600e6358878118b41d127f2799",
+    "docs/cli.md": "370082a06d372535966ab87c2ddcc86c040d1ab14aec2446af58e359b69d2ea7",
+    "docs/compatibility.md": "8d6ca29e0fc919fe7777fa690b9d508f71eb82bfa3999b3fcff4bc1432e99ae8",
+    "docs/concepts.md": "32d9359c8f92654e32eba171de9266efe40d4839dcbdddc17ef5037ca38fd48c",
+    "docs/configuration.md": "a50b605d5ade8cac5042be3766b100d93b40bf15969bc6e7123e75c68f1c69a3",
+    "docs/deployment.md": "ad98c83cc7fa258f0c3e8eb25a4693f7cbacfba1a85634576da6a85f912b023b",
+    "docs/installation.md": "05ea44093b10b8e0405ff67bb634255cff95ea08bbe8e0ed4174df0defa958f7",
+    "docs/operations.md": "212a8e26901228221b238c1a2a4db751190aca2a4551ff5cf14da51102c68d21",
+    "docs/persistence.md": "bb3cd5188bf67ea417fa9007be6fe6b6ed474d1cfd88397b298a08ca1fc4b411",
+    "docs/pipelines.md": "4229ef3a7ed8035dc92196cacb3900a89762272b81646eb063cec534556d1618",
+    "docs/quickstart.md": "fc02a706934d2cd266a7762dc14c36cc4679bbb5ffe65431fcbc377058a659cf",
+    "docs/reference/api.md": "870b39355074cfaeb60b40fd0a7ea4ffebfe928e912ea6381b12303ff371aee4",
+    "docs/reference/openapi.json": "34446600b14a97cbdb911981df8f9707b12660c6abf676e4b37a131763abeaeb",
+    "docs/troubleshooting.md": "8b398d0b29f79aff9785e226b069ffd33d43005286c4c390f6edc74a70c54a9a",
+    "docs/ui.md": "b162458a9dc8946597e13d719eccbfb0ba8038f61e6489f1d7f4a20b81c807d0",
+    "examples/quickstart/.dockerignore": "bae6a0808af101677c1fe539eb7eacfb5b778549dd35c34a2978e8c86a2faafc",
+    "examples/quickstart/.dockflow-pipelines.toml": "ab73525f11c25cef8bb497678dd7f050e45ba7d43f2001423334146a102532da",
+    "examples/quickstart/.gitignore": "743dfba6736933d2971f9399c01ab5d64d604085b3d2914f019f79e8c46d65e8",
+    "examples/quickstart/Dockerfile": "48ec2ad6caf0ff5b29e9c9ff576914bef70e881f66d4d0d4b6f0892d91a68857",
+    "examples/quickstart/README.md": "b6ed705714c23f688a07d53a2856c95c32b708104053ac1f8f66ac71a07008fb",
+    "examples/quickstart/components/generate/main.py": "010c29d53843ae6e179ca813b79c64b9dc0df95347abf9fb6bdbc4e8c4a70883",
+    "examples/quickstart/components/summarize/main.py": "18a0c08b812816808bc850fa4630bf5af7c6141cb7bf70bf8621c74d1dd15d19",
+    "examples/quickstart/orchestration/kfp/compile.py": "f8499c7758f3092180e3696eb22abe1391b9d3c2285e3f28b2fe190ee28efb16",
+    "examples/quickstart/orchestration/kfp/compiled/statistics.yaml": "1c741ff25a371f8ba049e13956b5a6469df4237f5b614b23d76ef378a214efc4",
+    "examples/quickstart/orchestration/kfp/definitions/pipeline.py": "548a4f1ef12e9e6a9af1b4be3a7a5faa8c5ce5282524e4721e61950925422348",
+    "packages/cli/README.md": "6b968ac4319394a2b640a1b16bf21f8fb4e41a4df61a2a8cade663cccaa2930a",
+    "packages/pipelines/README.md": "7a02d5ba0d8cdbf0de8a02a46dcf50c06ff5b7a6c7076c716875f09ef2898b13",
+    "tools/generate_api_docs.py": "3fc0edd6c406e7d121d6206e8575b60cfb61167be03be2b90338e1e5dde20d14"
+  },
+  "checks": {
+    "markdown_links": "24 user/developer Markdown files: local file targets present, no links to temporary review reports",
+    "api_generation": "Generated actual OpenAPI/reference; --check passed; app construction created no state/artifacts",
+    "python_lint": "ruff check tools/generate_api_docs.py examples/quickstart passed",
+    "python_format": "ruff format --check tools/generate_api_docs.py examples/quickstart passed (5 files)",
+    "python_types": "pyright tools/generate_api_docs.py examples/quickstart/components: 0 errors, 0 warnings",
+    "compiler": "KFP wrapper recompile produces identical checked-in YAML SHA-256",
+    "specs": "macrostates check and verify passed; external snapshots untouched",
+    "browser_developer_instructions": "CONTRIBUTING final instructions verified against fixture/probe command arguments; optional Playwright 1.55.0 and Node20+ developer tooling distinct from runtime dependencies",
+    "documentation_separation": "docs contains usage, operation and developer architecture guides; architecture-review, roadmap and open-source readiness reports live only in ignored tmp/reviews",
+    "final_reference_drift": "tools/generate_api_docs.py --check passed against final integrated source; generated files were not rewritten during the final audit"
+  },
+  "tutorial": {
+    "base_image_registry_digest": "python@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f",
+    "component_image": "dockflow-quickstart-components:v1",
+    "component_image_id": "sha256:9e1b9ef3076b911837eba0bf71535114866adbcc6e16d1d33b005449c5ae37e2",
+    "validation": "definitions validate statistics: valid, default count10",
+    "direct_run_id": "run_62f19188-3cec-44cc-bd42-4b29531e45f5",
+    "direct_result": {
+      "state": "succeeded",
+      "executed_tasks": 2,
+      "count": 10,
+      "sum": 55,
+      "mean": 5.5
+    },
+    "second_run_id": "run_c8693453-9cb6-4adc-ad20-c563ec5d040a",
+    "second_result": {
+      "state": "succeeded",
+      "reused_tasks": 2,
+      "new_artifacts": 0
+    },
+    "service_run_id": "run_9e42eb46-fbc1-486c-9e3f-e645eadc2ffa",
+    "service_result": {
+      "state": "succeeded",
+      "previous_local_runs_visible": 2,
+      "count": 20,
+      "mean": 10.5,
+      "scope": "none",
+      "static_ui_and_api_docs_loaded": true,
+      "openapi": "3.1.0"
+    },
+    "integrity": {
+      "valid": true,
+      "index_checked": true,
+      "content_verified": true,
+      "available_artifacts": 4
+    },
+    "service_lifecycle": "Ephemeral localhost port, explicit SIGINT shutdown, no existing service touched",
+    "temporary_evidence": "tmp/docs-quickstart-liay9pvy"
+  },
+  "limits": [
+    "Unpublished development source; no package/image publication or merge",
+    "No fresh full Compose deployment executed in this documentation workstream",
+    "Browser interaction/layout/security qualification belongs to the separate UI workstream",
+    "No other OS/CPU architecture qualification implied",
+    "Changes limited to Dockflow"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

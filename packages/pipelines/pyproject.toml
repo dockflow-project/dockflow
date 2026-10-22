@@ -1,0 +1,24 @@
+[project]
+name = "dockflow-pipelines"
+version = "0.1.0.dev0"
+description = "Durable compiled KFP pipelines through DockerRunner"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = ["dockflow-cli==0.1.0.dev0", "typer>=0.27.3,<0.28.0", "PyYAML>=6.0.2,<7"]
+
+[project.optional-dependencies]
+runtime = ["kfp>=2.17.0,<2.18", "docker>=7.1.0,<8", "ml-metadata>=1.21.0,<2"]
+service = ["fastapi>=0.136.3,<0.137", "starlette>=1.9.0,<2", "uvicorn>=0.34.2,<0.35", "python-multipart>=0.0.20,<0.1"]
+s3 = ["boto3>=1.38,<2"]
+
+[project.entry-points."dockflow_cli.modules"]
+pipelines = "dockflow_pipelines.cli:app"
+
+[tool.uv.sources]
+dockflow-cli = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.11.2,<0.12"]
+build-backend = "uv_build"

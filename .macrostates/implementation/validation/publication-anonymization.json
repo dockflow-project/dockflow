@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-21T15:23:49.458340+00:00",
+  "scope": "Dockflow publication-candidate source, authored qualification/workflow records, retained temporary reports and rebuilt distribution archives",
+  "changes": {
+    "anonymized_historical_workflows": 28,
+    "anonymized_historical_validation_receipts": 23,
+    "obsolete_scratch_files_discarded": 5242,
+    "obsolete_distribution_archives": "discarded; all three packages rebuilt from sanitized source",
+    "attribution": "role-based workflow attribution and Dockflow contributors package author metadata",
+    "fixture_labels": "generic integration labels; subset record and workflow renamed",
+    "original_copies_or_identity_maps_retained": false,
+    "process_handoff": "tmp/process-anonymized-documents-handoff.md",
+    "imported_specifications_and_licenses": "preserved with canonical provenance and integrity",
+    "discarded_review_generated_copies": [
+      "obsolete publication-review export",
+      "obsolete security-review distribution output"
+    ]
+  },
+  "checks": {
+    "authored_text_files_scanned": 259,
+    "immutable_imported_files": 52,
+    "identifying_context_and_bounded_credential_patterns": "no findings in scanned authored candidates or archive members",
+    "structured_files_parsed": {
+      "json": 35,
+      "toml": 7,
+      "yaml": 18
+    },
+    "authored_markdown_local_links": "passed",
+    "distribution_archives_scanned": 6,
+    "archive_members_scanned": 118,
+    "macrostates_check": "passed; includes imported snapshot integrity",
+    "uv_lock_check_offline": "passed",
+    "shared_version_check": "passed; 0.1.0.dev0",
+    "ruff_changed_test_files": "lint and format passed",
+    "targeted_tests": {
+      "command": ".venv/bin/pytest packages/pipelines/tests/integration/test_artifact_layout.py packages/pipelines/tests/test_interfaces.py::test_cli_json_artifact_import_and_offline_validation -q",
+      "passed": 30,
+      "warnings": 1
+    },
+    "package_verification": {
+      "command": "UV_OFFLINE=1 python tools/verify_packages.py --out-dir dist",
+      "wheels": 3,
+      "source_distributions": 3,
+      "clean_base_installs": [
+        "cli-only",
+        "artifacts-only",
+        "combined-base"
+      ],
+      "standalone_source_rebuilds": "passed",
+      "receipt": "dist/verification.json"
+    }
+  },
+  "limits": [
+    "Pattern checks plus manual review are bounded publication checks, not an exhaustive secret audit or formal anonymity proof.",
+    "Intentional container paths, synthetic API/test endpoints, required licenses and directly relevant public dependency/provenance references are retained.",
+    "Imported specification snapshots were verified rather than rewritten; the handoff targets canonical Process authoring rules.",
+    "Historical measurements are retained as observations; raw discarded fixtures cannot be reconstructed from these summaries.",
+    "A broader interface-module test attempt stalled and was interrupted. All 30 tests covering the renamed fixtures completed; the full runtime/deployment suite was not rerun for this cleanup.",
+    "Installed environments, third-party caches and application runtime state are outside the authored publication-document scope.",
+    "No Git integration, release, publication or workflow closure was performed."
+  ]
+}

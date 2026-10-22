@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-21",
+  "scope": "Readiness findings 1, 2, 3; Dockflow only",
+  "application_version": "0.1.0.dev0",
+  "tests": {
+    "python_3_13": {
+      "passed": 499,
+      "s3_deselected": 1
+    },
+    "python_3_12": {
+      "passed": 499,
+      "s3_deselected": 1
+    },
+    "docker_enabled": true,
+    "javascript_passed": 5
+  },
+  "checks": {
+    "ruff": "pass",
+    "ruff_format": "pass",
+    "pyright": "pass",
+    "macrostates": "pass",
+    "api_documentation": "pass",
+    "version": "pass",
+    "wheel_sdist_verification": "pass",
+    "standalone_runtime_install": "pass"
+  },
+  "dependency_audit": {
+    "tool": "pip-audit 2.10.1",
+    "applicable_locked_packages": 81,
+    "known_vulnerabilities": 0
+  },
+  "dependency_versions": {
+    "fastapi": "0.136.3",
+    "starlette": "1.9.0",
+    "urllib3": "2.8.0",
+    "certifi": "2026.10.19",
+    "kfp": "2.17.0",
+    "pytest": "9.1.1"
+  },
+  "upstream_metadata_exception": {
+    "package": "kfp==2.17.0",
+    "upstream_requirement": "urllib3==2.7.0",
+    "qualified_override": "urllib3==2.8.0",
+    "source_modified": false,
+    "plain_pip_inherits_override": false,
+    "expected_dependency_checker_conflicts": 1,
+    "instructions": "docs/installation.md#kfp-dependency-override"
+  },
+  "service_image": {
+    "tag": "dockflow-pipelines:security-review",
+    "published": false,
+    "probe": {
+      "normal_without_token": 401,
+      "malformed_host_mutation": 400,
+      "valid_authenticated_request": 200,
+      "public_health": 200
+    }
+  },
+  "not_exercised": [
+    "S3 provider integration",
+    "full Compose deployment",
+    "native Windows/macOS/ARM runtime",
+    "OS image vulnerability scan"
+  ],
+  "merged": false,
+  "published": false,
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

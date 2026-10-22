@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "format": "dockflow-json-v1",
+  "vectors": [
+    {
+      "name": "null",
+      "value": null,
+      "canonical_utf8": "[\"null\"]",
+      "sha256": "53b41ab0dae62befcb8708620b6d14794a24fedad6c24c03dd01e51fa698ff0b"
+    },
+    {
+      "name": "boolean",
+      "value": true,
+      "canonical_utf8": "[\"bool\",true]",
+      "sha256": "b15e5dc2d0858d7d9f2afcad8bf251f5b807810b68219e7ebcc645cb09c2474c"
+    },
+    {
+      "name": "integer",
+      "value": 1,
+      "canonical_utf8": "[\"int\",\"1\"]",
+      "sha256": "196bf27c76e388ef46771aaf1d4046700dc15d24a773835cc702e42d9e3c03cd"
+    },
+    {
+      "name": "float",
+      "value": 1.0,
+      "canonical_utf8": "[\"float64\",\"3ff0000000000000\"]",
+      "sha256": "17d68423d3d70c230425b45a40852a67f70a2842e60464bbbd9ad2774ec24787"
+    },
+    {
+      "name": "negative-zero",
+      "value": -0.0,
+      "canonical_utf8": "[\"float64\",\"8000000000000000\"]",
+      "sha256": "07d21e59702e20ecbe4daeda5eaf1ec0331295a6fcbe58d399483c221f3aaa12"
+    },
+    {
+      "name": "unicode",
+      "value": "café",
+      "canonical_utf8": "[\"string\",\"café\"]",
+      "sha256": "5fd3e9b9e473beab735484bd95d705d27b9dbf9cdd52ae765a660817f25c22c2"
+    },
+    {
+      "name": "object-order",
+      "value": {
+        "b": 1,
+        "a": true
+      },
+      "canonical_utf8": "[\"object\",[[\"a\",[\"bool\",true]],[\"b\",[\"int\",\"1\"]]]]",
+      "sha256": "36b47d61086672da10d4ee4aff1a87ffdbb6fd95fc6cf081acf08157797b1561"
+    },
+    {
+      "name": "array",
+      "value": [
+        null,
+        "x",
+        2
+      ],
+      "canonical_utf8": "[\"array\",[[\"null\"],[\"string\",\"x\"],[\"int\",\"2\"]]]",
+      "sha256": "52c7017021edc2a7356b5331c586949c1b49eb0869766d2f1be1be52870c92e7"
+    }
+  ]
+}

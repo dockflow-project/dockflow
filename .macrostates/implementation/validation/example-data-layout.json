@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-20T11:20:54.950503+00:00",
+  "workflow": "2026-10-20__16EA34__example-data-layout.md",
+  "branch": "feat/initial-implementation",
+  "source_commit": null,
+  "scope": "Integration fixture data layout; existing Dockflow configuration contract",
+  "authorization": "Disposable integration state; the dataset layout is independent of SQLite metadata",
+  "source_sha256": {},
+  "checks": {
+    "example_tests": 233,
+    "ruff": "pass",
+    "prepare_dataset_checksum": "pass",
+    "compiled_definitions_byte_identical": true,
+    "fixture_local_history_empty": true,
+    "fixture_artifact_store_empty": true,
+    "reset_preserves_external_sources_and_provenance": true
+  },
+  "reset": {
+    "local_state_reset": true,
+    "legacy_artifact_root_removed": true,
+    "old_dataset_path_removed": true,
+    "dataset_sha256": "6be6b1203f3d51df0b553a70e57b8a723cd405683958204f96d23d7cd6aea659",
+    "new_dataset": "data/external/sample/sample.data",
+    "artifact_root": "data/artifacts"
+  },
+  "compose": {
+    "compose_config": "valid",
+    "service": "dockflow",
+    "dataset_mount": "<fixture>/data/external/sample",
+    "target": "/inputs",
+    "read_only": true,
+    "credential_placeholders_for_config_only": true
+  },
+  "docker_smoke": {
+    "artifact_root": "data/artifacts",
+    "dataset": "data/external/sample/sample.data",
+    "metadata_integrity": true,
+    "config": "tmp/data-layout/execution-07f99ae5/dockflow.toml",
+    "training_run": "run_181197c2-bcf9-42e1-89d4-00ced34eee9a",
+    "inference_run": "run_2c7531cc-f1f4-47dd-863f-bc847081dd4a",
+    "terminal_traceprint_colors": true,
+    "redirected_plain_text": true,
+    "machine_json_valid": true,
+    "retained_colors_and_metadata": true
+  },
+  "limits": [
+    "No Compose or native KFP deployment in this check",
+    "No image rebuild; component code changed only by import ordering",
+    "No commit, merge, publication or accepted baseline"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

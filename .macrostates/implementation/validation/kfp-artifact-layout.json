@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-20T15:48:30.103456+00:00",
+  "specification_package": "dockflow-pipelines 3.0.0",
+  "application_version": "0.1.0.dev0",
+  "branch": "feat/initial-implementation",
+  "source_state": "unborn; uncommitted",
+  "layout": "<managed-root>/<pipeline-name>/<run-id>/<task-name>/<attempt-uuid>/<output-name>",
+  "checks": {
+    "dockflow_regression": {
+      "passed": 316,
+      "deselected": 15
+    },
+    "artifact_layout_matrix": {
+      "passed": 27,
+      "included_in_regression": true
+    },
+    "native_docker_publication_and_reuse": {
+      "passed": 2
+    },
+    "example_regression": {
+      "passed": 236
+    },
+    "ruff": "passed",
+    "format": "passed",
+    "pyright": "0 errors",
+    "api_docs_drift": "passed",
+    "macrostates_check": "passed",
+    "macrostates_verify": "passed",
+    "wheel_and_sdist_build": "passed",
+    "example_wheel_install": "passed"
+  },
+  "local_example": {
+    "isolated": true,
+    "runs": {
+      "backend": "dockflow-direct",
+      "source_artifact": "artifact_5c63141d-7963-49db-ac01-cca6f497b28e",
+      "training": {
+        "run_id": "run_46af3487-e3f8-482b-8331-826408cbc4d6",
+        "state": "succeeded",
+        "outputs": {
+          "inference_data": "artifact_a7f4e590-4337-4dc3-896d-2cd8f58b316d",
+          "model": "artifact_e0fd5064-6ba8-460c-b909-42a1f4d1fd48",
+          "validation_report": "artifact_f234b0ae-5adc-451c-87b5-0b5cbc4188f0"
+        }
+      },
+      "inference": {
+        "run_id": "run_9cc69321-ee78-4a01-81c1-bf111701e869",
+        "state": "succeeded",
+        "outputs": {
+          "predictions": "artifact_6d392b17-6160-41b8-858b-a915642600c7",
+          "report": "artifact_a056aefe-5f49-4fc8-9804-12792b71c946"
+        }
+      },
+      "cache_policy": "disabled",
+      "name_prefix": "KFP artifact layout",
+      "task_execution": {
+        "training": {
+          "evaluate-sample": {
+            "task_id": "task_a1cc537e-c6b9-46bc-a0b4-280e7d0f8ff4",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_7c1f51b6-5cbc-4330-8405-5055e247f790"
+            ]
+          },
+          "split-sample": {
+            "task_id": "task_f2c2b54b-ce53-42f8-bef2-7301b560dd1d",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_7426f934-df13-4ff4-a4b2-33008d814526"
+            ]
+          },
+          "train-sample": {
+            "task_id": "task_3e14808a-cbfd-499f-b1c6-08a693157896",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_db652a7c-295a-4a17-9eee-e07ab2167a5f"
+            ]
+          },
+          "validate-sample": {
+            "task_id": "task_3fc7290f-3e60-49de-8341-644606b3d8a1",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_9cfd8b2b-df5f-46ae-ae66-4cc82ccc7d43"
+            ]
+          }
+        },
+        "inference": {
+          "predict-sample": {
+            "task_id": "task_2224445e-1b20-4209-8ed6-0befec736637",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_6a3a66dd-a2ac-4e35-bdb1-de61644d5bcd"
+            ]
+          },
+          "score-predictions": {
+            "task_id": "task_8580c122-78ac-46af-a44a-f0950f356c15",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_d3f97fad-37ed-41cf-a0f2-14690f7c43f1"
+            ]
+          }
+        }
+      }
+    },
+    "metadata_valid": true
+  },
+  "compose_example": {
+    "runs": {
+      "backend": "dockflow-service",
+      "source_artifact": "artifact_eb239502-23eb-4892-9d17-33110471a7d8",
+      "training": {
+        "run_id": "run_f51eaba8-a3f4-42a6-8498-8da1a22e2cd0",
+        "state": "succeeded",
+        "outputs": {
+          "inference_data": "artifact_f04f52d8-2f93-478e-ba86-8c6af6874099",
+          "model": "artifact_74cedb2a-6af1-4d48-b4a6-45c17716ec3e",
+          "validation_report": "artifact_67b9af2d-7888-4b6a-8f2d-0debb1875fc1"
+        }
+      },
+      "inference": {
+        "run_id": "run_f1c50a0b-0e80-473f-9b71-d77524ce92ac",
+        "state": "succeeded",
+        "outputs": {
+          "predictions": "artifact_81fca67d-7a55-4823-b0e7-176c5734dc72",
+          "report": "artifact_5ffc010b-0978-4214-8e8f-8f8711244bd0"
+        }
+      },
+      "cache_policy": "disabled",
+      "name_prefix": "KFP artifact layout",
+      "task_execution": {
+        "training": {
+          "evaluate-sample": {
+            "task_id": "task_61d5a76d-7eb2-447d-9a60-cb0ae42ee9ef",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_9f416420-9157-499a-96b8-ff7ed7a0f787"
+            ]
+          },
+          "split-sample": {
+            "task_id": "task_a3866b2c-1283-44ca-9a02-b0a4096f5658",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_7691eadc-0719-4463-b729-64fa7f3ab044"
+            ]
+          },
+          "train-sample": {
+            "task_id": "task_f8485f35-2f23-4c63-aeb8-38f98f592aec",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_2a8f8ef1-558f-4fd8-bc81-d923490c0271"
+            ]
+          },
+          "validate-sample": {
+            "task_id": "task_1308b32d-12c4-4d74-b8ac-e50939a68e8d",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_1da74038-2d9b-4307-a151-cd64b40dc144"
+            ]
+          }
+        },
+        "inference": {
+          "predict-sample": {
+            "task_id": "task_959826d3-03ae-45f1-86ed-1b996dcbf0e7",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_0151b00e-ae71-479a-8b4a-1cbcce3935c6"
+            ]
+          },
+          "score-predictions": {
+            "task_id": "task_8b2f40c0-68e4-4f30-baca-5368fb76c511",
+            "state": "succeeded",
+            "disposition": "executed",
+            "attempt_ids": [
+              "attempt_9a489286-d3a9-4ca3-94a9-a6aa0bf42cc3"
+            ]
+          }
+        }
+      },
+      "registrations": {
+        "training": {
+          "pipeline_id": "pipeline_d9a27858-ec6f-4425-a46f-9aa9f612d71f",
+          "pipeline_version_id": "definition_38e584bb-552a-4bda-b910-998f756af1fc",
+          "version_name": "sha256-672c2582d67a4d65a1e494d420ea8acfad32257e171cf99af01bf2d1c70be918"
+        },
+        "inference": {
+          "pipeline_id": "pipeline_eff18cd7-50b3-4cda-a3d4-647f036238a1",
+          "pipeline_version_id": "definition_46b8f8da-2867-472a-99e1-09f0d41e2b8b",
+          "version_name": "sha256-38ebaaf1a05c17f48d953e712184b1c28219488301ba55731e0b2b9399e5b46b"
+        }
+      }
+    },
+    "metadata_valid": true,
+    "artifact_uris": [
+      "s3://fixture/artifacts/sample-training/run_f51eaba8-a3f4-42a6-8498-8da1a22e2cd0/split-sample/7691eadc-0719-4463-b729-64fa7f3ab044/inference_data",
+      "s3://fixture/artifacts/sample-training/run_f51eaba8-a3f4-42a6-8498-8da1a22e2cd0/train-sample/2a8f8ef1-558f-4fd8-bc81-d923490c0271/model",
+      "s3://fixture/artifacts/sample-training/run_f51eaba8-a3f4-42a6-8498-8da1a22e2cd0/evaluate-sample/9f416420-9157-499a-96b8-ff7ed7a0f787/report",
+      "s3://fixture/artifacts/sample-inference/run_f1c50a0b-0e80-473f-9b71-d77524ce92ac/predict-sample/0151b00e-ae71-479a-8b4a-1cbcce3935c6/predictions",
+      "s3://fixture/artifacts/sample-inference/run_f1c50a0b-0e80-473f-9b71-d77524ce92ac/score-predictions/9a489286-d3a9-4ca3-94a9-a6aa0bf42cc3/report"
+    ]
+  },
+  "service_image": "sha256:5cd163266c1735e563de0cac95feaad6fc1085d4f6ec2d5256e364a353c96ab1",
+  "deployment": "Existing local Compose Dockflow service was idle, refreshed without dependency/volume changes, and verified healthy.",
+  "limitations": [
+    "No native Kubernetes deployment rerun; wrappers, compiled definitions and component image unchanged.",
+    "S3 backup/restore exercised with a controlled provider fixture; real SeaweedFS exercised publication, consumption and integrity.",
+    "Existing artifacts are not relocated. Reuse can retain historical URIs."
+  ],
+  "intermediate_checks": [
+    "Initial restricted regression run interrupted at local service tests; complete suite passed with process/loopback access.",
+    "Initial build backend fetch blocked by sandbox DNS; approved build and final offline rebuild passed.",
+    "New backup fixture initially lacked execution records; corrected before final passing tests."
+  ],
+  "sha256": {
+    "packages/pipelines/src/dockflow_pipelines/artifacts.py": "919393fe00269709ba3948102ac68bd9241efd7ce361f349b1fbf0f739cd4f73",
+    "packages/pipelines/src/dockflow_pipelines/engine.py": "814a524a26b5e223026618b310ca1173d37fb55e3ff23fb565326d7cd517fdef",
+    "packages/pipelines/src/dockflow_pipelines/definitions.py": "555e59e5b7dc93accdd8a756165cd7e570161d1f6ef307968f2c1724fb7e6b46",
+    "tools/backup.py": "71d211c37729c2623c15bf882b22b7dcbbe0d8f42cbd32dc4722d6a0a9c01b45",
+    "packages/pipelines/tests/integration/test_artifact_layout.py": "1b03844ca7b7ce5f986e2a810c8a6b4f537f5b7cc9e0fd931baeb53cda0120ce",
+    "dist/dockflow_cli-0.1.0.dev0-py3-none-any.whl": "74046882d7cbd9efd3d20ac11ab03b97ee4516c145430a403828cf53d5e49f0a",
+    "dist/dockflow_pipelines-0.1.0.dev0-py3-none-any.whl": "75a3346e264c23522dfb371129ac600bb06f18a7e65c8ef6eb7a5c61c09362fd"
+  },
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

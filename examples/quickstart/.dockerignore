@@ -1,0 +1,6 @@
+**
+!components/
+!components/**/
+!components/**/*.py
+!Dockerfile
+!.dockerignore

@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-19T10:31:14.576351+00:00",
+  "source": {
+    "branch": "feat/initial-implementation",
+    "commit": null,
+    "accepted_baseline": false
+  },
+  "specification_package": {
+    "name": "dockflow-pipelines",
+    "version": "1.1.1",
+    "impact": "Patch (editorial volume labels)"
+  },
+  "application_version": "0.1.0.dev0",
+  "mapping": {
+    "control-state": "dockflow-state",
+    "execution-data": "dockflow-execution",
+    "engine-state": "docker-state",
+    "containerd-state": "docker-containerd",
+    "seaweed-data": "artifacts"
+  },
+  "unchanged_volumes": [
+    "docker-socket",
+    "registry-data"
+  ],
+  "copies": {
+    "dockflow-state": {
+      "entries": 301,
+      "logical_bytes": 3130191,
+      "manifest_sha256": "a1ec64d23c740e3d6925d6b660912e8b9e3f22c311a963c87f639ae897021b02",
+      "verified": [
+        "file contents",
+        "owners",
+        "modes",
+        "mtime",
+        "symlinks",
+        "hardlinks",
+        "device nodes",
+        "all extended attributes"
+      ]
+    },
+    "dockflow-execution": {
+      "entries": 55,
+      "logical_bytes": 191827,
+      "manifest_sha256": "2349d1f3164155986b74939f463f096bab775189198c484c96c1b02634ccf32a",
+      "verified": [
+        "file contents",
+        "owners",
+        "modes",
+        "mtime",
+        "symlinks",
+        "hardlinks",
+        "device nodes",
+        "all extended attributes"
+      ]
+    },
+    "docker-state": {
+      "entries": 12505,
+      "logical_bytes": 407077650,
+      "manifest_sha256": "c5c21449e1bf8c7b50fb2c3c0a7cfe79714443cc4f64bc71157a70767e6a0bd3",
+      "verified": [
+        "file contents",
+        "owners",
+        "modes",
+        "mtime",
+        "symlinks",
+        "hardlinks",
+        "device nodes",
+        "all extended attributes"
+      ]
+    },
+    "docker-containerd": {
+      "entries": 1,
+      "logical_bytes": 0,
+      "manifest_sha256": "01f4bf1776d242c2e5abfb8ce2b38ffec29cc890fe4da915035309ee140b61d7",
+      "verified": [
+        "file contents",
+        "owners",
+        "modes",
+        "mtime",
+        "symlinks",
+        "hardlinks",
+        "device nodes",
+        "all extended attributes"
+      ]
+    },
+    "artifacts": {
+      "entries": 118,
+      "logical_bytes": 82261,
+      "manifest_sha256": "d77fac6b8d89d367962851fb426991bfa46d67549354e0f3c81c603e5956668f",
+      "verified": [
+        "file contents",
+        "owners",
+        "modes",
+        "mtime",
+        "symlinks",
+        "hardlinks",
+        "device nodes",
+        "all extended attributes"
+      ]
+    }
+  },
+  "preservation": {
+    "runs": [
+      "run_7a5d4831-db41-48e3-8e2d-8e876bbbcd03",
+      "run_2b3e4dfc-3834-490a-94d7-170c3d0546de"
+    ],
+    "definitions": [
+      "definition_b4b5271e-8c18-493b-a50f-0b2cf6f4673e",
+      "definition_1f50a9b1-1cd7-4cf8-a35a-831ea5df46ec",
+      "definition_9f8c67d0-5920-4cba-a893-d3a1ba6baedb",
+      "definition_8462c222-60b6-4077-94f2-9bd3790dd67b",
+      "definition_9acff309-944b-493e-ae31-8836f7d129dc",
+      "definition_571876b1-f4b5-4fd7-bd28-ce6c503fd5ed",
+      "definition_46d824d5-1da6-4cf9-86c0-8ca1ee95274a",
+      "definition_6144fb05-9464-4e05-bb62-1440d62c9fb5"
+    ],
+    "engine_images": [
+      "sha256:74c2fc279bde554c060b4f8d23200a102542208b107e44100cbbe5aa034cac2a",
+      "sha256:d25404a48300853ceb7f8ff692864bca35db58725dd444f8456c98f51afb08d4"
+    ],
+    "engine_containers": [
+      "0e0397ff80a261c4486537f41539ea798cc010efa85c27fc7d195136bf08523d",
+      "2299e0eb281eb3570702f4deeb1da672cad78643e410868552b43fbe80730169",
+      "47fd937178da03288af76df24e60d99a06089f31b037ec2ef7bc81d877e82a59",
+      "ce644ed4c26ce12fc33480cf8ac5e2221a67697831aa20eb30cde76a7a182846",
+      "db86ed6cd704b89b7b61b29ccd825c71b777acda296978546f3e568ade77af6c",
+      "e3ae9151d101c9ebeeeed1d3c12fbdcd465a9bb1e40d128ba9f407b0f3623c28"
+    ],
+    "before_after_equal": true,
+    "original_volumes_retained": true
+  },
+  "execution": {
+    "run_id": "run_bdcacb07-fd69-4954-9278-7cf6ed919bbd",
+    "state": "succeeded",
+    "reuse": {
+      "scope": "none"
+    },
+    "executed_attempts": [
+      "attempt_6f4e4d7b-4fce-4b29-8174-2f3d7b0e72cf",
+      "attempt_3e20c381-69ce-493d-b670-19c2859eb509"
+    ]
+  },
+  "metadata": {
+    "valid": true,
+    "project_id": "fixture-example-service",
+    "accepted_sequence": 166,
+    "errors": [],
+    "index_checked": true,
+    "content_verified": true,
+    "availability": [
+      {
+        "artifact_id": "artifact_af0f36ad-e417-45a6-977e-395136de7cd9",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_c6bfdd23-7352-4e64-b25a-5f2a7afbb277",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_2307072e-6596-4c3c-8a91-cfbc04f66120",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_26a90cdd-5f39-4573-b73d-ee58f95c03df",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_2ee7746a-e53b-4ecd-84d2-40894e36c37a",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_6f4b3919-1573-4c61-8389-9f0131171c40",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_771cc8b8-32cc-4fc2-ba25-09196fa0e5fd",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_c538c958-3b4c-4d68-b60b-30afb7704571",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_47578968-95e3-4449-aacc-6e5b7511db38",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_52994584-c0a8-48ae-a855-1f5ff789f991",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_a9a55538-96be-4c00-93f8-07cd4554eab8",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_fd74252b-8820-43e5-b6b9-d026a1de8241",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_55d3ee04-4d8f-40b6-b52d-6f131e494189",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      },
+      {
+        "artifact_id": "artifact_378a1809-cf2a-45d5-b6b1-4c6c0424d711",
+        "availability": "available",
+        "verified": true,
+        "reason": null
+      }
+    ]
+  },
+  "checks": [
+    "Both Compose profiles render with exact seven names and unchanged runtime mount paths",
+    "84 example registration/reset/services tests passed",
+    "Changed test Ruff lint/format passed",
+    "Macrostates check/verify passed"
+  ],
+  "limitations": [
+    "Only the existing SeaweedFS example stack required and received data migration; generic MinIO profile was rendered only.",
+    "Old volume backups are retained and excluded from current Compose reset.",
+    "Native KFP is unaffected and remains stopped; no CPU/RAM comparison benchmark was performed."
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

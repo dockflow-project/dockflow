@@ -1,0 +1,75 @@
+# KFP compatibility and current limits
+
+[Documentation index](README.md)
+
+Dockflow executes a deliberately bounded KFP profile. It does not replace every
+Kubeflow service or implement the entire KFP server API. Query the installation
+or service you are actually using:
+
+```bash
+dockflow pipelines capabilities
+dockflow pipelines --endpoint http://127.0.0.1:8080 capabilities
+```
+
+The development profile is `dockflow-kfp-2.17-v1`: KFP SDK 2.17, compiled IR schema
+2.1.0, KFP DockerRunner, MLMD/SQLite and filesystem or S3-compatible artifacts.
+SDK version, IR schema and HTTP backend API version are separate identities.
+The current [qualification record](../.macrostates/implementation/main.md)
+describes tested combinations and remaining platform gaps.
+
+The source development preview exposes this implemented profile for evaluation.
+Public source availability does not qualify every intended deployment target.
+Use the locked source installation and retain the limitations below when
+choosing an environment.
+
+## Pipeline definitions
+
+| Supported by the current profile | Rejected or deferred |
+| --- | --- |
+| Compiled KFP v2 YAML/JSON pipeline or primitive component. | Python source entrypoints, v1 component YAML, Argo Workflow YAML, pickles. |
+| Container executors with prepared images, commands, args and supported environment bindings. | Kubernetes platform plugins, PVC provisioning, accelerators, OCI modelcar sidecars. |
+| Static DAGs and nested graph components. | `ParallelFor`, loops, `Collected`, artifact lists and `ExitHandler`. |
+| Typed scalar parameters and supported JSON lists/objects. | NaN/infinity, integers outside ±(2^53−1), ambiguous/duplicate JSON/YAML keys. |
+| Named scalar artifacts, file/directory payloads, supported metadata-only metrics and external publication through URI parameters/typed importers. | Overrides of framework-managed output artifact URIs/paths. |
+| Standard KFP importer and supported scalar conditional branches/OneOf convergence. | Arbitrary expression execution or unrecognized condition syntax. |
+| Cache policy, bounded retries, CPU/memory limits, cancellation and static partial selection. | Parallel task execution, distributed workers and multi-owner state. |
+
+Unsupported executable semantics produce a validation error instead of being
+silently dropped. Compilation alone does not establish that a feature is admitted;
+run `definitions validate` before deployment.
+
+The scalar condition grammar admits `inputs.parameter_values['name']` (or double
+quotes), scalar JSON literals, `int`/`double`/`string`/`bool` casts, comparisons,
+`!`, `&&`, `||` and parentheses. Expressions are parsed with an allowlist, never
+executed as Python. The capabilities response describes the exact profile.
+
+## Service compatibility
+
+The bounded KFP v2beta1 adapter supports experiment creation/list/get,
+pipeline upload/version upload/list/get, run creation/list/get and termination.
+It accepts the documented official KFP 2.17 client calls. Unsupported fields,
+nonempty Kubernetes namespaces, recurring schedules, deletion/archive operations,
+remote package URLs and archive uploads are not supported. See [API](api.md).
+
+Dockflow's browser interface uses its own native API plus the existing upload
+adapter. It follows familiar KFP concepts while showing Dockflow's actual
+capabilities. It is not the upstream KFP UI bundle and does not require the
+upstream UI's larger backend surface.
+
+## Runtime and deployment boundaries
+
+One project has one coordinator, at most one active Run, and serial tasks.
+The persistent service queues additional Runs. SQLite is part of control state;
+there is no external database or Kubernetes requirement. Same-host filesystem
+ownership is enforced by an OS lock; arbitrary network-filesystem SQLite sharing
+and distributed fencing are outside this profile.
+
+The intended CLI platform range and actual runtime qualification are distinct.
+The reference execution environment is Linux x86-64 with Python 3.13; Python
+3.12 is the minimum language target. Native ARM64 execution, macOS/Windows
+runtime combinations and Docker Desktop variants require their own evidence.
+Configured CI jobs and successful cross-builds do not provide that evidence.
+MLMD availability further limits execution environments; the remote client
+does not need MLMD. See the qualification record for tested combinations.
+Docker images execute trusted user code; this profile is not a multi-tenant
+sandbox. External SQL metadata backends are not part of the qualified preview.

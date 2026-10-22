@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-20T12:12:46.584885+00:00",
+  "workflow": "2026-10-20__19MM1Z__kfp-executor-output.md",
+  "application_version": "0.1.0.dev0",
+  "specification_package": "dockflow-pipelines 2.0.0",
+  "branch": "feat/initial-implementation",
+  "source_commit": null,
+  "source_sha256": {
+    "packages/pipelines/src/dockflow_pipelines/cli.py": "6256f64526507e878b38c14243a2e4d2e9b3f7c6fe51487a6fe4c2b7cbb2d71f",
+    "packages/pipelines/src/dockflow_pipelines/console.py": "5f808972ca5dfaa3618488ed13e12e02961505a7c30b01863eeff81b2c8f4157",
+    "packages/pipelines/tests/test_console.py": "f5af554e0be4fd616fc4c23d5cbf70a258bcc33397063cf324bc2703cac944a5",
+    "docs/cli.md": "d114c054d72965ba4b71e829b244564b199368aa6d48b0d07e213d7d6b939b90",
+    ".macrostates/implementation/main.md": "82071b708dcb717f5cdae069bf468bfb3257daed0df70316c9a0fe5cef3178f7",
+    ".macrostates/specs/main.md": "8576852be6656a59057bc070b3b628493e7ba9a5d30d9101b2e02a128e094fb3",
+    ".macrostates/specs/composition.yaml": "579102afceb4cabd991136bacf036655b775ceee6c72cf1f5aaed317c8405d07",
+    ".macrostates/specs/053_dockflow-pipelines/README.md": "719b8cde1211673e177be467991787d8cdac14fd7e2bf379305d92942eb7ba31",
+    ".macrostates/specs/053_dockflow-pipelines/package.yaml": "a26f2a97d89e3ff74525b78bdba556060a4bac824f488da5a104a75d8208ead2",
+    ".macrostates/specs/053_dockflow-pipelines/009_cli.md": "56d91fd00da842f053ebd233fe066234606c803a8fc246fc8c313035af024b6f",
+    ".macrostates/specs/053_dockflow-pipelines/011_acceptance.md": "aa584946f9e808a8d6303da580e8b9e5e2fc8fd1d826c57e5d51eefdfe07da61"
+  },
+  "validation": {
+    "presentation_tests": 70,
+    "dockflow_non_provider_tests": 280,
+    "provider_tests_deselected": 15,
+    "ruff": "pass",
+    "changed_python_format": "pass",
+    "pyright": "0 errors",
+    "macrostates_check_verify": "pass"
+  },
+  "packages": {
+    "schema_version": 1,
+    "version": "0.1.0.dev0",
+    "python": "3.13.16",
+    "uv": "uv 0.12.24 (x86_64-unknown-linux-gnu)",
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "libc": [
+        "glibc",
+        "2.44"
+      ]
+    },
+    "source": {
+      "commit": null,
+      "branch": "feat/initial-implementation",
+      "dirty": true,
+      "note": "Uncommitted development checkout; no accepted or published baseline"
+    },
+    "clean_install": [
+      "cli-only",
+      "combined-base"
+    ],
+    "runtime_extras_absent_from_base": true,
+    "artifacts": [
+      {
+        "filename": "dockflow_cli-0.1.0.dev0-py3-none-any.whl",
+        "sha256": "74046882d7cbd9efd3d20ac11ab03b97ee4516c145430a403828cf53d5e49f0a",
+        "name": "dockflow-cli",
+        "version": "0.1.0.dev0",
+        "dependencies": [
+          "typer>=0.27.3,<0.28.0"
+        ],
+        "build_backend_generator": "uv 0.11.33"
+      },
+      {
+        "filename": "dockflow_pipelines-0.1.0.dev0-py3-none-any.whl",
+        "sha256": "4846bbde36aca0e906fa468477c309f4678823472affea880cba46f8246d2f1e",
+        "name": "dockflow-pipelines",
+        "version": "0.1.0.dev0",
+        "dependencies": [
+          "dockflow-cli==0.1.0.dev0",
+          "typer>=0.27.3,<0.28.0",
+          "pyyaml>=6.0.2,<7",
+          "kfp>=2.17.0,<2.18 ; extra == 'runtime'",
+          "docker>=7.1.0,<8 ; extra == 'runtime'",
+          "ml-metadata>=1.21.0,<2 ; extra == 'runtime'",
+          "boto3>=1.38,<2 ; extra == 's3'",
+          "fastapi>=0.115.12,<0.116 ; extra == 'service'",
+          "uvicorn>=0.34.2,<0.35 ; extra == 'service'",
+          "python-multipart>=0.0.20,<0.1 ; extra == 'service'"
+        ],
+        "build_backend_generator": "uv 0.11.33"
+      },
+      {
+        "filename": "dockflow_cli-0.1.0.dev0.tar.gz",
+        "sha256": "2e98f4e3180cf1d6a1318bf69e2ad0359482d111b03727ee5f29bf723189b6be",
+        "standalone_rebuild": true
+      },
+      {
+        "filename": "dockflow_pipelines-0.1.0.dev0.tar.gz",
+        "sha256": "6f40d93b3f2bcc25524070aea28f7fdaf295fa4c5aaccc66dce4cec58b6e42bd",
+        "standalone_rebuild": true
+      }
+    ]
+  },
+  "install": {
+    "existing_state_unchanged": true,
+    "state_file_count": 244,
+    "run_count": 3
+  },
+  "docker_smoke": {
+    "config": "tmp/kfp-executor-output/execution-ab229602/dockflow.toml",
+    "training_run": "run_22f98efd-1582-4586-af08-415a271e036b",
+    "cases": [
+      {
+        "dockflow_output": true,
+        "component_output": true,
+        "json": false,
+        "output": "trimmed",
+        "run_id": "run_b5e95892-58c7-4edd-85a0-5ffa4e5b5e62",
+        "logs_retained": true
+      },
+      {
+        "dockflow_output": false,
+        "component_output": true,
+        "json": false,
+        "output": "trimmed",
+        "run_id": "run_8b50a240-c10a-4b75-a84b-030af8227e49",
+        "logs_retained": true
+      },
+      {
+        "dockflow_output": true,
+        "component_output": false,
+        "json": false,
+        "output": "trimmed",
+        "run_id": "run_a59fa7f8-e59b-48aa-908f-ca0189d6a193",
+        "logs_retained": true
+      },
+      {
+        "dockflow_output": false,
+        "component_output": false,
+        "json": false,
+        "output": "trimmed",
+        "run_id": "run_6b18f881-dd97-489c-8010-ee6cd359b06a",
+        "logs_retained": true
+      },
+      {
+        "dockflow_output": false,
+        "component_output": false,
+        "json": true,
+        "output": "trimmed",
+        "run_id": "run_57067d67-3cb7-4abd-bc20-4fb70fd6d730",
+        "logs_retained": true
+      },
+      {
+        "dockflow_output": false,
+        "component_output": true,
+        "json": false,
+        "output": "full",
+        "run_id": "run_7dfc1027-5102-43f7-aa2e-17a2e15df225",
+        "logs_retained": true
+      }
+    ],
+    "failure": {
+      "run_id": "run_8aa3fb96-2e0b-406b-945c-726125945cf3",
+      "exit_code": 1,
+      "diagnostic_visible": true,
+      "logs_retained": true
+    },
+    "metadata_integrity": true
+  },
+  "image": {
+    "image": "dockflow-pipelines:development",
+    "id": "sha256:4b738c3b358a9319af9e8f73b4d59ed801936cc5741d2ba956e0338d014698fe",
+    "presentation_check": "pass"
+  },
+  "evidence_sha256": {
+    "tmp/kfp-executor-output/failure.stderr": "da79afe0b68fc30e1a1e39c9b8c2558f376fa4e7d806fdf158dff620667ae875",
+    "tmp/kfp-executor-output/failure.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tmp/kfp-executor-output/image-build.log": "4cd64557b45d1ad616f9ed9d2fdb3e216de9f28e5ad1eeb8f3441816c6086b58",
+    "tmp/kfp-executor-output/image.json": "2c0d86eeec77ad93843c7e6d40c7ba9dafab7f0ced7942eba64bfbd86dcd9796",
+    "tmp/kfp-executor-output/inference-False-False-False-trimmed.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tmp/kfp-executor-output/inference-False-False-False-trimmed.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tmp/kfp-executor-output/inference-False-False-True-trimmed.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tmp/kfp-executor-output/inference-False-False-True-trimmed.stdout": "50dcd23b1e8cf547ca78b4cee71a6a6290c1adda4efacfaff0b74dc9f1c0d906",
+    "tmp/kfp-executor-output/inference-False-True-False-full.stderr": "78ffcceaccce71a67cdda5379e5a27c63921362a3167c134a2648edba9226ce6",
+    "tmp/kfp-executor-output/inference-False-True-False-full.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tmp/kfp-executor-output/inference-False-True-False-trimmed.stderr": "d14c03e823bc992d3f206c2bb5fa74253b8f1eb7dfb4772779d3c97ee1f80016",
+    "tmp/kfp-executor-output/inference-False-True-False-trimmed.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tmp/kfp-executor-output/inference-True-False-False-trimmed.stderr": "8cf466d4c787a313eac4c537e63318e99b9594531e2e3e40e6bbb33b0359312f",
+    "tmp/kfp-executor-output/inference-True-False-False-trimmed.stdout": "29d1ffd926762e75687ab02ff5d8904ecd84fd5a6f1ad3bc3cdfc8fb81d1197d",
+    "tmp/kfp-executor-output/inference-True-True-False-trimmed.stderr": "cb4569fc290562d5aab0d4a0debac256c14ddd0bd3f8fdc4260951a9dd59f9cb",
+    "tmp/kfp-executor-output/inference-True-True-False-trimmed.stdout": "f6ce91038239124db2d83fd48424d379963e80f35dc816169c91943ef3971875",
+    "tmp/kfp-executor-output/install.json": "c74507a724cbea492181a9f29a7a0884a28592aee1a9229ce03da2643a5ff8ae",
+    "tmp/kfp-executor-output/smoke.json": "7ff15a9e487e49e85075c54fbba0a0fe75dcb6ef3cf597e8810868d790257257",
+    "tmp/kfp-executor-output/smoke.py": "4a11a2ea0493ef1db43e0100879e2a83d842023100bf63eff59a30667ad356b4",
+    "tmp/kfp-executor-output/training.stderr": "5b57f343c2d5ea5b10a9d24fdf5bc2afc2993982396318ccba23f42410dfcbf0",
+    "tmp/kfp-executor-output/training.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limits": [
+    "Linux x86_64 development qualification",
+    "Narrow KFP 2.17 executor message shapes; unknown messages and malformed/oversized input JSON stay visible",
+    "No Compose or native KFP deployment",
+    "No reset, commit, merge, publication or accepted baseline"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

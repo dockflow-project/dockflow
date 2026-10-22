@@ -1,0 +1,13 @@
+name: docker-1
+version: 3.0.0
+versioned_at: 2026-10-13 16:10
+description: Reusable Docker image and container conventions.
+entrypoint: README.md
+dependencies:
+- name: meta
+  version: 2.2.0
+  constraint: at_least
+optional_dependencies:
+- name: process
+  version: 5.0.0
+  constraint: at_least

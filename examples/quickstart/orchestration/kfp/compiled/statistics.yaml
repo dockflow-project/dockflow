@@ -1,0 +1,101 @@
+# PIPELINE DEFINITION
+# Name: statistics
+# Description: Generate numbers and summarize them.
+# Inputs:
+#    count: int [Default: 10.0]
+components:
+  comp-generate:
+    executorLabel: exec-generate
+    inputDefinitions:
+      parameters:
+        count:
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      artifacts:
+        dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-summarize:
+    executorLabel: exec-summarize
+    inputDefinitions:
+      artifacts:
+        dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        report:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+      parameters:
+        mean:
+          parameterType: NUMBER_DOUBLE
+deploymentSpec:
+  executors:
+    exec-generate:
+      container:
+        args:
+        - --count
+        - '{{$.inputs.parameters[''count'']}}'
+        - --output-directory
+        - '{{$.outputs.artifacts[''dataset''].path}}'
+        command:
+        - python
+        - /components/generate/main.py
+        image: dockflow-quickstart-components:v1
+    exec-summarize:
+      container:
+        args:
+        - --input-directory
+        - '{{$.inputs.artifacts[''dataset''].path}}'
+        - --output-directory
+        - '{{$.outputs.artifacts[''report''].path}}'
+        - --mean-output
+        - '{{$.outputs.parameters[''mean''].output_file}}'
+        command:
+        - python
+        - /components/summarize/main.py
+        image: dockflow-quickstart-components:v1
+pipelineInfo:
+  description: Generate numbers and summarize them.
+  name: statistics
+root:
+  dag:
+    tasks:
+      generate:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-generate
+        inputs:
+          parameters:
+            count:
+              componentInputParameter: count
+        taskInfo:
+          name: generate
+      summarize:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-summarize
+        dependentTasks:
+        - generate
+        inputs:
+          artifacts:
+            dataset:
+              taskOutputArtifact:
+                outputArtifactKey: dataset
+                producerTask: generate
+        taskInfo:
+          name: summarize
+  inputDefinitions:
+    parameters:
+      count:
+        defaultValue: 10.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.17.0

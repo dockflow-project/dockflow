@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-20T11:34:32.872249+00:00",
+  "workflow": "2026-10-20__174234__managed-artifact-directory.md",
+  "application_version": "0.1.0.dev0",
+  "specification_package": "dockflow-pipelines 1.6.0",
+  "branch": "feat/initial-implementation",
+  "source_commit": null,
+  "source_sha256": {
+    "packages/pipelines/src/dockflow_pipelines/config.py": "0955ce13c1ae0f4feee7e98255e4e3e66ae839a0dde8c6f6774ab0a79d082445",
+    "packages/pipelines/src/dockflow_pipelines/artifacts.py": "942d8c8acca665a6ce530ab80b14ddcbb06467c944ac5f87a1b51e7c399e256a",
+    "packages/pipelines/src/dockflow_pipelines/metadata.py": "3f148a743fc4739afb01447d03f4e8ed1481f768389380a2319d07871cd7340a",
+    "packages/pipelines/src/dockflow_pipelines/kfp_api.py": "844009ef1e7ce020450e1cf3c07af43addd70919e00bc616125911a1710fb11b",
+    "tools/backup.py": "4bc71f88755086f8729475650479ab662039a5a9e7d0f26fd1c7fd34269f64c3",
+    "packages/pipelines/tests/unit/test_config.py": "6077b6d1b16b6f3e2fa73e5c2d5b0911e89c84896c2751d4b34c3da83d582707",
+    "packages/pipelines/tests/integration/test_persistence.py": "45854fb08795fd42deff3c3bcd943d3616552657c4682ee8ec86ff77ec911012",
+    "packages/pipelines/tests/test_interfaces.py": "4862ca04afc850f2c6c2a90eb55a7334b3d3a80f09f2c29838b8e6ceca870a36",
+    "docs/configuration.md": "2f279428f0bee81e714d5cbc68a8dc41d51a9a6fee70933fb7c4b01e17edb4c7",
+    "docs/artifacts.md": "3757da9bcb8f8de152b664676016cef1cb1f1896c4d3914bf92f287ceed734b6",
+    "docs/persistence.md": "41584abb0beaf6b37a2059b2fb3acd6c4353223c6f1784dad5d4a8c817a51739",
+    ".macrostates/specs/composition.yaml": "5ad922f2714789fbfbe685e6ee8a48f2dbb254d34f84c19678ec5d2350f2fdf0",
+    ".macrostates/specs/main.md": "8e093dedc4b1b3f9b0d3fb5e0664e7b0f3cce27e6fa38196aec6ef68cb966c8c",
+    ".macrostates/implementation/main.md": "c825e80d95c9f3b69c74c19e6d6d36c4b2564725afe6b168eadd3b4567327961",
+    ".macrostates/specs/053_dockflow-pipelines/001_pipelines.md": "e6504c9c4e3a112983c8c967ae80175c040390bbffadb6120beffee864f835c8",
+    ".macrostates/specs/053_dockflow-pipelines/002_local-execution.md": "d05138bc6660264eba66da97c22e1a45d98d4ad384c21ba81aaaf134ff113f44",
+    ".macrostates/specs/053_dockflow-pipelines/003_configuration-and-backends.md": "d48f4024fbfe05eef13c4cc4386be6130edacab5ddca7c46b530190421ec9e1e",
+    ".macrostates/specs/053_dockflow-pipelines/004_kfp-compatibility.md": "6c4be5c3cde722d8a9544a625ef2cbc2f48ce1f16cb6b820340441f4417e7db0",
+    ".macrostates/specs/053_dockflow-pipelines/005_execution-and-lifecycle.md": "6e85d7b33c4eb0a491bd7c169cf10fd84f9f0842bd04c16836b11e81bca9e447",
+    ".macrostates/specs/053_dockflow-pipelines/006_artifacts.md": "fa471159be6950e33b72e427ca0e696bb90b3d73cedd7622735a84e28c2288c0",
+    ".macrostates/specs/053_dockflow-pipelines/007_metadata-and-recovery.md": "97f04725bb13958ddf1a31bf7870facc52b21e0ca7367adb9aa34fa1aaedd3e1",
+    ".macrostates/specs/053_dockflow-pipelines/008_reuse-and-selection.md": "a19f390c370ef2837ab524e41f8d3635923ecbd5e44e4a86413e4a90b6d40065",
+    ".macrostates/specs/053_dockflow-pipelines/009_cli.md": "c408b286b61166849186a2e6b186a836c0d57bcf40fc246d90acdf704a6cbeea",
+    ".macrostates/specs/053_dockflow-pipelines/010_service-api.md": "2c0a3e659c552e5189d2de7f28b10224e7c42e4fc9664ca355dd25913ff0cb37",
+    ".macrostates/specs/053_dockflow-pipelines/011_acceptance.md": "fcfa983773624dc4abe23b1f2dffa91d7440492d7accd5366f0d5e3222f54484",
+    ".macrostates/specs/053_dockflow-pipelines/012_review-and-qualification.md": "0701fa5ad68050a699be4133f5dbe0b56393cf773417d1d0c15f1f2c229d934b",
+    ".macrostates/specs/053_dockflow-pipelines/013_web-interface.md": "288d96349bcda80bcec00a7bce311cc010638b76b392e19650a655e32bacc0d6",
+    ".macrostates/specs/053_dockflow-pipelines/README.md": "e4699454acf89086f4de49e536c2b8aaa1908748ec13b52e52ebe982998909f8",
+    ".macrostates/specs/053_dockflow-pipelines/package.yaml": "aa3da0dc7998648969433004bdcc5d3add5e127ae1b6fada08528dd3af0305d8"
+  },
+  "validation": {
+    "dockflow_non_provider_tests": 231,
+    "example_tests": 236,
+    "final_persistence_tests": 22,
+    "ruff": "pass",
+    "changed_python_format": "pass",
+    "pyright": "0 errors",
+    "macrostates_check_verify": "pass",
+    "fixture_state_empty": true,
+    "installed_example_managed_root": "<fixture>/data/artifacts"
+  },
+  "packages": {
+    "schema_version": 1,
+    "version": "0.1.0.dev0",
+    "python": "3.13.16",
+    "uv": "uv 0.12.24 (x86_64-unknown-linux-gnu)",
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "libc": [
+        "glibc",
+        "2.44"
+      ]
+    },
+    "source": {
+      "commit": null,
+      "branch": "feat/initial-implementation",
+      "dirty": true,
+      "note": "Uncommitted development checkout; no accepted or published baseline"
+    },
+    "clean_install": [
+      "cli-only",
+      "combined-base"
+    ],
+    "runtime_extras_absent_from_base": true,
+    "artifacts": [
+      {
+        "filename": "dockflow_cli-0.1.0.dev0-py3-none-any.whl",
+        "sha256": "74046882d7cbd9efd3d20ac11ab03b97ee4516c145430a403828cf53d5e49f0a",
+        "name": "dockflow-cli",
+        "version": "0.1.0.dev0",
+        "dependencies": [
+          "typer>=0.27.3,<0.28.0"
+        ],
+        "build_backend_generator": "uv 0.11.33"
+      },
+      {
+        "filename": "dockflow_pipelines-0.1.0.dev0-py3-none-any.whl",
+        "sha256": "d990419be4d9573cdf021315f3761d22691c862dd8707ebf26d9c226a231928a",
+        "name": "dockflow-pipelines",
+        "version": "0.1.0.dev0",
+        "dependencies": [
+          "dockflow-cli==0.1.0.dev0",
+          "typer>=0.27.3,<0.28.0",
+          "pyyaml>=6.0.2,<7",
+          "kfp>=2.17.0,<2.18 ; extra == 'runtime'",
+          "docker>=7.1.0,<8 ; extra == 'runtime'",
+          "ml-metadata>=1.21.0,<2 ; extra == 'runtime'",
+          "boto3>=1.38,<2 ; extra == 's3'",
+          "fastapi>=0.115.12,<0.116 ; extra == 'service'",
+          "uvicorn>=0.34.2,<0.35 ; extra == 'service'",
+          "python-multipart>=0.0.20,<0.1 ; extra == 'service'"
+        ],
+        "build_backend_generator": "uv 0.11.33"
+      },
+      {
+        "filename": "dockflow_cli-0.1.0.dev0.tar.gz",
+        "sha256": "2e98f4e3180cf1d6a1318bf69e2ad0359482d111b03727ee5f29bf723189b6be",
+        "standalone_rebuild": true
+      },
+      {
+        "filename": "dockflow_pipelines-0.1.0.dev0.tar.gz",
+        "sha256": "a7adbbd7774a8bbe9e208cb9948bb1d2650ceb390ca236bf993b9839fa0bfbdd",
+        "standalone_rebuild": true
+      }
+    ]
+  },
+  "smoke": {
+    "artifact_root": "data/artifacts",
+    "dataset": "data/external/sample/sample.data",
+    "metadata_integrity": true,
+    "config": "tmp/managed-root/execution-766edcfe/dockflow.toml",
+    "training_run": "run_27775d8b-4ae0-425b-8e25-22386ec9bec8",
+    "inference_run": "run_15047283-12d5-42c6-b0e3-ffc25d58c1e6",
+    "terminal_traceprint_colors": true,
+    "redirected_plain_text": true,
+    "machine_json_valid": true,
+    "retained_colors_and_metadata": true,
+    "service_training_run": "run_9d853e78-2f49-4512-8b1c-7e57e7c0fdbb",
+    "service_inference_run": "run_8a2d95f3-85da-4e75-befe-4ea4260033a9",
+    "service_metadata_integrity": true,
+    "no_managed_child": true
+  },
+  "image": {
+    "image": "dockflow-pipelines:development",
+    "id": "sha256:3acf8b63f70788596fe0182f5d399124dbebbbd4be283dd2c757096b3abbe1dd",
+    "managed_root_configuration": "pass"
+  },
+  "limits": [
+    "Linux x86_64 development qualification",
+    "No Compose or native KFP deployment for this change",
+    "Existing S3 layout unchanged",
+    "No commit, merge, publication or accepted baseline"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-20T17:31:52.987515+00:00",
+  "problem": "Reset removed the local artifact directory and publication config required as task mounts.",
+  "changes": [
+    "Shared local-only preparation used by setup and both applied reset modes",
+    "Read-only preview and owner/symlink/cleanup-order safeguards retained",
+    "Missing-mount diagnostics identify the source path",
+    "Generated prerequisites repaired and updated Pipelines wheel installed in the example environment"
+  ],
+  "validation": {
+    "example_tests_passed": 253,
+    "task_mount_tests_passed": 5,
+    "checks": [
+      "Ruff lint and format",
+      "Pyright",
+      "shell syntax",
+      "Macrostates check"
+    ],
+    "training_command_exit_code": 0,
+    "training_run_id": "run_c4fdf720-7a10-482a-8515-3b83896a3a67",
+    "training_state": "succeeded"
+  },
+  "operations": {
+    "existing_history_preserved": true,
+    "live_reset_performed": false,
+    "serving_stacks_started": false
+  },
+  "source_sha256": {
+    "packages/pipelines/src/dockflow_pipelines/executor.py": "555799c6cd75dc573a8a2cfed6d75e1e2a1868a7f65093bfc639e0c8ab1391fc"
+  },
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

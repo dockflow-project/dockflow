@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-19T22:44:14.409476+00:00",
+  "workflow": "2026-10-19__2CYRYD__architecture-review.md",
+  "branch": "feat/initial-implementation",
+  "starting_commit": null,
+  "application_version": "0.1.0.dev0",
+  "semantic_specification_change": false,
+  "source_sha256": {
+    "packages/pipelines/src/dockflow_pipelines/metadata.py": "d674e9395fa87672a47309dd67877585036145de2bd3b4a9946b4ad75b6a416f",
+    "packages/pipelines/src/dockflow_pipelines/ownership.py": "54ec42b3dcb2b25c08012b458e6a888f8c36918e391c31a1a3496fa036fa3878",
+    "packages/pipelines/src/dockflow_pipelines/mlmd_index.py": "c114e98f4bc5dcc74c11d78251877d605b90c957bcc60b113312651f75fde58e",
+    "packages/pipelines/src/dockflow_pipelines/records.py": "ae4aa92ef35ec14547d24752d059fdf068fe07d95e5c65f6954e1b50e13f6cc5",
+    "packages/pipelines/tests/integration/test_ownership.py": "68043de00038f5299301188ab6ebed084456c59bbe5e1160106b53a811664941",
+    "packages/pipelines/tests/integration/test_runtime_boundaries.py": "85f44e79c72030eaafb5979cbd7a26ccb0f79e6689883957b859424fd3bac6fe",
+    "docs/architecture.md": "f78f77cf94a0e0ae28952c44a94375d97777a1388b0f6a89a14aae672c11dcc4"
+  },
+  "validation": {
+    "focused": {
+      "junit_path": "tmp/architecture-review/focused.xml",
+      "sha256": "7bda3839698e61297aaf051bdb872590d0e2c2f96e4cbbee470825871ddf2a48",
+      "tests": 80,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    "docker": {
+      "junit_path": "tmp/architecture-review/docker.xml",
+      "sha256": "33870ead4e687691cc2d0fcb69ff2cfc85c4f8d9bcad8d7b34b59856e080bfa6",
+      "tests": 1,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    "integrated_non_docker": {
+      "junit_path": "tmp/architecture-review/integrated-non-docker.xml",
+      "sha256": "c6ea269954599895936931a134c251c4885005effec9999e3214ff38563efa5b",
+      "tests": 181,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "deselected": 12
+    }
+  },
+  "checks": {
+    "ruff_lint": "passed",
+    "ruff_format": "6 files already formatted",
+    "pyright": "0 errors, 0 warnings"
+  },
+  "platform": {
+    "system": "Linux",
+    "machine": "x86_64",
+    "python": "3.13.16"
+  },
+  "limits": [
+    "No new Windows/macOS/network-filesystem qualification",
+    "Integrated UI/API/package checks belong to parent workflow",
+    "No deployment rebuild or publication"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

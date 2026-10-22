@@ -1,0 +1,352 @@
+{
+  "schema_version": 1,
+  "validated_at": "2026-10-19T22:54:21.028171+00:00",
+  "workflow": "2026-10-19__2CYRYD__web-interface.md",
+  "branch": "feat/initial-implementation",
+  "source_commit": null,
+  "application_version": "0.1.0.dev0",
+  "local_pipelines_specification_version": "1.3.0",
+  "project_baseline": "provisional specs-0.1.0; no implementation baseline",
+  "environment": {
+    "python": "3.13.16",
+    "system": "Linux",
+    "machine": "x86_64",
+    "libc": [
+      "glibc",
+      "2.44"
+    ],
+    "node": "20.20.2",
+    "playwright": "1.55.0",
+    "chromium": "140.0.7339.16"
+  },
+  "source_sha256": {
+    ".macrostates/specs/053_dockflow-pipelines/001_pipelines.md": "e6504c9c4e3a112983c8c967ae80175c040390bbffadb6120beffee864f835c8",
+    ".macrostates/specs/053_dockflow-pipelines/002_local-execution.md": "d05138bc6660264eba66da97c22e1a45d98d4ad384c21ba81aaaf134ff113f44",
+    ".macrostates/specs/053_dockflow-pipelines/003_configuration-and-backends.md": "8366481cabb76322aa434a5987dd6a46a593da2a6d09b5a967dd1725740049ff",
+    ".macrostates/specs/053_dockflow-pipelines/004_kfp-compatibility.md": "6c4be5c3cde722d8a9544a625ef2cbc2f48ce1f16cb6b820340441f4417e7db0",
+    ".macrostates/specs/053_dockflow-pipelines/005_execution-and-lifecycle.md": "5139985f0efe2156125354e39d402afe20917b0fe8432b8ece546702be9d3027",
+    ".macrostates/specs/053_dockflow-pipelines/006_artifacts.md": "b161cb655ffa40bb98565b57094a566f288e240745331ada342eabbc06e719c8",
+    ".macrostates/specs/053_dockflow-pipelines/007_metadata-and-recovery.md": "97f04725bb13958ddf1a31bf7870facc52b21e0ca7367adb9aa34fa1aaedd3e1",
+    ".macrostates/specs/053_dockflow-pipelines/008_reuse-and-selection.md": "a19f390c370ef2837ab524e41f8d3635923ecbd5e44e4a86413e4a90b6d40065",
+    ".macrostates/specs/053_dockflow-pipelines/009_cli.md": "dae4ad3a093facbee304e7af10ad70b18af75b89a1ebc12fa6ac38e2f8feb091",
+    ".macrostates/specs/053_dockflow-pipelines/010_service-api.md": "6c1cb7e4748ca52099696a0efdfb67aad0fd6fe2a253b19b69d20a53a5c90a34",
+    ".macrostates/specs/053_dockflow-pipelines/011_acceptance.md": "0b3ffbd922e2fb999db6b8336665eb59392bda0f2cf3f095772e480a2aaf5d2c",
+    ".macrostates/specs/053_dockflow-pipelines/012_review-and-qualification.md": "5f1734d671fde18e5ac3758e55765602363b7a3afd12987c91bce08fb18b96bf",
+    ".macrostates/specs/053_dockflow-pipelines/013_web-interface.md": "490f99032d79c6a92a9b67eda015a36f4579119126d27d5c49052bc3745e5601",
+    ".macrostates/specs/053_dockflow-pipelines/README.md": "fd06e478eaf4c87f098e09d7501c9198ce5bc4f09059d3ade8dae9da67d50a0b",
+    ".macrostates/specs/053_dockflow-pipelines/package.yaml": "07baac6121b2aef95778b9c4df532821711b6a87cf1f4aac19ba36e1d744e255",
+    ".macrostates/specs/composition.lock.yaml": "970f457083568f560f333ee66bb65d2ff7aa4858e01601c0dbf8093d72a181e4",
+    ".macrostates/specs/composition.yaml": "62614a78f5f4643f1d9beaf63c0da345542b6e6d90c56e31f31a809f10c67607",
+    ".macrostates/specs/main.md": "d2c248e360807b8a843b8ad8fe41e2f9034fe67e5fcabf649f93c3b6bed01ffd",
+    "CONTRIBUTING.md": "8762324515caff8bb9aaf5c162509230444aa6da0cdf20fb2dc13be6fc297351",
+    "docs/api.md": "02a4496b841db73c3427240c42b8cb18602cafd0d507674fa4191bc361a3f397",
+    "docs/reference/api.md": "870b39355074cfaeb60b40fd0a7ea4ffebfe928e912ea6381b12303ff371aee4",
+    "docs/reference/openapi.json": "34446600b14a97cbdb911981df8f9707b12660c6abf676e4b37a131763abeaeb",
+    "docs/ui.md": "b162458a9dc8946597e13d719eccbfb0ba8038f61e6489f1d7f4a20b81c807d0",
+    "packages/cli/src/dockflow_cli/__init__.py": "8e5ee4ec93fbcab5aa1bc7252d4f061c061b344318c5bbee7e60c0a3e6832907",
+    "packages/cli/src/dockflow_cli/main.py": "c153e28bcf0a2f985ec7b5640abfe88421be26f62fb27ced0bacc316c6d23ff1",
+    "packages/pipelines/src/dockflow_pipelines/__init__.py": "64a580d8c415e8b1f75f349d3b545f8808910674a5c601a4ebb8f3437e5522a2",
+    "packages/pipelines/src/dockflow_pipelines/artifacts.py": "125f76aca5949b8161c7060ea04562d8d7b3c89699ed629ba2196739a4afc167",
+    "packages/pipelines/src/dockflow_pipelines/canonical.py": "d4633592fb3e5cc37b8060583617dd6f6af162239fef76988bb2cd3dece081f5",
+    "packages/pipelines/src/dockflow_pipelines/cli.py": "8682a2ba9f0306fdb62c189a99c845fda06629d1d48e1425ea4e42bdc0bc3abe",
+    "packages/pipelines/src/dockflow_pipelines/client.py": "ef8f62abb8223d18643c6d645ee0a424595737eeff84fd17065004474dbb4183",
+    "packages/pipelines/src/dockflow_pipelines/config.py": "87071686e13d07db426cbcf25681de9562c272687325a913f24e8f51aa7384f1",
+    "packages/pipelines/src/dockflow_pipelines/core.py": "a35551b3996c784b4a2a669b181e8025ea9aa02369cda949489e3201f88dcd42",
+    "packages/pipelines/src/dockflow_pipelines/definitions.py": "8bbb62e50aac0771bbf36c112277de3738f5eac6eb8b2790eb1875834e1af562",
+    "packages/pipelines/src/dockflow_pipelines/engine.py": "660e2f7ea2d8130ffb75c10c37556152bb96aaa7a4b1aedae95c1c84b9c9e7f0",
+    "packages/pipelines/src/dockflow_pipelines/errors.py": "e417a406c4428a14c4b6dc66396a4f044d5bfdbd21aa9a3a194e6ff5b6368743",
+    "packages/pipelines/src/dockflow_pipelines/executor.py": "1b1d6ccbba52ed70b72d2e15fc7b1dc63ace26b0fc1950357996cddf460c3ecd",
+    "packages/pipelines/src/dockflow_pipelines/kfp_api.py": "90b9117efe864c1b784e5bc0259dd571e86ef1e3c7aa6f85510e7b971ee2f36a",
+    "packages/pipelines/src/dockflow_pipelines/metadata.py": "d674e9395fa87672a47309dd67877585036145de2bd3b4a9946b4ad75b6a416f",
+    "packages/pipelines/src/dockflow_pipelines/mlmd_index.py": "c114e98f4bc5dcc74c11d78251877d605b90c957bcc60b113312651f75fde58e",
+    "packages/pipelines/src/dockflow_pipelines/openapi.py": "69ac8f39e12d7aeca61d7357e956c0b4d918e988c6cba17b8a4e7a8a019ae1d3",
+    "packages/pipelines/src/dockflow_pipelines/operations.py": "ab637de995d278f692984fb9a27ddcae7af83190653ca78a85d29209064a419a",
+    "packages/pipelines/src/dockflow_pipelines/ownership.py": "54ec42b3dcb2b25c08012b458e6a888f8c36918e391c31a1a3496fa036fa3878",
+    "packages/pipelines/src/dockflow_pipelines/records.py": "ae4aa92ef35ec14547d24752d059fdf068fe07d95e5c65f6954e1b50e13f6cc5",
+    "packages/pipelines/src/dockflow_pipelines/reuse.py": "0cfc42c25339af51762ae5f33f3d3da67c065f3d65e86c8ef3f4293e75cad091",
+    "packages/pipelines/src/dockflow_pipelines/service.py": "6057fbd8d49a1a55e54a28124f96fc79ccb4c48ddebf8337865c3f5bf52cd98a",
+    "packages/pipelines/src/dockflow_pipelines/static/api-docs.html": "29732bbf11bc06ef0c71d3876e7cd2921f47c44ca26ac97577182d9118ce1a79",
+    "packages/pipelines/src/dockflow_pipelines/static/api-docs.js": "c17adddfe94d1080ee508cfc729d458c1fafd8191faffe291b3953b2cb08b2b0",
+    "packages/pipelines/src/dockflow_pipelines/static/api.js": "d3ad71310f75402bb985281e8da514506ceb314c44695d6d2f3852b5fbac4066",
+    "packages/pipelines/src/dockflow_pipelines/static/app.js": "cd17eb9cbd6a19e5f4c52387a3ff704d5c1417f26f208019b89955162e08292d",
+    "packages/pipelines/src/dockflow_pipelines/static/dom.js": "71b93b4e4a423a9efbf770b34cb5f72235864c2cbe981d1a75ca9d9a3bdb2e18",
+    "packages/pipelines/src/dockflow_pipelines/static/forms.js": "72b669b30defa2168aa8ff7c0c04020b5357a6f2517a14c8d2b614aaa06212ee",
+    "packages/pipelines/src/dockflow_pipelines/static/graph.js": "d6b83496a4c980d9254cd9dd3020bb765fa41b555e16d56068f426ad764087c1",
+    "packages/pipelines/src/dockflow_pipelines/static/index.html": "4c7095d5d7dbb48888df531bcc6d07ce5f76045777d73ff01e282edd2dd82b0d",
+    "packages/pipelines/src/dockflow_pipelines/static/json.js": "7d2dea45d6d0d3cbbca9b35417b31a89656b568f7e5f520cc9ef1f6e2151be13",
+    "packages/pipelines/src/dockflow_pipelines/static/package.json": "609158e6c5fbc237939fa3ddf7faab80ab690bdc0c8d584414a885130103c4e8",
+    "packages/pipelines/src/dockflow_pipelines/static/styles.css": "82ca609217ee91c79b5c2aa911b911c2792e5f9f30ea8cd3bdec6731598de81b",
+    "packages/pipelines/src/dockflow_pipelines/static/views.js": "8956ed4f6dcebe52e38d6588f75fb98590aab8a898a3614458b3fb2ffb3ea6ec",
+    "packages/pipelines/src/dockflow_pipelines/web.py": "79355d625167b17a3a68f4cbab42ddb080920f68f6076f372a542813f0d8fb86",
+    "packages/pipelines/tests/test_web.py": "541ea9edd5015820b7f0e6c67dcb9b1ae4d6b770a9a35d3c6caa4e6294c4d250",
+    "packages/pipelines/tests/web/api.test.mjs": "c30d863ac6e6bc535961f91bdbb66c74d4447176d676ee019ddfaefb5d21ea77",
+    "packages/pipelines/tests/web/graph.test.mjs": "ab4d90275ca179aa5186306cf7d117da8deeda7cd1b836b9b0a6375ce830d035",
+    "packages/pipelines/tests/web/json.test.mjs": "1d0b5ab147e59b164532258f472fcf7778f14b2ab116b256916aaf5ceade4605",
+    "packages/pipelines/tests/web/parameters.test.mjs": "ab3cb60cee266fb9299b848fffe05fea2499a27631798faac39ca0c69853fba3",
+    "tools/browser_smoke.py": "a6cce36bf37f65dae3ef9272bb6f2b55291c101ee1e154136e0686f0d74ca1b9",
+    "tools/generate_api_docs.py": "3fc0edd6c406e7d121d6206e8575b60cfb61167be03be2b90338e1e5dde20d14",
+    "tools/verify_packages.py": "c75cf08f1ef507a37b8a03698774d421ed95e2a4604dd1fd9e99cfd477e2733f",
+    "tools/web_fixture.py": "6ebfa5e9668f8f34cc268fa30ff0ac4668f2721ff18d1d430bb98bc9e842813b"
+  },
+  "python": {
+    "non_provider": {
+      "command": ".venv/bin/pytest -m 'not docker and not s3' -q -o faulthandler_timeout=30 --junitxml=tmp/web-interface/regression-final.xml",
+      "deselected": 12,
+      "path": "tmp/web-interface/regression-final.xml",
+      "sha256": "93e3a6a89a5b05594521cf67dc0909d6b9026d3ce94bf5033577446af50dd93d",
+      "tests": 181,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "docker": {
+      "command": "DOCKFLOW_TEST_DOCKER=1 .venv/bin/pytest -m docker -q -o faulthandler_timeout=90 --junitxml=tmp/web-interface/docker.xml",
+      "deselected": 181,
+      "path": "tmp/web-interface/docker.xml",
+      "sha256": "165403050ba5e88965b783d8eab503491d14848281c9b12bcfbb3ee98f332564",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "web_contract_subset": {
+      "note": "Included in non-provider total, not additional tests",
+      "path": "tmp/web-interface/contracts.xml",
+      "sha256": "927eb62757f03d7374931032cdca52ffddf18e4587506ac60662ba0125171a11",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "distinct_passed": 193,
+    "warnings": "Two upstream dependency warnings in the integrated suites"
+  },
+  "javascript": {
+    "command": "node packages/pipelines/tests/web/{api,graph,json,parameters}.test.mjs (each file separately)",
+    "tests": [
+      {
+        "path": "tmp/web-interface/node-api.tap",
+        "sha256": "6b88c8175d0a03df3f48c5bdf8a747043c3e250dfac48b61038bf98a6d6373d6",
+        "tests": 6,
+        "pass": 6,
+        "fail": 0
+      },
+      {
+        "path": "tmp/web-interface/node-graph.tap",
+        "sha256": "e7b43f807e9fdc285961a8016603dd59014c1415a6de6d4ab7efd38b7669012d",
+        "tests": 6,
+        "pass": 6,
+        "fail": 0
+      },
+      {
+        "path": "tmp/web-interface/node-json.tap",
+        "sha256": "c74cc69a3b55d68f4aff1d3664624473b0b44932ed98d477117bd9ea9d4d7b00",
+        "tests": 4,
+        "pass": 4,
+        "fail": 0
+      },
+      {
+        "path": "tmp/web-interface/node-parameters.tap",
+        "sha256": "c77f74b1e7424140ab5c165d58347f62587fd7ed7f4020453d26b0f502b7c657",
+        "tests": 8,
+        "pass": 8,
+        "fail": 0
+      }
+    ],
+    "distinct_passed": 24
+  },
+  "browser": {
+    "tool": "Automated headless Playwright against newly created disposable fixture services, real Docker execution",
+    "runs": [
+      {
+        "path": "tmp/web-interface/browser-final/result.json",
+        "sha256": "48fd99672a14101217477063a4f0f09cd36b3ee6ad0c3778f1037df12ad05bc6",
+        "result": {
+          "browser": "140.0.7339.16",
+          "checks": [
+            "keyboard skip link preserves navigation",
+            "compiled pipeline upload and graph",
+            "immutable version upload and default selection",
+            "response-loss retry returns the original run via idempotency key",
+            "typed run submission, input validation, actual Docker completion, graph/task results and XSS text",
+            "attempt navigation and bounded retained logs",
+            "clone, actual reuse and original producer link",
+            "run comparison with real numeric artifact metadata",
+            "artifact pin and producer/consumer lineage",
+            "experiment creation and empty run list",
+            "real failure and confirmed cancellation states",
+            "server-side artifact import and metadata text rendering",
+            "narrow layout and usable navigation",
+            "offline live-schema API explorer"
+          ],
+          "pipeline_id": "pipeline_8d2ac40a-4bfc-421d-bde6-2865d67fbc02",
+          "run_ids": [
+            "run_bb209375-917e-4f9e-93ba-42c2ad49bf14",
+            "run_e794bc5b-3493-40df-82d3-0fd3a0ca6de9",
+            "run_535ca56f-d585-4feb-a419-c5f98142f390",
+            "run_9ab0e6c5-7d4f-4952-ba51-dcaff4bdc446"
+          ],
+          "page_errors": [],
+          "external_requests": []
+        },
+        "screenshots": {
+          "tmp/web-interface/browser-final/compare-desktop.png": "5c598d22690256b6eac61e317526d5bab8f7211b5d7bd738c6843a11a646935c",
+          "tmp/web-interface/browser-final/pipeline-desktop.png": "3520b748436272ba4357e750086249bf14065ec2bd1c954345c38de62cd63bf1",
+          "tmp/web-interface/browser-final/pipelines-mobile.png": "b550f60823b7930d8881e610642d5e0d51e0df7c49aca7b5cdda0a583b09ebc1",
+          "tmp/web-interface/browser-final/run-desktop.png": "470200b48a149491cd88a4ef213be95fe9c106c27c9659f88719fd7a46efc981"
+        }
+      },
+      {
+        "path": "tmp/web-interface/browser-auth/result.json",
+        "sha256": "6780c460d2f38f78afee4741826924b41d8cc624dfdda7c8a2fce7fc30ba8986",
+        "result": {
+          "browser": "140.0.7339.16",
+          "checks": [
+            "keyboard skip link preserves navigation",
+            "compiled pipeline upload and graph",
+            "immutable version upload and default selection",
+            "response-loss retry returns the original run via idempotency key",
+            "typed run submission, input validation, actual Docker completion, graph/task results and XSS text",
+            "attempt navigation and bounded retained logs",
+            "clone, actual reuse and original producer link",
+            "run comparison with real numeric artifact metadata",
+            "artifact pin and producer/consumer lineage",
+            "experiment creation and empty run list",
+            "real failure and confirmed cancellation states",
+            "server-side artifact import and metadata text rendering",
+            "narrow layout and usable navigation",
+            "offline live-schema API explorer",
+            "memory-only credential signout"
+          ],
+          "pipeline_id": "pipeline_f9f13c16-a714-4cf1-9957-c30ce4a386ee",
+          "run_ids": [
+            "run_aa08308a-a1cf-4124-a487-99b2b2a02175",
+            "run_f50414bc-bcf3-4c2c-a403-87801f7dce01",
+            "run_87fd0c28-ca95-4dec-ba5f-ab251ce5aa2b",
+            "run_be3d8f50-64ba-4a42-a36c-d3b1a30c80cf"
+          ],
+          "page_errors": [],
+          "external_requests": []
+        },
+        "screenshots": {
+          "tmp/web-interface/browser-auth/compare-desktop.png": "804d44f0d1bde60413c1dbbd49a866ca12bfeb50c99b73c02a45bf2812a47aa4",
+          "tmp/web-interface/browser-auth/pipeline-desktop.png": "70b47830111608be1acb35358c952324f0f2da54fc34fb4d50c6c6e8a519e015",
+          "tmp/web-interface/browser-auth/pipelines-mobile.png": "c272a517824a722bad3295aaf494579e9e830740e9a45e0381d416ac7c3f8f4d",
+          "tmp/web-interface/browser-auth/run-desktop.png": "0fe122575f86420f9fce44ffadf78a963e64e23d7a263b82334dfbee55d41a9c"
+        }
+      }
+    ],
+    "final_mobile": {
+      "result": {
+        "browser": "140.0.7339.16",
+        "passed": true,
+        "dimensions": {
+          "viewport": 420,
+          "document": 420,
+          "table": 680,
+          "container": 280
+        },
+        "check": "Mobile viewport stays within width, full table scrolls horizontally without compressing names"
+      },
+      "screenshot": "tmp/web-interface/mobile-final.png",
+      "screenshot_sha256": "0ed66159a3a0fc680b206d16043500ff4488e798543b47329d320f6a79496fac",
+      "visual_inspection": "Final mobile, desktop run and comparison screenshots inspected"
+    },
+    "lifecycle": "Both final fixture services stopped explicitly with SIGTERM after validation; pre-existing services untouched",
+    "earlier_findings": "Fixed test selector/log expectations, restarted stale fixture after asset-whitelist addition, and widened narrow tables after visual inspection. Final passing results above supersede preliminary scratch runs."
+  },
+  "packages": {
+    "receipt": "dist/web-interface/verification.json",
+    "receipt_sha256": "56d3d4f3878ae8d17a6e2f9a3319b6ebd2be73fc91415b65c58e2aff9b6094bb",
+    "result": {
+      "schema_version": 1,
+      "version": "0.1.0.dev0",
+      "python": "3.13.16",
+      "uv": "uv 0.12.24 (x86_64-unknown-linux-gnu)",
+      "platform": {
+        "system": "Linux",
+        "machine": "x86_64",
+        "libc": [
+          "glibc",
+          "2.44"
+        ]
+      },
+      "source": {
+        "commit": null,
+        "branch": "feat/initial-implementation",
+        "dirty": true,
+        "note": "Uncommitted development checkout; no accepted or published baseline"
+      },
+      "clean_install": [
+        "cli-only",
+        "combined-base"
+      ],
+      "runtime_extras_absent_from_base": true,
+      "artifacts": [
+        {
+          "filename": "dockflow_cli-0.1.0.dev0-py3-none-any.whl",
+          "sha256": "74046882d7cbd9efd3d20ac11ab03b97ee4516c145430a403828cf53d5e49f0a",
+          "name": "dockflow-cli",
+          "version": "0.1.0.dev0",
+          "dependencies": [
+            "typer>=0.27.3,<0.28.0"
+          ],
+          "build_backend_generator": "uv 0.11.33"
+        },
+        {
+          "filename": "dockflow_pipelines-0.1.0.dev0-py3-none-any.whl",
+          "sha256": "803b880a9910311234fa765c25c92372c1fc11632e30c6fba3a4de74b14a9e92",
+          "name": "dockflow-pipelines",
+          "version": "0.1.0.dev0",
+          "dependencies": [
+            "dockflow-cli==0.1.0.dev0",
+            "typer>=0.27.3,<0.28.0",
+            "pyyaml>=6.0.2,<7",
+            "kfp>=2.17.0,<2.18 ; extra == 'runtime'",
+            "docker>=7.1.0,<8 ; extra == 'runtime'",
+            "ml-metadata>=1.21.0,<2 ; extra == 'runtime'",
+            "boto3>=1.38,<2 ; extra == 's3'",
+            "fastapi>=0.115.12,<0.116 ; extra == 'service'",
+            "uvicorn>=0.34.2,<0.35 ; extra == 'service'",
+            "python-multipart>=0.0.20,<0.1 ; extra == 'service'"
+          ],
+          "build_backend_generator": "uv 0.11.33"
+        },
+        {
+          "filename": "dockflow_cli-0.1.0.dev0.tar.gz",
+          "sha256": "2e98f4e3180cf1d6a1318bf69e2ad0359482d111b03727ee5f29bf723189b6be",
+          "standalone_rebuild": true
+        },
+        {
+          "filename": "dockflow_pipelines-0.1.0.dev0.tar.gz",
+          "sha256": "b68b5cc5d0c7638ecf7ae179abbe90375aabe2b021fafa1030d17d8ca05ea33e",
+          "standalone_rebuild": true
+        }
+      ]
+    },
+    "static_assets": "All 12 static package files byte-match final source in the wheel; clean CLI-only/combined-base installations and standalone sdist rebuilds passed",
+    "tooling": "Used an existing uv executable read-only; tool installation was unchanged"
+  },
+  "other_checks": {
+    "ruff_check": "passed for packages tests tools examples",
+    "ruff_format": "48 files already formatted",
+    "pyright": "0 errors, 0 warnings",
+    "api_reference": "tools/generate_api_docs.py --check passed",
+    "macrostates": "check and verify passed; external snapshots unchanged",
+    "documentation_links": "24 user/developer Markdown files resolve; review reports are separate under tmp/reviews"
+  },
+  "related_evidence": [
+    "architecture-review.json",
+    "documentation.json",
+    "open-source-readiness.json"
+  ],
+  "limits": [
+    "Linux x86-64 development qualification only; no new native Windows/macOS/ARM64 qualification",
+    "No new fresh full Compose deployment or S3 provider suite in this UI workstream",
+    "Browser tests cover selected real workflows, not exhaustive accessibility, browser-engine compatibility or full KFP parity",
+    "Captured task stdout/stderr become available after container exit; no live per-line streaming",
+    "Artifact payload previews/downloads, schedules, loops and parallel tasks remain outside the supported profile",
+    "No public release, publication, commit, merge or changes outside Dockflow; all five requested workstreams await acceptance"
+  ],
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

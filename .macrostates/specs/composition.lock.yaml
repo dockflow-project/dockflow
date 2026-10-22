@@ -1,0 +1,236 @@
+schema_version: 1
+packages:
+  meta:
+    selection:
+      name: meta
+      version: 3.0.0
+      path: 000_meta
+      entrypoint: README.md
+      source:
+        type: git-archive
+        repository: https://github.com/Macrostates/macrostates-meta.git
+        tag: v3.0.0
+    commit: 2f3500aa14203e8b324c901d399ae831ce5570a6
+    content_sha256: 5886a1ba4e43909205ad91630caaf939f54567c9c3530839c52a624f27d8ec99
+    files:
+      001_concepts.md:
+        sha256: a3b58d35ecf3f846ea4b394ac33fba3e7f588d9966ab13936aca61ba9ee96ef7
+        executable: false
+      002_project-composition.md:
+        sha256: a21e48cf91eca8f4acb57338bc97f9bca6e6c03e8dc7803723671d29edaecb07
+        executable: false
+      003_progressive-disclosure.md:
+        sha256: 96a5c12aa423aceb683d5048ac3d513036d70535543e2a6cee554ba0e51f5b2d
+        executable: false
+      LICENSE:
+        sha256: fb36cfd742a789c0e7843dbf21c3a7442a13e37dee4dfaf0fa7afe0b87f06ef6
+        executable: false
+      README.md:
+        sha256: 6d8213822ee0da7a76fe801cc7d99e02b80f83bd84b4f9b2cae4de7cc24c61fb
+        executable: false
+      annex_cli.md:
+        sha256: 28f63fa29b32f57d24a43c3f618ad7c9b8fd1adac493f7bb008e1717d440f9da
+        executable: false
+      annex_official-packages.md:
+        sha256: c447829e0d4e226344d71cb6d495489eab859b394a4a5988dfe9539f4cf3ae44
+        executable: false
+      annex_package-lock.md:
+        sha256: c04c0746aa09644d78e278e494b3b776a90c21d6ddab898e68b5ae7c99f56bd3
+        executable: false
+      annex_project-kick-off.md:
+        sha256: 7b42ce066c9f689afb61bc393be7e0034094113b1a14c16fee839a8df46fb5c3
+        executable: false
+      package.yaml:
+        sha256: e3b6228e0a5f6efe7b220608ba062d233c245a608265021e8efaf4a35cc88fa8
+        executable: false
+      resources/project-kickoff.md:
+        sha256: ba4a4f0a1942a69b88135e6d23b023e68ce19336b52a64cb7be560cce5ae7b07
+        executable: false
+  process:
+    selection:
+      name: process
+      version: 5.1.0
+      path: 001_process
+      entrypoint: README.md
+      source:
+        type: git-archive
+        repository: https://github.com/Macrostates/macrostates-process.git
+        tag: v5.1.0
+    commit: 6a6cfd19f01a7d7265f315b1237f75c8db5e5d4d
+    content_sha256: d8bc82b6c27837d2ea768435787499c4958095c610ad4dfae92f4ce731c40e9c
+    files:
+      001_concepts.md:
+        sha256: 7cae598a8250fbbd71a60e69eaeafb457ec82bd152529b3883320e3b7027eb87
+        executable: false
+      002_artifacts.md:
+        sha256: 4c3b3a9e69f5e3967e7b68593400c15d100f09d6764055aba9827ca4d9f5ed36
+        executable: false
+      003_execution.md:
+        sha256: c4de2379520aa761e2dd0594333edc404a164bef377844ba2916c98dc8827089
+        executable: false
+      LICENSE:
+        sha256: fb36cfd742a789c0e7843dbf21c3a7442a13e37dee4dfaf0fa7afe0b87f06ef6
+        executable: false
+      README.md:
+        sha256: 61785f94697d760797a4593ad6049fe9cb017250039ec74ca2e670eec173d753
+        executable: false
+      annex_conflicts.md:
+        sha256: d77f7005734d256a06c534207971a51b297bf3b2d3c77647f3dc63376f99c78e
+        executable: false
+      annex_exceptions.md:
+        sha256: bc62f1268718a169a03e5a80f3987d87cd10d0fa859904068c0e620173a8fa6c
+        executable: false
+      annex_project-state.md:
+        sha256: edf8ccd6d88f1979f702476a7650b65b9f42e467931bd46bc9c6804276e68439
+        executable: false
+      annex_versioning.md:
+        sha256: 780f90c64b700fcbd2aba7fc3b35597b48d7cd0b31c1b1fed14292a0b2132dac
+        executable: false
+      package.yaml:
+        sha256: e3afae84310fa60df68191aea971cf6a6f4a45323bcde909cb27f7463f596726
+        executable: false
+  repository-1:
+    selection:
+      name: repository-1
+      version: 4.0.0
+      path: 010_repository-1
+      entrypoint: README.md
+      source:
+        type: git-archive
+        repository: https://github.com/Macrostates/macrostates-repository-1.git
+        tag: v4.0.0
+    commit: 1106dfd8982baa9a602fbd2d1ccb726b559fbd21
+    content_sha256: b30b45b1ccc6c346e103535080e92411442cd6d7803cc07b745bf97764b724e7
+    files:
+      001_conventions.md:
+        sha256: bfe2fa6c8e5b3d6c0ae4c8ba6817e695aa1b92ee9cc00c4b7aeffecd36b585cf
+        executable: false
+      002_contents.md:
+        sha256: 6b88c203dd7b932bdb1cc70d4f1eaafbaa615ba2254796467cf3bfdae49dc2d5
+        executable: false
+      003_documentation.md:
+        sha256: cea9b5194c0da08829c7366dbd178127c4823dc625f58dc2b691cc228d8b3175
+        executable: false
+      004_technology.md:
+        sha256: 088e4ff75f8560f1c0673fb2c3d6f61f478b0a28e16b0f9b08b30a1b7cf27ac7
+        executable: false
+      LICENSE:
+        sha256: fb36cfd742a789c0e7843dbf21c3a7442a13e37dee4dfaf0fa7afe0b87f06ef6
+        executable: false
+      README.md:
+        sha256: 0eb2dbf459f4ac19238ac61be00124eb136a283f1060840cf268f38217aeb117
+        executable: false
+      package.yaml:
+        sha256: d1b71e23f392818e3e7b9a0f31916f5fef0c89cff151ebed07298820b972f2d8
+        executable: false
+  docker-1:
+    selection:
+      name: docker-1
+      version: 3.0.0
+      path: 011_docker-1
+      entrypoint: README.md
+      source:
+        type: git-archive
+        repository: https://github.com/Macrostates/macrostates-docker-1.git
+        tag: v3.0.0
+    commit: f31d67bcdfbdb9e4aec08ba7dcdbb61624145ac1
+    content_sha256: b0637143990afa27f085c6dfa2a585c81d61a5263c8e71518408997093bf4bf9
+    files:
+      001_images.md:
+        sha256: 7a9c858d39b9f5aaca96c3d8904c34616753eaa0191c9e9117d31832d4f6da63
+        executable: false
+      002_runtime.md:
+        sha256: 23bde95a60b6f9689ef313c11e1a081667a95960c8d2337d3535678ab783cccd
+        executable: false
+      003_naming-and-publishing.md:
+        sha256: ab9ec74a6ddd75c60e9b530b2f96cf8f916819ba5c95222a4d2b7c4fecda1df6
+        executable: false
+      LICENSE:
+        sha256: fb36cfd742a789c0e7843dbf21c3a7442a13e37dee4dfaf0fa7afe0b87f06ef6
+        executable: false
+      README.md:
+        sha256: feefe76aef69f8b23e2c954e678a85b292d27230a80e27f5fd0517693485d564
+        executable: false
+      package.yaml:
+        sha256: d6a2c0253721c6cebbe0d09a08f6aa94b40b641e5fe72abc84efbf24e343f353
+        executable: false
+  python-1:
+    selection:
+      name: python-1
+      version: 2.1.1
+      path: 020_python-1
+      entrypoint: README.md
+      source:
+        type: git-archive
+        repository: https://github.com/Macrostates/macrostates-python-1.git
+        tag: v2.1.1
+    commit: a322eabd55af52e02447a12de93f2989193a2a93
+    content_sha256: 43ce65f633846b16d399507d31f01a73b7268aa699a4906b04438a7768929bea
+    files:
+      001_python.md:
+        sha256: 91fc09327846e4c11f5e524dc9ff811b96ac47437fecf6ed4b6cb7582596f6e3
+        executable: false
+      LICENSE:
+        sha256: fb36cfd742a789c0e7843dbf21c3a7442a13e37dee4dfaf0fa7afe0b87f06ef6
+        executable: false
+      README.md:
+        sha256: de61c70999dbf4a5912ded6c3dc2f1c047a4d39b7d395a96f17d4325e635468c
+        executable: false
+      package.yaml:
+        sha256: a66224a4fe2d139dbefd535a552c0a1f68cd59a2228d5604cd4396e732fed04b
+        executable: false
+  python-project-1:
+    selection:
+      name: python-project-1
+      version: 3.0.0
+      path: 030_python-project-1
+      entrypoint: README.md
+      source:
+        type: git-archive
+        repository: https://github.com/Macrostates/macrostates-python-project-1.git
+        tag: v3.0.0
+    commit: 7917b226a1b296cabc79991c151186ac1005241c
+    content_sha256: 6f7d17763127be5f71dc4ac642f3d8afc6b406b405ffb4187649fe45e6b45999
+    files:
+      001_project-layout.md:
+        sha256: e0220f54f27ac3227a505b25a66fbb36c96b734bf2c18908a3fceb0e39769096
+        executable: false
+      002_dependency-management.md:
+        sha256: 294154ed44d6d41063b4e11eecdb51c33b2f3fa3e6475d209bd2b2ebbb0ab355
+        executable: false
+      003_vendored-libraries.md:
+        sha256: e88b8b45d9b57b4ea4b05a48ea02cb25ce4c54240ed42884ac8f42a8c9f451d5
+        executable: false
+      004_formatting.md:
+        sha256: 098ad0abef266d3aed35a923775a4ae5ac7145228ca7a565a081563c64a3b009
+        executable: false
+      005_linting.md:
+        sha256: fb26d7b996895bd101a06e396a763b9aaf34d2b5551619a11d3dbbaf30774d56
+        executable: false
+      006_type-checking.md:
+        sha256: a4436b807a9455e0e5ea3095bd32a22fbedb66a5aadd2648c040f8a987ef0157
+        executable: false
+      007_testing.md:
+        sha256: 93b8f3bdde1d2a4626fb8bed2479c46c2bb10d8cf6a64f6615e7e5c0286de900
+        executable: false
+      008_hooks.md:
+        sha256: 339cf17112ded657d69ec50b2ab4da5d40a19e73a093f9e73320d207a444cb75
+        executable: false
+      009_packaging.md:
+        sha256: e9a166742a28ebf2c79ca1540e1979d33122d1fd264a99599daf44d0c7e60b13
+        executable: false
+      010_versioning.md:
+        sha256: e385f03effe601c06e1e7f555688abe715a26fe30850e169183480068b785719
+        executable: false
+      LICENSE:
+        sha256: fb36cfd742a789c0e7843dbf21c3a7442a13e37dee4dfaf0fa7afe0b87f06ef6
+        executable: false
+      README.md:
+        sha256: 9494e38440223c0ac6a572be9e11243b3f8a1e13bee9500fc06bbef238a63ab3
+        executable: false
+      annex_docker.md:
+        sha256: 53e74bcf14bcc2149db9762a112e540cbc2d5426b479886c4606b3568626c72c
+        executable: false
+      package.yaml:
+        sha256: 5763e3558354189a327133014aa269429456795094bb471621b05f1bbe3804d1
+        executable: false

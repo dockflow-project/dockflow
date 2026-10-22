@@ -1,0 +1,51 @@
+[project]
+name = "dockflow-workspace"
+version = "0.1.0.dev0"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+# KFP 2.17 pins urllib3==2.7.0. Qualify the security-fixed version explicitly
+# until upstream relaxes its pin; see docs/installation.md.
+override-dependencies = ["urllib3==2.8.0"]
+
+[tool.uv.workspace]
+members = ["packages/cli", "packages/pipelines", "packages/artifacts"]
+
+[tool.uv.sources]
+dockflow-cli = { workspace = true }
+dockflow-pipelines = { workspace = true }
+dockflow-artifacts = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "pytest>=9.1.1,<10", "pytest-cov>=6,<7", "ruff>=0.11.13,<0.12",
+  "pyright>=1.1.400,<2", "pre-commit>=4.2,<5", "httpx>=0.28.1,<0.29",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = [".macrostates/specs", "tmp"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["typer.Option"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = ".venv"
+include = ["packages/cli/src", "packages/pipelines/src", "packages/artifacts/src"]
+exclude = ["**/__pycache__"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages/cli/tests", "packages/pipelines/tests", "packages/artifacts/tests", "tests"]
+markers = ["docker: requires a running Docker daemon", "s3: requires S3 service"]
+
+[tool.coverage.run]
+source = ["dockflow_cli", "dockflow_pipelines", "dockflow_artifacts"]

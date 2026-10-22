@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Dockflow Pipelines</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+    <script type="module" src="assets/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <aside class="sidebar" aria-label="Main navigation">
+      <a href="#/pipelines" class="brand"
+        ><span class="brand-symbol" aria-hidden="true">◈</span
+        ><span>Dockflow<small>PIPELINES</small></span></a
+      >
+      <div class="nav-caption">WORKSPACE</div>
+      <nav id="navigation"></nav>
+      <div class="sidebar-footer">
+        <a href="../dockflow/v1/docs">API documentation ↗</a
+        ><a href="#/service">Service information</a
+        ><span class="subtle">Docker execution · KFP definitions</span>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <span class="project-label"
+          >PROJECT <strong id="project-name">Connecting…</strong></span
+        >
+        <div class="topbar-actions">
+          <span id="connection" role="status">Connecting</span
+          ><button id="connect" class="quiet">Connect</button>
+        </div>
+      </header>
+      <main id="content" tabindex="-1" aria-live="polite">
+        <div class="loading">Loading your workspace…</div>
+      </main>
+    </div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <dialog id="modal" aria-labelledby="dialog-title"></dialog>
+    <noscript
+      >This interface requires JavaScript. The CLI and REST API remain
+      available.</noscript
+    >
+  </body>
+</html>

@@ -1,0 +1,170 @@
+{
+  "recorded_at": "2026-10-21T10:26:37.777499+00:00",
+  "scope": "Exploration/step artifact paths and package-specific hidden bookkeeping",
+  "spec_packages": {
+    "dockflow-pipelines": "4.0.0",
+    "dockflow-artifacts": "1.0.0"
+  },
+  "application_version": "0.1.0.dev0",
+  "verification": {
+    "dockflow_regressions": 397,
+    "example_regressions": 257,
+    "live_seaweedfs_tests": 1,
+    "ruff": "passed",
+    "pyright": "passed",
+    "macrostates": "passed",
+    "api_docs": "current",
+    "shell_syntax": "passed",
+    "setup": "passed",
+    "component_and_service_images": "rebuilt"
+  },
+  "local": [
+    {
+      "run_id": "run_1d28a00a-6e93-4102-97a3-0f9bdb4f3ab0",
+      "state": "succeeded",
+      "outputs": {
+        "inference_data": "artifact_79866b6a-c51c-41ce-b47b-68d0f0edf9d7",
+        "model": "artifact_97eb0f73-5646-4a32-ae6f-996263434de0",
+        "validation_report": "artifact_56e0dca7-4dd0-48bb-8fde-6170df5f1652"
+      }
+    },
+    {
+      "run_id": "run_82e8da6a-ad76-4916-a3eb-0ac71ae107cb",
+      "state": "succeeded",
+      "outputs": {
+        "predictions": "artifact_e9dd33f8-d9a6-496b-a4d1-f68830e68430",
+        "report": "artifact_be13e7de-85d3-4076-884c-ccbad418f927"
+      }
+    }
+  ],
+  "compose": {
+    "training": {
+      "run_id": "run_73d4d547-f58c-4dad-b63d-93caa4c8ccd3",
+      "state": "succeeded",
+      "outputs": {
+        "inference_data": "artifact_83764c04-7f51-4f68-9971-826b6f13346a",
+        "model": "artifact_05e6c170-6e83-44b4-b796-559c4c3303ed",
+        "validation_report": "artifact_8f1edaae-45d3-4c1b-9416-0c89aa2c4d7e"
+      }
+    },
+    "inference": {
+      "run_id": "run_4281ca84-2def-4210-814e-03e2783fbb72",
+      "state": "succeeded",
+      "outputs": {
+        "predictions": "artifact_0615f549-f0e7-411e-b3e2-318846c3d8a7",
+        "report": "artifact_0e5ebd33-2d0b-4d61-a6ac-456ec7aad5d9"
+      }
+    }
+  },
+  "native_kfp": {
+    "status": "succeeded",
+    "training_run_id": "aed793ce-9a9d-4274-9c04-156b6fb1bdaf",
+    "inference_run_id": "c273386b-a01a-4f32-97a0-ff68c1559475",
+    "cache_policy": "disabled",
+    "task_execution": {
+      "training": {
+        "evaluate-sample": {
+          "task_id": "560a5f67-824f-4ccf-84c8-f9faead20ebd",
+          "state": "SUCCEEDED",
+          "state_history": [
+            "RUNNING",
+            "SUCCEEDED"
+          ],
+          "execution_id": null,
+          "pod_name": null,
+          "mlmd_execution_id": 16,
+          "mlmd_state": "COMPLETE"
+        },
+        "split-sample": {
+          "task_id": "71abb859-4bab-44fc-82ff-1e8140022449",
+          "state": "SUCCEEDED",
+          "state_history": [
+            "RUNNING",
+            "SUCCEEDED"
+          ],
+          "execution_id": null,
+          "pod_name": null,
+          "mlmd_execution_id": 6,
+          "mlmd_state": "COMPLETE"
+        },
+        "train-sample": {
+          "task_id": "d6b06947-2de2-4eb2-8b4f-58f7fae11b88",
+          "state": "SUCCEEDED",
+          "state_history": [
+            "RUNNING",
+            "SUCCEEDED"
+          ],
+          "execution_id": null,
+          "pod_name": null,
+          "mlmd_execution_id": 13,
+          "mlmd_state": "COMPLETE"
+        },
+        "validate-sample": {
+          "task_id": "ddc35e7c-9d9a-4e27-b857-c2f6eef24bf0",
+          "state": "SUCCEEDED",
+          "state_history": [
+            "RUNNING",
+            "SUCCEEDED"
+          ],
+          "execution_id": null,
+          "pod_name": null,
+          "mlmd_execution_id": 3,
+          "mlmd_state": "COMPLETE"
+        }
+      },
+      "inference": {
+        "predict-sample": {
+          "task_id": "03a3d63c-b051-46e0-9ad1-395fbab7ffe8",
+          "state": "SUCCEEDED",
+          "state_history": [
+            "RUNNING",
+            "SUCCEEDED"
+          ],
+          "execution_id": null,
+          "pod_name": null,
+          "mlmd_execution_id": 22,
+          "mlmd_state": "COMPLETE"
+        },
+        "score-predictions": {
+          "task_id": "40c24e00-74fa-44e9-bfb1-1dd9468f9c6b",
+          "state": "SUCCEEDED",
+          "state_history": [
+            "RUNNING",
+            "SUCCEEDED"
+          ],
+          "execution_id": null,
+          "pod_name": null,
+          "mlmd_execution_id": 25,
+          "mlmd_state": "COMPLETE"
+        }
+      }
+    },
+    "model_uri": "minio://mlpipeline/custom-artifacts/global/step_3__train/model.json",
+    "registered_model_types": [
+      "system.Model",
+      "system.Model"
+    ]
+  },
+  "service_cleanup": "Compose and native KFP stopped; forwarding stopped; generated data retained",
+  "layout": {
+    "publication_control": ".dockflow/dockflow-artifacts",
+    "pipeline_control": ".dockflow/dockflow-pipelines",
+    "payload": "<exploration_id>/step_<step_number>__<component_name>/<filename>",
+    "default_exploration": "global"
+  },
+  "compatibility": "Prior managed descriptor layouts remain readable. Legacy publisher control roots require explicit reset or a fresh root. No automatic migration.",
+  "limitations": [
+    "Local filesystem runtime tested on Linux only. No publication or Git integration performed."
+  ],
+  "payload_sha256_matching_all_modes": {
+    "global/step_1__predict/predictions.json": "bded48836011e94087966cffbc36ca22cb4f06046816ca4b49477a36d4e7e584",
+    "global/step_1__validate/dataset.json": "1a9071f9e675a233b58de008f1082a14bcb53286d63af6b83678af2c7232e0ad",
+    "global/step_2__score/report.json": "20c46971b204184d088fdf45393f157657a24615f23ca4a771241717e4f73032",
+    "global/step_2__split/inference_data.json": "9beb8a96350028e24705686805885f8ddc8f6052b97c792d533693b89715bc4e",
+    "global/step_2__split/training.json": "9e9697d3a3a1ddc1dca11e0193a5906e7c0f7ded9ea1fef8a0ab604c7c41d70d",
+    "global/step_2__split/validation.json": "107ae9c689d35a20b6587949c63d1d944ff0f6c48f5291da4cd5eafa5d0c0367",
+    "global/step_3__train/model.json": "cdd6f1a376f68f34c31e8c2a25a3c1f12a3b0f942d3a89f81236ca0becc3c851",
+    "global/step_4__evaluate/report.json": "307a6448b3f4a2d739977a05b42bd52bb5b1c2e0d40690f87fc2f1e2bcc8b2d0"
+  },
+  "publication_note": "Anonymized historical qualification summary. Fixture names and paths are normalized; placeholders are not runnable locations. Results, measured values and original content hashes are retained as historical observations, not new validation or hashes of this edited record. Out-of-repository source inventories and raw scratch fixtures are not retained. See README.md."
+}

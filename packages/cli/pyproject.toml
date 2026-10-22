@@ -1,0 +1,16 @@
+[project]
+name = "dockflow-cli"
+version = "0.1.0.dev0"
+description = "Dockflow extensible command host"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = ["typer>=0.27.3,<0.28.0"]
+
+[project.scripts]
+dockflow = "dockflow_cli.main:main"
+
+[build-system]
+requires = ["uv_build>=0.11.2,<0.12"]
+build-backend = "uv_build"

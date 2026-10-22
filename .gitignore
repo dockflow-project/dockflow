@@ -1,0 +1,44 @@
+# Local notes and temporary work; retain the scratch-directory marker.
+/tmp/*
+!/tmp/.gitkeep
+
+# Local agent configuration and credentials.
+/.agents/
+/.codex/
+/.aws/
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Python environments, caches, and generated artifacts.
+.venv*/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.coverage
+.coverage.*
+/.dockflow/
+/.runtime/
+/artifacts/
+/coverage.xml
+htmlcov/
+build/
+dist/
+
+# Local reference-deployment configuration and input data.
+/deploy/dockflow.toml
+/deploy/definitions/
+/deploy/inputs/
+
+# Local editor and operating-system files.
+.idea/
+.vscode/
+.DS_Store
+*~

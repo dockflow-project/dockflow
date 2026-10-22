@@ -1,0 +1,6 @@
+# The MinIO image builds only from its pinned upstream source archive.
+# This directory is a separate Docker build context; the root ignore file does
+# not protect local deployment credentials or mounted inputs in this context.
+*
+!Minio.Dockerfile
+!.dockerignore
