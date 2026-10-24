@@ -2,7 +2,7 @@
 
 - Project phase: `active`
 - Workflow type: `Review or gap assessment`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `large`
 - Branch: `feat/distributed-artifact-cache`

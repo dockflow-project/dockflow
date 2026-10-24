@@ -2,7 +2,7 @@
 
 - Project phase: `active`
 - Workflow type: `Implementation amendment`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `medium`
 - Branch: `feat/collapsed-pipeline-graphs`

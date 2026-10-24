@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Specification update` (editorial correction)
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `small`
 - Branch: `feat/initial-implementation` (unborn)

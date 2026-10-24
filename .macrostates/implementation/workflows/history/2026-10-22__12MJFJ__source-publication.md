@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Integration preparation`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `bounded`
 - Branch: `feat/initial-implementation`

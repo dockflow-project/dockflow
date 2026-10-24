@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Project bootstrapping`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `systemic`
 - Branch: `feat/initial-implementation` (unborn repository; no starting commit)

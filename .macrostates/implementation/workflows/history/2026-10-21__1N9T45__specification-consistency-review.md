@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Review or gap assessment`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `systemic`
 - Branch: `feat/initial-implementation` (unborn)

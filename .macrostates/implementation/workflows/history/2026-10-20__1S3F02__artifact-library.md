@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Project bootstrapping`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `large`
 - Branch: `feat/initial-implementation` in the existing Dockflow monorepo.

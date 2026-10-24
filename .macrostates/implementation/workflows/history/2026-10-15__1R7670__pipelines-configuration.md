@@ -2,7 +2,7 @@
 
 - Project phase: `specification`
 - Workflow type: `Initial specification`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `large`
 - Branch: `chore/macrostates-setup` (unborn repository; no starting commit)

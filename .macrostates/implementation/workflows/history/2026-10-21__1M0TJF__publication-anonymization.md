@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Implementation amendment` (publication hygiene)
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `medium`
 - Branch: `feat/initial-implementation` (unborn)

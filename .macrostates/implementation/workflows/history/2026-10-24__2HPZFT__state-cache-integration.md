@@ -2,7 +2,7 @@
 
 - Project phase: `active`
 - Workflow type: `Integration preparation`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `large`
 - Branch: `feat/distributed-artifact-cache`
