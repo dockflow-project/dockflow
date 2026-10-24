@@ -25,12 +25,12 @@ def test_host_and_bind_mounted_container_share_owner_lock(tmp_path):
     script = """
 import json
 from pathlib import Path
-from dockflow_pipelines.errors import DockflowError
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.metadata import ControlStore
 store = ControlStore(Path('/shared-state'), 'bind-mount-owner-test')
 try:
     with store.owner():
-        print(json.dumps({'acquired': json.loads((store.state / 'owner.lock').read_text())}))
+        print(json.dumps({'acquired': store.database.owner_metadata()}))
 except DockflowError as error:
     print(json.dumps({'error': error.as_dict()}))
 """
@@ -44,11 +44,15 @@ except DockflowError as error:
                 "python:3.13-slim",
                 ["python", "-c", script],
                 environment={
-                    "PYTHONPATH": "/opt/dockflow",
+                    "PYTHONPATH": "/opt/dockflow:/opt/dockflow-database",
                     "PYTHONDONTWRITEBYTECODE": "1",
                 },
                 volumes={
                     str(source): {"bind": "/opt/dockflow", "mode": "ro"},
+                    str(source.parents[1] / "database/src"): {
+                        "bind": "/opt/dockflow-database",
+                        "mode": "ro",
+                    },
                     str(state): {"bind": "/shared-state", "mode": "rw"},
                 },
                 user=f"{os.getuid()}:{os.getgid()}",
@@ -58,16 +62,13 @@ except DockflowError as error:
             return json.loads(output)
 
         with store.owner(endpoint="http://127.0.0.1:8080"):
-            lock = state / "owner.lock"
-            previous = lock.read_bytes()
-            identity = json.loads(previous)
+            lock = state / "state.sqlite"
+            identity = store.database.owner_metadata()
             inode = lock.stat().st_ino
             error = probe()["error"]
             assert error["code"] == "CONFLICT"
             detail = error["details"][0]
-            assert detail["state_directory"] == "/shared-state"
             assert detail["owner"] == identity
-            assert lock.read_bytes() == previous
             assert lock.stat().st_ino == inode
 
         acquired = probe()["acquired"]
@@ -75,8 +76,8 @@ except DockflowError as error:
         assert acquired["mode"] == "local"
         assert acquired["pid"] == 1
         assert lock.stat().st_ino == inode
-        assert json.loads(lock.read_bytes()) == acquired
+        assert store.database.owner_metadata() == acquired
         with store.owner():
-            assert json.loads(lock.read_bytes())["owner_id"] != acquired["owner_id"]
+            assert store.database.owner_metadata()["owner_id"] != acquired["owner_id"]
     finally:
         client.close()

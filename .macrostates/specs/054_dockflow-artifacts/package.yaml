@@ -1,6 +1,6 @@
 name: dockflow-artifacts
-version: 2.1.1
-versioned_at: 2026-10-21 19:55
+version: 3.1.0
+versioned_at: 2026-10-24 23:38
 description: Reusable artifact publication, integrity and orchestration integration contracts.
 entrypoint: README.md
 dependencies:
@@ -11,11 +11,11 @@ dependencies:
     version: 5.1.0
     constraint: at_least
   - name: dockflow
-    version: 0.3.0
+    version: 1.0.0
     constraint: at_least
   - name: docker-1
     version: 3.0.0
     constraint: at_least
   - name: dockflow-pipelines
-    version: 4.1.0
+    version: 9.0.0
     constraint: at_least

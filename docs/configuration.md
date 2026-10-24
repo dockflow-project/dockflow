@@ -63,8 +63,9 @@ Only `schema_version = 1` and `project.id` are required.
 | `project` | `root` | Configuration directory (`"."`). |
 | `definitions` | `pipelines`, `components` | Empty maps of registered names to compiled file paths. Names match `[a-z][a-z0-9_-]{0,63}`. |
 | `state` | `directory` | `".dockflow"`. |
-| `metadata` | `backend` | `"sqlite"`; only supported backend. |
-| `metadata` | `directory` | `db/` beneath state; database is `mlmd.sqlite`. |
+| `state` | `backend` | `"sqlite"` or `"postgresql"`. |
+| `state` | `database` | `state.sqlite` beneath state; SQLite only. |
+| `state` | `dsn_env` | Required for PostgreSQL; names its DSN environment variable. |
 | `execution` | `work_directory` | `work/` beneath state. |
 | `execution` | `task_parallelism` | `1`; other values rejected. |
 | `execution` | `timeout_seconds` | `0` (unlimited); nonnegative integer. |
@@ -135,7 +136,7 @@ are interpreted; definitions and input root lists remain in TOML.
 | `ENDPOINT` | `client.endpoint` |
 | `PROJECT_ROOT` | `project.root` |
 | `STATE_DIRECTORY` | `state.directory` |
-| `METADATA_BACKEND`, `METADATA_DIRECTORY` | `metadata.backend`, `metadata.directory` |
+| `STATE_BACKEND`, `STATE_DATABASE`, `STATE_DSN_ENV` | `state.backend`, `state.database`, `state.dsn_env` |
 | `WORK_DIRECTORY` | `execution.work_directory` |
 | `TIMEOUT_SECONDS`, `SHUTDOWN_GRACE_SECONDS` | Corresponding `execution` fields. |
 | `CPU_LIMIT`, `MEMORY_LIMIT_BYTES` | Corresponding `execution` fields. |
@@ -170,8 +171,10 @@ selected, including `discovery`. Paths derived from state or a legacy artifact
 root are distinguished from explicit settings.
 
 The snapshot retains the original values/origins when configuration changes.
-Older Runs may have no `sources`; their provenance is unavailable. Token-file
-paths can appear, but token contents, provider credentials and mounted file
+The separate versioned `execution_choices` value fixes computation settings for
+execution after restart or on another coordinator. Local deployment paths and
+access remain current; see [accepted choices](persistence.md#accepted-execution-choices).
+Token-file paths can appear, but token contents, provider credentials and mounted file
 contents are excluded. No additional configuration-inspection command is needed.
 
 ## Optional local policy
@@ -219,3 +222,123 @@ cannot overlap runtime mounts. The Docker daemon must see the same source paths.
 Configuration stores paths/modes, never file contents. Keep secret files out of
 source control. Changing mounted publication configuration is not a tracked data
 change: disable reuse or change a declared pipeline input when changing its store.
+
+## Coordinated artifact cache
+
+Cacheable tasks use registry tables in the same database as execution history.
+The local default is one file, `.dockflow/state.sqlite`. `[state]` is the only
+database connection configuration; `[cache]` contains policy. The former
+cache.backend, cache.registry and cache.dsn_env settings and environment overrides
+are rejected. Separate databases have separate histories and caches.
+
+For successive isolated environments, use the same project.id, PostgreSQL primary
+and managed artifact store. They retain complete history and reusable outputs,
+with per-Run ownership across independent coordinators. Each coordinator executes
+one Run at a time; separate processes may execute different Runs concurrently.
+SQLite retains a single coordinator and Run per project.
+
+```toml
+[state]
+backend = "postgresql"
+dsn_env = "DOCKFLOW_STATE_DSN"
+
+[cache]
+topology = "shared"
+storage_identity = "dockflow-shared-artifacts"
+namespace = "default"
+# Required only for commonly mounted filesystem artifacts.
+shared_filesystem = true
+```
+
+Install `dockflow-pipelines[postgresql]` and supply the connection string through
+DOCKFLOW_STATE_DSN using your deployment's secret mechanism. Only the variable
+name is retained. The runtime image includes that extra. Filesystem artifacts
+require durable mounts; S3 requires the same endpoint, bucket and prefix. The
+persistent store identity detects different stores configured with one label.
+
+SQLite supports one host and local filesystems. WAL is unsuitable for network
+filesystems or sharing across hosts. Detectable network mounts and shared
+topology are rejected. A mount-table check cannot detect every unsupported store.
+
+| Cache setting | Default |
+| --- | --- |
+| `namespace`, `topology` | `default`, `local` |
+| `storage_identity` | Derived from local storage configuration; explicit for shared topology |
+| `shared_filesystem` | `false`; explicit assertion for shared filesystem artifacts |
+| `lease_seconds`, `heartbeat_seconds` | `120`, `30` |
+| `wait_seconds` | `1800` |
+| `poll_seconds`, `poll_max_seconds` | `0.25`, `5` |
+| `max_attempts` | `3`, including expired/cancelled producers |
+| `backoff_seconds`, `backoff_max_seconds` | `1`, `30`, with persisted jitter |
+| `transaction_timeout_seconds`, `infrastructure_attempts` | `5`, `4` |
+| `freshness_seconds` | `0`, no freshness deadline |
+
+All fields accept `DOCKFLOW_PIPELINES_CACHE_` plus the uppercase field name.
+Counts are 1–100;
+durations must be finite and positive, except freshness/backoff may be zero.
+Heartbeat plus twice the transaction timeout must be below the lease. Policy,
+key/validation versions and store identity must agree across the entire scope;
+conflicting workers fail before computation. Wait/poll budgets may differ.
+No backend fallback or uncoordinated execution occurs on registry failure.
+
+Compiled cache disablement, `cache_safe=false`, and scope `none` still bypass
+cache production and reuse. Container failure retries additionally require the
+existing `retry_safe` declaration; crash/cancellation recovery shares the persisted
+episode budget. See [operations](operations.md#inspect-and-recover-cache-coordination)
+for inspection, reset and legacy-cache behavior.
+
+## Database-backed execution history
+
+The default needs no SQL service: `.dockflow/state.sqlite` holds the authoritative
+journal, resource queries, definitions, logs and cache coordination. SQLite requires persistent local
+storage. For external state:
+
+```toml
+[state]
+backend = "postgresql"
+dsn_env = "DOCKFLOW_STATE_DSN"
+```
+
+Install `dockflow-pipelines[postgresql]` and supply that environment variable
+through your deployment's secret mechanism. Its value is never retained in Run
+configuration or errors. TLS/connection parameters belong in the DSN. There is
+no database fallback. The service runtime includes the PostgreSQL extra.
+
+Cache tables always use this same database; no separate cache connection is configured.
+Use the same project.id, PostgreSQL database and managed artifact store from
+successive disposable environments to retain complete history and cache data.
+SQLite has one project coordinator; PostgreSQL uses independent per-Run owners.
+Multiple PostgreSQL services share the queue, and direct processes reserve and
+execute their own Runs. Local work/state bases can be disposable
+with PostgreSQL, while filesystem artifact mounts must remain durable and stable
+or artifacts should use S3-compatible storage.
+
+The old `[metadata]` table is rejected. File-authoritative history is unsupported
+by this fresh schema; select a new state directory instead of migrating it.
+[Persistence](persistence.md) explains ownership, rebuild and backup/restore.
+
+
+## PostgreSQL Run leases
+
+Backend selection also selects coordination: SQLite uses lifetime local ownership;
+PostgreSQL uses leases to synchronize isolated hosts. No extra deployment-mode
+flag is required. Configure a durable PostgreSQL primary and common artifact
+storage, such as S3. Each host needs a Docker daemon and local staging space.
+
+```toml
+[state]
+backend = "postgresql"
+dsn_env = "DOCKFLOW_STATE_DSN"
+
+[execution]
+run_lease_seconds = 120
+run_heartbeat_seconds = 30
+```
+
+Both durations must be finite and positive. Lease must exceed heartbeat plus ten
+seconds for database timeout margin. Corresponding environment overrides are
+DOCKFLOW_PIPELINES_RUN_LEASE_SECONDS and DOCKFLOW_PIPELINES_RUN_HEARTBEAT_SECONDS.
+A renewal failure stops local execution authority. Expiry permits another owner
+to reconcile the Run; it does not automatically repeat computation. A replacement
+must reach the original daemon for unfinished containers. See
+[recovery](persistence.md#ownership-and-isolated-environments).

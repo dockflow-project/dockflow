@@ -40,3 +40,7 @@ write fails instead of replacing a previously published artifact.
 
 [Contributing](../../CONTRIBUTING.md) describes the shared development environment,
 tests and package verification. The library follows the repository's MIT license.
+
+Publication claims and manifests use the shared SQLite/PostgreSQL database.
+Storage contains payloads and an identity marker; see [storage](storage.md) for
+defaults, explicit remote configuration and coordinated backups.

@@ -6,6 +6,7 @@ import socket
 import subprocess
 import sys
 import time
+import uuid
 from copy import deepcopy
 
 import httpx
@@ -20,7 +21,12 @@ pytestmark = [
 ]
 
 
-def test_isolated_service_workers_kfp_sdk_and_restart(tmp_path):
+@pytest.mark.parametrize("backend", ["sqlite", "postgresql"])
+def test_isolated_service_workers_kfp_sdk_and_restart(tmp_path, backend):
+    if backend == "postgresql" and not os.environ.get(
+        "DOCKFLOW_TEST_STATE_POSTGRES_DSN"
+    ):
+        pytest.skip("Requires disposable PostgreSQL execution-state database")
     import kfp
 
     document = {
@@ -48,8 +54,14 @@ def test_isolated_service_workers_kfp_sdk_and_restart(tmp_path):
     package = tmp_path / "pipeline.yaml"
     package.write_text(json.dumps(document))
     config = tmp_path / "config.toml"
+    project_id = "service-runtime-fixture-" + uuid.uuid4().hex
+    state_configuration = (
+        '[state]\nbackend="postgresql"\ndsn_env="DOCKFLOW_TEST_STATE_POSTGRES_DSN"\n'
+        if backend == "postgresql"
+        else ""
+    )
     config.write_text(
-        'schema_version=1\n[project]\nid="service-runtime-fixture"\n[definitions.pipelines]\necho="pipeline.yaml"\n[images]\npull_policy="never"\n'
+        f'schema_version=1\n[project]\nid="{project_id}"\n{state_configuration}[definitions.pipelines]\necho="pipeline.yaml"\n[images]\npull_policy="never"\n'
     )
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))

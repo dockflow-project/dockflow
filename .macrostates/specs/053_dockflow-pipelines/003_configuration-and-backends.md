@@ -40,7 +40,7 @@ has a different project ID, stop before attaching to it.
 A fresh project may select one stable project ID and a common persistent state
 store from its first operation. Direct/service mode does not require different
 project IDs or independent histories. The acquisition-specific `owner_id` in
-`owner.lock` is a coordinator diagnostic and must not replace `project.id`.
+SQL ownership diagnostics is a coordinator diagnostic and must not replace `project.id`.
 Using a common store requires equivalent access to its configured metadata,
 artifact and execution locations; changing mode does not remap historical file
 URIs or migrate backend data. A service and direct process never own that state
@@ -51,7 +51,7 @@ root against that directory. Resolve every other relative filesystem setting
 against the resulting project root, regardless of process working directory.
 Derived defaults follow the resolved state.directory. Normalize absolute paths
 before ownership checks; server paths are server filesystem paths, not host paths.
-Same-host bind-mount aliases still refer to the same underlying ownership lock;
+Same-host bind-mount aliases still refer to the same underlying database ownership lock;
 different path strings do not create independent writer permission. Qualification
 requires local filesystem semantics as described in
 [Execution](005_execution-and-lifecycle.md).
@@ -73,8 +73,8 @@ explicit; no recursive Python discovery is supported.
 | --- | --- |
 | project | id required; root = configuration directory. |
 | definitions | pipelines and components are name-to-compiled-file maps; empty by default. Names match [a-z][a-z0-9_-]{0,63}. |
-| state | directory = ./.dockflow. |
-| metadata | backend = sqlite; directory = db/ beneath state; SQLite filename is mlmd.sqlite. |
+| state | directory = ./.dockflow; backend = sqlite; database = state.sqlite beneath state; dsn_env required only for postgresql. |
+| metadata | Legacy backend/directory settings are rejected; use state.backend and state.database. |
 | execution | work_directory = work/ beneath state; task_parallelism = 1; timeout_seconds = 0; shutdown_grace_seconds = 30. |
 | execution resources | cpu_limit and memory_limit_bytes omitted means no extra quota. Supplied values must be finite positive CPU cores / positive integer bytes. |
 | images | pull_policy = if-missing; admitted values if-missing, always, never. |
@@ -151,8 +151,8 @@ Prefix the following names with DOCKFLOW_PIPELINES_:
 | CONFIG | Configuration-file selection, not an ordinary field. |
 | ENDPOINT | client.endpoint |
 | PROJECT_ROOT | project.root |
-| STATE_DIRECTORY | state.directory |
-| METADATA_BACKEND / METADATA_DIRECTORY | metadata.backend / metadata.directory |
+| STATE_DIRECTORY / STATE_BACKEND / STATE_DATABASE / STATE_DSN_ENV | state.directory / state.backend / state.database / state.dsn_env |
+
 | WORK_DIRECTORY | execution.work_directory |
 | TIMEOUT_SECONDS / SHUTDOWN_GRACE_SECONDS | execution.timeout_seconds / execution.shutdown_grace_seconds |
 | CPU_LIMIT / MEMORY_LIMIT_BYTES | execution.cpu_limit / execution.memory_limit_bytes |
@@ -187,19 +187,18 @@ as a whole, not separate provenance entries for each alias/list element.
 
 Origin values are `file`, `environment`, `option`, `default` or `derived`.
 Precedence selects the origin; converting a relative path to an absolute path
-preserves its winning origin. Derived metadata/work directories and the managed
+preserves its winning origin. Derived database/work locations and the managed
 child of a legacy artifact root use `derived` when not explicitly configured.
 Absent optional settings have no entry. `schema_version` has origin `file`;
 `config_path` records selection by `option`, `environment` or `discovery`.
 Resolved project/state/metadata/work paths are also exposed through the existing
-`root`, `state`, `metadata_directory` and `work_directory` snapshot fields.
+`root`, `state`, `state_storage` and `work_directory` snapshot fields.
 
 Token-file paths may be recorded, but token contents, provider credential values
 and mounted file contents must never enter this snapshot or its origin mapping.
 Inspection returns a detached value and never reloads current configuration to
-reinterpret a historical Run. Older records without `sources` remain readable;
-missing provenance means unavailable, not a guessed default. No backfill or
-state migration is required for this additive field.
+reinterpret an accepted Run. Every new Run includes its origin mapping; the
+current fresh-state format requires no backfill or migration.
 
 ## Definitions, policies and catalog refresh
 
@@ -268,9 +267,6 @@ training = "pipelines/training.yaml"
 prepare = "components/prepare.yaml"
 [state]
 directory = ".dockflow"
-[metadata]
-backend = "sqlite"
-directory = ".dockflow/db"
 [execution]
 work_directory = ".dockflow/work"
 task_parallelism = 1
@@ -295,9 +291,6 @@ root = "/project"
 training = "pipelines/training.yaml"
 [state]
 directory = "/var/lib/dockflow"
-[metadata]
-backend = "sqlite"
-directory = "/var/lib/dockflow/db"
 [execution]
 work_directory = "/execution"
 task_parallelism = 1
@@ -343,3 +336,61 @@ read-only secret configuration files without embedding credentials in IR. The
 Docker daemon must see sources at the same paths as the owner; service deployments
 must arrange matching bind mounts/shared volumes. No implicit host-directory or
 Docker socket access is granted. Existing execution defaults are unchanged.
+
+## Distributed cache extension
+
+The optional `[cache]` table and `DOCKFLOW_PIPELINES_CACHE_*` mapping are owned by
+[Cache coordination](014_cache-coordination.md#20-dockflow-configuration-and-existing-contracts).
+Cache tables and execution-state tables MUST occupy the same physical database,
+selected only by `[state]`. Cache policy does not define another connection.
+
+## Database state configuration
+
+[Metadata and recovery](007_metadata-and-recovery.md) owns SQL authority and
+ownership. Effective configuration exposes state_storage with only backend,
+resolved SQLite database path or DSN environment-variable name. The old metadata
+table is rejected to prevent interpreting a former MLMD index as authoritative
+SQL history. Default SQLite needs no additional service or native metadata SDK.
+PostgreSQL configuration is:
+
+```toml
+[state]
+backend = "postgresql"
+dsn_env = "DOCKFLOW_STATE_DSN"
+directory = ".dockflow"
+```
+
+Both repositories MUST use the same database abstraction and state connection
+configuration. Reject `cache.backend`, `cache.registry` and `cache.dsn_env`,
+including their former environment overrides; no split-database mode is supported.
+For disposable cross-host environments, select PostgreSQL and commonly accessible
+artifact storage. Work directories remain local and disposable.
+
+
+## Run ownership configuration
+
+`state.backend=sqlite` selects the local one-owner model; `postgresql` selects
+cross-host synchronization through the same configured database for state/cache.
+No independent execution deployment-mode flag is supported. PostgreSQL requires
+commonly accessible artifact storage and a Docker daemon usable by each active
+coordinator. Database access does not grant access to another daemon.
+
+`execution.run_lease_seconds` defaults to 120 and `run_heartbeat_seconds` to 30.
+Both must be finite and positive; lease must exceed heartbeat plus the ten-second
+database-timeout safety margin. The corresponding environment variables are
+DOCKFLOW_PIPELINES_RUN_LEASE_SECONDS and DOCKFLOW_PIPELINES_RUN_HEARTBEAT_SECONDS.
+These govern PostgreSQL Run ownership; SQLite retains lifetime local ownership.
+One Run per coordinator and sequential tasks per Run remain the initial local
+limits; multiple PostgreSQL coordinators provide concurrent Runs.
+
+Capabilities expose active_runs=1 with active_runs_scope=project for SQLite and
+active_runs_scope=coordinator for PostgreSQL; concurrent_postgresql_runs identifies
+the distributed feature. Direct PostgreSQL submissions reserve their Run in the
+admission transaction so queue workers cannot steal that Run before foreground
+execution begins. Only that pinned coordinator may adopt its live reservation;
+after expiry another coordinator may claim accepted unstarted work.
+
+
+Configured CPU and byte-memory caps must remain positive when converted to
+Docker nanocores/bytes and fit signed 64-bit limits. Reject underflow and
+unrepresentable quotas during configuration loading.

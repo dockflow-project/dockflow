@@ -1,15 +1,14 @@
 """The native KFP hierarchy must survive publication, reuse and recovery."""
 
 import importlib.util
-import json
 import shutil
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
 
 import pytest
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.artifacts import ArtifactStore
-from dockflow_pipelines.errors import DockflowError
-from dockflow_pipelines.metadata import ControlStore, new_id
+from dockflow_pipelines.metadata import ControlStore
+from dockflow_pipelines.records import new_id
 from test_s3_artifacts import MemoryS3
 
 DATASET = {"schema_title": "system.Dataset", "schema_version": "0.0.1"}
@@ -36,7 +35,7 @@ def storage(tmp_path, request, monkeypatch):
     control = ControlStore(tmp_path / "state", "layout-test")
     artifacts = ArtifactStore(control, options)
     with control.owner():
-        control.initialize(require_mlmd=False)
+        control.initialize()
     return control, artifacts, client
 
 
@@ -84,10 +83,7 @@ def commit(control, record, outputs):
 
 
 def read_recovery(artifacts, client, descriptor):
-    relative = f".dockflow/dockflow-pipelines/{descriptor['artifact_id']}/artifact.json"
-    if artifacts.backend == "filesystem":
-        return json.loads((artifacts.managed_root / relative).read_bytes())
-    return json.loads(client.objects[("artifacts", f"project/{relative}")])
+    return artifacts.recovery_descriptor(descriptor["artifact_id"])
 
 
 @pytest.mark.parametrize("kind", ["file", "directory", "metadata"])
@@ -151,7 +147,7 @@ def test_outputs_share_attempt_salt_and_retry_never_overwrites(tmp_path, storage
         )
         commit(control, record, {"dataset": first, "validation": sibling})
         source.write_text("retry")
-        with pytest.raises(DockflowError, match="already exists"):
+        with pytest.raises(DockflowError, match="reserved|already exists"):
             artifacts.publish(source, DATASET, record)
         retry_record = {**record, "attempt_id": new_id("attempt")}
         retry = artifacts.publish(source, DATASET, retry_record)
@@ -191,7 +187,6 @@ def test_unsafe_publication_names_fail_before_storage(tmp_path, storage, field, 
 
 
 def test_new_layout_backup_restore_retains_uris_and_payloads(tmp_path, storage):
-    pytest.importorskip("ml_metadata")
     control, artifacts, client = storage
     source = tmp_path / "input"
     source.mkdir()
@@ -239,44 +234,22 @@ def test_new_layout_backup_restore_retains_uris_and_payloads(tmp_path, storage):
 
 
 @pytest.mark.parametrize("layout", [None, "kfp-v1"])
-def test_old_descriptor_locations_remain_readable(tmp_path, storage, layout):
-    control, artifacts, client = storage
+def test_unsupported_descriptor_layouts_fail_without_relocation(
+    tmp_path, storage, layout
+):
+    control, artifacts, _ = storage
     source = tmp_path / "source"
-    source.write_text("legacy")
+    source.write_text("current payload")
     with control.owner():
-        record = producer(control)
-        descriptor = artifacts.publish(source, DATASET, record)
-        original = descriptor["content_uri"]
-        if layout is None:
-            del descriptor["storage_layout"]
-            del descriptor["managed_path"]
-        else:
-            descriptor["storage_layout"] = layout
-        content, recovery = artifacts.managed_paths(descriptor)
+        descriptor = artifacts.publish(source, DATASET, producer(control))
+        original = artifacts.managed_content_path(descriptor)
+        descriptor["storage_layout"] = layout
+        with pytest.raises(
+            DockflowError, match="Unsupported managed artifact storage layout"
+        ):
+            artifacts.managed_content_path(descriptor)
         if artifacts.backend == "filesystem":
-            target = artifacts.managed_root / content
-            target.parent.mkdir(parents=True, exist_ok=True)
-            Path(unquote(urlsplit(original).path)).rename(target)
-            descriptor["content_uri"] = target.as_uri()
-            (artifacts.managed_root / recovery).parent.mkdir(
-                parents=True, exist_ok=True
-            )
-            (artifacts.managed_root / recovery).write_text(json.dumps(descriptor))
-        else:
-            old_key = artifacts.object_key(content)
-            new_key = urlsplit(original).path.lstrip("/")
-            client.objects[("artifacts", old_key)] = client.objects.pop(
-                ("artifacts", new_key)
-            )
-            descriptor["content_uri"] = f"s3://artifacts/{old_key}"
-            client.objects[("artifacts", artifacts.object_key(recovery))] = json.dumps(
-                descriptor
-            ).encode()
-        control.put("artifacts", descriptor)
-        commit(control, record, {"dataset": descriptor})
-        assert artifacts.verify(descriptor["artifact_id"])["verified"]
-        artifacts.materialize(descriptor["artifact_id"], tmp_path / "download")
-        assert (tmp_path / "download").read_text() == "legacy"
+            assert (artifacts.managed_root / original).read_text() == "current payload"
 
 
 def test_filesystem_publication_refuses_dangling_output_symlink(tmp_path):
@@ -285,7 +258,7 @@ def test_filesystem_publication_refuses_dangling_output_symlink(tmp_path):
     source = tmp_path / "source"
     source.write_text("safe")
     with control.owner():
-        control.initialize(require_mlmd=False)
+        control.initialize()
         record = producer(control)
         output = (
             artifacts.managed_root

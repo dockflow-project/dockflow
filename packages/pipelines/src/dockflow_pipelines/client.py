@@ -6,9 +6,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 
+from dockflow_database.errors import DockflowError
+
 from .canonical import loads
 from .config import validate_endpoint
-from .errors import DockflowError
 
 
 class _RejectRedirects(HTTPRedirectHandler):
@@ -94,6 +95,13 @@ class Client:
 
     def operate(self, action: str, values: dict):
         prefix = "/dockflow/v1"
+        if action in {"cache.invalidate", "cache.reset"}:
+            operation = action.split(".")[1]
+            return self.request(
+                "POST",
+                prefix + f"/cache/{values['id']}/{operation}",
+                {key: value for key, value in values.items() if key != "id"},
+            )
         if action == "capabilities":
             return self.request("GET", prefix + "/capabilities")
         if action.endswith(".list"):
@@ -125,15 +133,17 @@ class Client:
                     )
                 page = self.request(
                     "GET",
-                    prefix + "/definitions",
-                    query={"name": identifier, "page_size": 200},
+                    prefix + "/pipelines",
+                    query={"name": identifier, "page_size": 1},
                 )
                 available = [item for item in page["items"] if item.get("available")]
                 if not available:
                     raise DockflowError(
                         f"Unknown registered definition: {identifier}", "NOT_FOUND", 404
                     )
-                return available[0]
+                return self.request(
+                    "GET", prefix + "/definitions/" + available[0]["definition_id"]
+                )
             return self.request("GET", prefix + f"/{collection}/{identifier}")
         if action == "logs":
             return self.request(

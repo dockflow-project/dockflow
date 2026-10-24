@@ -1,0 +1,6 @@
+schema_version: 1
+id: state-cache-integration
+origin:
+  commit: 032444d3686f5951cb0b2457e64a023ded502387
+  specification: specs-0.1.0
+  implementation: imp-0.1.1

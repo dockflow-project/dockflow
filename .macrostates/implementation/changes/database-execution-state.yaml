@@ -1,0 +1,28 @@
+schema_version: 1
+id: database-execution-state
+summary: Retain complete execution history in local SQLite or external PostgreSQL with database ownership.
+origin:
+  commit: "032444d3686f5951cb0b2457e64a023ded502387"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.1"
+impact:
+  specification: major
+  implementation: major
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: SQL-authoritative journal, resources, definitions, logs and stable identities across fresh environments (007, A33).
+    implementation: Shared SQLite/PostgreSQL schema commits accepted events and projections atomically, retains exact source bytes, and scopes complete history by project. Persistent numeric KFP aliases replace native MLMD IDs.
+    verification: Full runtime regressions and fresh-environment history, queue/idempotency, pagination, source/log, lineage, isolation and rollback tests.
+  - requirement: Database execution ownership, uncertainty handling and safe Docker recovery (005, 007, A33).
+    implementation: Stable local SQLite inode or pinned PostgreSQL advisory-lock session; no automatic reconnect, poisoned uncertain commits, same-daemon recovery and retirement of stopped container handles.
+    verification: Independent-process contention/death, nested threads, session termination/takeover, lost COMMIT, consistent read snapshots and daemon-mismatch tests.
+  - requirement: Portable backups, rebuild, fresh-state configuration and operational guidance (003, 007).
+    implementation: Owner-exclusive project export/import through portable SQLite, hashed artifact backups, atomic empty-project restore/rebuild, derived external cache configuration and DSN-reference-only snapshots. Legacy files and foreign/unknown schemas fail explicitly; history migration is deliberately omitted.
+    verification: Both-backend export/import, artifact backup/restore, corruption/empty-target guards, optional-import and trust-audit tests, clean package builds and documentation/composition checks.
+evidence:
+  - validation/database-execution-state.md
+gaps: []
+delivery_limits:
+  - Physical multi-host deployment and additional native execution platforms remain unqualified.
+  - One active coordinator and Run per project/database remains the execution contract; this feature is not a distributed task scheduler.

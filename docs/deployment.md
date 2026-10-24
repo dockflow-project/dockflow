@@ -42,7 +42,7 @@ start/stop and example-image loading commands.
 ```mermaid
 flowchart LR
     Client[Browser / CLI / HTTP] --> API[Dockflow service]
-    API --> State[Control state and MLMD SQLite]
+    API --> State[State and cache database]
     API --> Socket[Inner Docker socket]
     Socket --> Engine[Dedicated Docker engine]
     Engine --> Task[Component task containers]
@@ -66,7 +66,7 @@ state from the host's engine, but is not a hostile-code isolation boundary. See
 
 | Compose volume | Contents |
 | --- | --- |
-| `dockflow-state` | Project/catalog records, exact compiled snapshots, Runs, logs and MLMD SQLite at `/state`. |
+| `dockflow-state` | Project/catalog records, exact compiled snapshots, Runs, logs and state and cache SQLite at `/state`. |
 | `dockflow-execution` | Staged inputs, per-attempt outputs and execution scratch at `/execution`. |
 | `docker-socket` | Dedicated daemon socket shared with Dockflow. |
 | `docker-state` | Docker images, containers and engine metadata at `/var/lib/docker`. |

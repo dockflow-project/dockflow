@@ -1,0 +1,28 @@
+schema_version: 1
+id: unified-database
+summary: Store execution history and cache coordination in one database through a shared backend abstraction.
+origin:
+  commit: "032444d3686f5951cb0b2457e64a023ded502387"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.1"
+impact:
+  specification: major
+  implementation: major
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: One physical SQLite or PostgreSQL database and one connection configuration (003, 007, A34).
+    implementation: State is the sole connection configuration; cache connection fields and former environment overrides are rejected. Both repositories use the Database abstraction and one atomic versioned schema, initialized in either order.
+    verification: Both-backend initialization, held-owner cache progress, fresh-environment history, configuration rejection and existing ownership/cache conformance suites.
+  - requirement: Preserve execution ownership, cache fencing and domain commit boundaries (005, 007, 014).
+    implementation: Pinned execution session and independent short cache connections share the same database. The common adapter owns drivers, SQL dialect, durability, clocks, locks and failure classification; domain repositories retain transaction uncertainty and retry policies.
+    verification: Independent-process contention/death, PostgreSQL session loss, uncertain commit, stale producer, shared retry and runtime regression tests.
+  - requirement: Complete project snapshot and artifact recovery (007, 014, A34).
+    implementation: One repeatable SQL snapshot exports project state and all cache namespaces, fencing history and manifests, excluding other projects and owners. Backup collects cache-only bytes and store identity; restore validates both.
+    verification: Concurrent cache commit during export, cross-backend portable restore, namespace/project isolation, nonempty target refusal and real S3 cache-only publication recovery.
+evidence:
+  - validation/unified-database.md
+gaps: []
+delivery_limits:
+  - Physical multi-host deployment and additional native execution platforms remain unqualified.
+  - One active coordinator and Run per project remains the execution contract; database unification does not add a distributed task scheduler.

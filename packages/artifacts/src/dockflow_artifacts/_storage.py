@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import io
 import os
 import tempfile
 from functools import cached_property
@@ -10,8 +9,20 @@ from pathlib import Path
 from typing import Any, BinaryIO
 from urllib.parse import unquote, urlsplit
 
-from ._paths import CONTROL, file_info, hash_stream, no_links, relative
-from .errors import ArtifactError, ConflictError, IntegrityError
+from ._paths import file_info, hash_stream, no_links, relative
+from .errors import ArtifactError, IntegrityError
+
+
+def _sync_ancestors(path: Path) -> None:
+    """Flush every potentially new directory entry, including identical retries."""
+    for directory in (path, *path.parents):
+        descriptor = os.open(
+            directory, os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0)
+        )
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
 
 
 class FileStore:
@@ -36,11 +47,20 @@ class FileStore:
     def has_prefix(self, prefix: str) -> bool:
         return self.path(prefix).exists()
 
+    def sync(self, key: str) -> None:
+        path = self.path(key)
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        _sync_ancestors(path.parent)
+
     def put(self, key: str, body: BinaryIO) -> bool:
         path = self.path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
         no_links(path)
-        staging = self.path(f"{CONTROL}/staging")
+        staging = self.path(".dockflow/staging")
         staging.mkdir(parents=True, exist_ok=True)
         no_links(staging)
         descriptor, temporary = tempfile.mkstemp(prefix=".publication-", dir=staging)
@@ -53,12 +73,11 @@ class FileStore:
             try:
                 os.link(temporary, path)
             except FileExistsError:
+                # An uncertain previous write or an adopted identical payload
+                # still needs a durable file and directory boundary.
+                self.sync(key)
                 return False
-            directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(directory)
-            finally:
-                os.close(directory)
+            _sync_ancestors(path.parent)
             return True
         finally:
             Path(temporary).unlink(missing_ok=True)
@@ -228,10 +247,3 @@ def make_store(root: str | Path, options: dict[str, Any]) -> FileStore | S3Store
     if not path.is_absolute():
         raise ArtifactError("Filesystem publication roots must be absolute")
     return FileStore(path)
-
-
-def put_record(store: FileStore | S3Store, key: str, value: bytes) -> None:
-    if not store.put(key, io.BytesIO(value)) and store.get(key) != value:
-        raise ConflictError(
-            "Destination is already reserved for different contents or metadata"
-        )

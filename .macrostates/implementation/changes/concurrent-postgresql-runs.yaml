@@ -1,0 +1,28 @@
+schema_version: 1
+id: concurrent-postgresql-runs
+summary: Preserve local SQLite single ownership and coordinate concurrent PostgreSQL Runs across isolated processes.
+origin:
+  commit: "032444d3686f5951cb0b2457e64a023ded502387"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.1"
+impact:
+  specification: major
+  implementation: major
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Backend-selected local or distributed coordination (003, 005, 007, A35).
+    implementation: SQLite retains lifetime local ownership; PostgreSQL uses shared maintenance sessions, database-time Run leases, independent renewals and fenced execution writes through the common adapter.
+    verification: SQLite exclusion regressions; PostgreSQL competing claims, renewal failure, expiry, stale writes, independent processes and owner death.
+  - requirement: Concurrent durable admission, scheduling and cancellation (005, A35).
+    implementation: Short project transactions allocate journal counters, preserve aliases, serialize catalog/idempotency/capacity checks and stop intent. Direct submissions reserve their Run atomically; service workers skip peer claims and execute different Runs.
+    verification: Independent-process idempotent admission, queue capacity, direct reservation, multiple actual services, direct execution beside services and remote cancellation.
+  - requirement: Scoped recovery, cache provenance and exclusive maintenance (005, 007, 014, A35).
+    implementation: Recover only abandoned Runs on their original daemon, retain live remote Runs, reject stale cache publication, and preserve producer lifecycle through immutable cache observations. Maintenance excludes coordinators and cache transactions; restore acquires exclusivity before artifact transfer.
+    verification: Crashed-service Docker recovery alongside a live Run, same-key waiting/reuse, live-producer observation, expired publication rollback, maintenance contention and backup/rebuild regressions.
+evidence:
+  - validation/concurrent-postgresql-runs.md
+gaps: []
+delivery_limits:
+  - Physical multi-host deployment and additional native platforms remain unqualified; measured distributed tests use isolated processes on one host.
+  - Each coordinator executes one Run at a time; tasks within a Run remain sequential. Docker access and common durable artifact storage are required.

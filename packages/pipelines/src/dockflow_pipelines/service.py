@@ -7,17 +7,19 @@ import logging
 import multiprocessing
 import re
 import threading
+import time
 from collections.abc import AsyncIterator
 from urllib.parse import urlsplit
 
+from dockflow_database.errors import DockflowError
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from .canonical import loads
-from .core import TERMINAL, Core, capabilities, only_fields
-from .errors import DockflowError
+from .core import Core, capabilities, only_fields
 from .operations import operate
+from .records import TERMINAL
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,16 +57,31 @@ def _validate_host(request: Request) -> None:
 
 RPC = {
     "store": {
+        "check_execution",
         "get",
+        "has_output_set",
         "put",
         "list",
+        "query",
         "append",
         "log",
         "commit_output_set",
         "ensure_reconciled",
         "verify_output_set",
+        "finish_run",
+        "import_cache_result",
+        "publish_cache_result",
     },
-    "artifacts": {"get", "list", "register", "materialize", "verify", "publish"},
+    "artifacts": {
+        "get",
+        "list",
+        "register",
+        "materialize",
+        "verify",
+        "publish",
+        "verify_cache",
+        "storage_identity",
+    },
 }
 
 
@@ -113,25 +130,78 @@ class Scheduler:
         self.active_run = None
         self.ready = False
         self.error = None
+        self.last_recovery = 0.0
+        self.execution_enabled = True
+
+    def available(self) -> bool:
+        return (
+            self.ready
+            and not self.stopping.is_set()
+            and (
+                not self.execution_enabled
+                or self.thread is not None
+                and self.thread.is_alive()
+            )
+        )
 
     def reconcile(self) -> None:
-        """Confirm lost workers stopped before making any replacement dispatch."""
+        """Recover only claimable abandoned Runs; never touch a live remote Run."""
+        if not self.core.store.database.adapter.concurrent_runs:
+            self._reconcile()
+            return
+        for run in self.core.store.database.queries.recovery_runs():
+            try:
+                with self.core.store.run_owner(
+                    run["run_id"], self.core.settings.execution, recovering=True
+                ):
+                    self._reconcile(run["run_id"])
+            except DockflowError as exc:
+                if exc.code != "RUN_BUSY":
+                    LOGGER.warning("Run recovery remains unresolved: %s", exc)
+
+    def _reconcile(self, run_id: str | None = None) -> None:
+        """Confirm recorded handles stopped on their original Docker daemon."""
         import docker
         from docker.errors import NotFound
 
-        from .metadata import utc_now
+        from .records import utc_now
 
         client = docker.from_env()
         try:
             client.ping()
-            for attempt in self.core.store.list("attempts"):
-                if attempt["state"] not in {
-                    "running",
-                    "publishing",
-                } and not attempt.get("reconciliation_required"):
+            with self.core.store.database.transaction():
+                self.core.store._recover_committed_outputs(
+                    self.core.store.accepted_events(kind="output_set", run_id=run_id)
+                )
+            for attempt in self.core.store.database.queries.select(
+                "attempts", filters={"run_id": run_id} if run_id is not None else None
+            ):
+                if (
+                    attempt["state"]
+                    not in {
+                        "running",
+                        "publishing",
+                    }
+                    and not attempt.get("reconciliation_required")
+                    and not (run_id is not None and attempt.get("container_id"))
+                ):
                     continue
                 identifier = attempt.get("container_id")
                 if identifier:
+                    daemon_id = attempt.get("daemon_id")
+                    if daemon_id:
+                        if client.info().get("ID") != daemon_id:
+                            raise DockflowError(
+                                "Recorded attempt belongs to a different Docker daemon; reconcile its original daemon before dispatch",
+                                "UNAVAILABLE",
+                                503,
+                            )
+                    elif self.core.store.database.backend == "postgresql":
+                        raise DockflowError(
+                            "Recorded Docker daemon identity is missing; execution remains unresolved",
+                            "UNAVAILABLE",
+                            503,
+                        )
                     try:
                         container = client.containers.get(identifier)
                         labels = container.labels
@@ -139,6 +209,13 @@ class Scheduler:
                             labels.get("dockflow.project")
                             != self.core.settings.project_id
                             or labels.get("dockflow.attempt") != attempt["attempt_id"]
+                            or (
+                                run_id is not None
+                                and (
+                                    labels.get("dockflow.run") != attempt["run_id"]
+                                    or labels.get("dockflow.task") != attempt["task_id"]
+                                )
+                            )
                         ):
                             raise DockflowError(
                                 "Recorded container ownership does not match; reconciliation required",
@@ -192,26 +269,23 @@ class Scheduler:
                                     task_id=attempt["task_id"],
                                     attempt_id=attempt["attempt_id"],
                                 )
-                            path = self.core.store.attempt_path(
+                            self.core.store.snapshot_attempt_log(
                                 attempt["run_id"],
                                 attempt["task_id"],
                                 attempt["attempt_id"],
-                            )
-                            self.core.store.write_bytes(
-                                path.relative_to(self.core.settings.state)
-                                / "logs"
-                                / (stream + ".log"),
+                                stream,
                                 text.encode("utf-8"),
                             )
+                        # Retire the handle before relinquishing the recovery hold.
+                        # A stale worker can no longer start a formerly-created container.
+                        container.remove(force=True)
                     except NotFound:
                         pass
-                marker = (
-                    self.core.store.attempt_path(
-                        attempt["run_id"], attempt["task_id"], attempt["attempt_id"]
-                    )
-                    / "output-set.json"
+                state = (
+                    "succeeded"
+                    if self.core.store.has_output_set(attempt["attempt_id"])
+                    else "interrupted"
                 )
-                state = "succeeded" if marker.exists() else "interrupted"
                 self.core.store.put(
                     "attempts",
                     {
@@ -226,10 +300,14 @@ class Scheduler:
                 )
             # Clear Run holds only after every uncertain Attempt was reconciled.
             # A later failed stop must leave terminal Runs held for the retry.
-            for run in self.core.store.list("runs"):
+            runs = (
+                [self.core.store.get("runs", run_id)]
+                if run_id is not None
+                else self.core.store.database.queries.recovery_runs()
+            )
+            for run in runs:
                 if run["state"] in {"running", "cancelling"}:
-                    self.core.store.put(
-                        "runs",
+                    self.core.store.finish_run(
                         {
                             **run,
                             "state": "interrupted",
@@ -240,10 +318,11 @@ class Scheduler:
                                 "message": "Recovered after execution owner loss; no automatic rerun",
                             },
                         },
+                        recovering=True,
                     )
                 elif run["state"] in TERMINAL and run.get("reconciliation_required"):
-                    self.core.store.put(
-                        "runs", {**run, "reconciliation_required": False}
+                    self.core.store.finish_run(
+                        {**run, "reconciliation_required": False}, recovering=True
                     )
         finally:
             client.close()
@@ -261,7 +340,27 @@ class Scheduler:
         self.thread.start()
 
     def _loop(self):
+        try:
+            self._dispatch_loop()
+        except Exception as exc:
+            # A failed scheduler cannot continue accepting work. Do not silently
+            # start a replacement while execution/commit authority is uncertain.
+            self.error = (
+                "Scheduler stopped; resolve the failure and restart the service"
+            )
+            LOGGER.error("Scheduler stopped (%s)", type(exc).__name__)
+            self.stopping.set()
+        finally:
+            self.ready = False
+
+    def _dispatch_loop(self):
         while not self.stopping.is_set():
+            if (
+                self.core.store.database.adapter.concurrent_runs
+                and time.monotonic() - self.last_recovery >= 2
+            ):
+                self.reconcile()
+                self.last_recovery = time.monotonic()
             with self.core.mutex:
                 if self.stopping.is_set():
                     return
@@ -270,84 +369,95 @@ class Scheduler:
                     self.error = "Accepted metadata requires offline reconciliation before dispatch"
                     self.stopping.set()
                     return
-                queued = sorted(
-                    (
-                        run
-                        for run in self.core.store.list("runs")
-                        if run["state"] == "queued"
-                    ),
-                    key=lambda item: item["acceptance_sequence"],
-                )
-                if queued:
-                    # Claim while holding the same lock used by shutdown, so
-                    # every dispatched worker receives any stop intent.
-                    run = queued[0]
-                    self.active_run = run["run_id"]
-            if not queued:
-                self.stopping.wait(0.1)
-                continue
-            parent, child = multiprocessing.get_context("spawn").Pipe()
-            process = multiprocessing.get_context("spawn").Process(
-                target=_worker,
-                args=(child, self.core.settings, run),
-                name=f"dockflow-{run['run_id']}",
-            )
-            process.start()
-            child.close()
-            finished = False
-            try:
-                while process.is_alive() or parent.poll():
-                    if parent.poll(0.1):
-                        message = parent.recv()
-                        if message[0] in {"finished", "failed"}:
-                            finished = message[0] == "finished"
-                            if not finished:
-                                LOGGER.error("Run worker failed: %s", message[1])
-                            break
-                        target, name, args, kwargs = message
+                queued = self.core.store.database.queries.queued()
+            dispatched = False
+            for run in queued:
+                try:
+                    with self.core.store.run_owner(
+                        run["run_id"], self.core.settings.execution
+                    ):
                         with self.core.mutex:
-                            try:
-                                if target not in RPC or name not in RPC[target]:
-                                    raise DockflowError(
-                                        "Invalid worker operation", "INTERNAL", 500
-                                    )
-                                value = getattr(getattr(self.core, target), name)(
-                                    *args, **kwargs
-                                )
-                                parent.send(("ok", value))
-                            except DockflowError as exc:
-                                if self.core.store.reconciliation_required:
-                                    self.ready = False
-                                    self.error = (
-                                        "Accepted metadata requires reconciliation"
-                                    )
-                                parent.send(
-                                    ("error", {**exc.as_dict(), "status": exc.status})
-                                )
-                            except Exception:
-                                LOGGER.exception("Owner operation failed")
-                                parent.send(
-                                    (
-                                        "error",
-                                        {
-                                            "message": "Owner operation failed; inspect retained service logs",
-                                            "code": "INTERNAL",
-                                            "status": 500,
-                                        },
-                                    )
-                                )
-                process.join()
-                if not finished:
+                            if self.stopping.is_set():
+                                return
+                            self.active_run = run["run_id"]
+                        self._dispatch(run)
+                        dispatched = True
+                    break
+                except DockflowError as exc:
+                    if exc.code != "RUN_BUSY":
+                        self.error = str(exc)
+                        LOGGER.warning("Run dispatch refused: %s", exc)
+                finally:
+                    self.active_run = None
+            if not dispatched:
+                self.stopping.wait(0.1)
+
+    def _dispatch(self, run):
+        parent, child = multiprocessing.get_context("spawn").Pipe()
+        process = multiprocessing.get_context("spawn").Process(
+            target=_worker,
+            args=(child, self.core.settings, run),
+            name=f"dockflow-{run['run_id']}",
+        )
+        try:
+            process.start()
+        except BaseException:
+            parent.close()
+            child.close()
+            raise
+        child.close()
+        finished = False
+        try:
+            while process.is_alive() or parent.poll():
+                if parent.poll(0.1):
+                    message = parent.recv()
+                    if message[0] in {"finished", "failed"}:
+                        finished = message[0] == "finished"
+                        if not finished:
+                            LOGGER.error("Run worker failed: %s", message[1])
+                        break
+                    target, name, args, kwargs = message
                     with self.core.mutex:
-                        self.reconcile()
-            except (EOFError, OSError, DockflowError) as exc:
-                self.ready = False
-                self.error = str(exc)
-                LOGGER.exception("Execution reconciliation required")
-                self.stopping.set()
-            finally:
-                parent.close()
-                self.active_run = None
+                        try:
+                            if target not in RPC or name not in RPC[target]:
+                                raise DockflowError(
+                                    "Invalid worker operation", "INTERNAL", 500
+                                )
+                            value = getattr(getattr(self.core, target), name)(
+                                *args, **kwargs
+                            )
+                            parent.send(("ok", value))
+                        except DockflowError as exc:
+                            if self.core.store.reconciliation_required:
+                                self.ready = False
+                                self.error = "Accepted metadata requires reconciliation"
+                            parent.send(
+                                ("error", {**exc.as_dict(), "status": exc.status})
+                            )
+                        except Exception:
+                            LOGGER.exception("Owner operation failed")
+                            parent.send(
+                                (
+                                    "error",
+                                    {
+                                        "message": "Owner operation failed; inspect retained service logs",
+                                        "code": "INTERNAL",
+                                        "status": 500,
+                                    },
+                                )
+                            )
+            process.join()
+            if not finished:
+                with self.core.mutex:
+                    self._reconcile(run["run_id"])
+        except (EOFError, OSError, DockflowError) as exc:
+            self.ready = False
+            self.error = str(exc)
+            LOGGER.exception("Execution reconciliation required")
+            self.stopping.set()
+        finally:
+            parent.close()
+            self.active_run = None
 
     def stop(self):
         with self.core.mutex:
@@ -370,6 +480,7 @@ class Scheduler:
 def create_app(settings, *, execute: bool = True) -> FastAPI:
     core = Core(settings)
     scheduler = Scheduler(core)
+    scheduler.execution_enabled = execute
     token = None
 
     @contextlib.asynccontextmanager
@@ -537,7 +648,7 @@ def create_app(settings, *, execute: bool = True) -> FastAPI:
     @app.get("/health/ready")
     def ready():
         reconciliation_required = core.store.reconciliation_required
-        admission_ready = scheduler.ready and not reconciliation_required
+        admission_ready = scheduler.available() and not reconciliation_required
         return JSONResponse(
             {
                 "status": "ready" if admission_ready else "unavailable",
@@ -677,7 +788,7 @@ def create_app(settings, *, execute: bool = True) -> FastAPI:
 
     @app.post("/dockflow/v1/runs")
     def submit(request: Request):
-        if not scheduler.ready:
+        if not scheduler.available():
             raise DockflowError("Execution owner is not ready", "UNAVAILABLE", 503)
         with core.mutex:
             run, replay = core.submit(
@@ -782,6 +893,32 @@ def create_app(settings, *, execute: bool = True) -> FastAPI:
             operation_route(action, fields),
             methods=["POST"],
             name=action,
+        )
+
+    @app.get("/dockflow/v1/cache/{key}")
+    def cache_show(key: str):
+        return operate(core, "cache.show", {"id": key})
+
+    for cache_operation, cache_fields in (
+        ("invalidate", {"artifact_id", "reason"}),
+        ("reset", {"revision", "reason"}),
+    ):
+
+        def cache_route(operation, fields):
+            def cache_mutate(key: str, request: Request):
+                body = request.state.body
+                only_fields(body, fields)
+                if set(body) != fields:
+                    raise DockflowError("Cache maintenance requires all request fields")
+                return operate(core, "cache." + operation, {"id": key, **body})
+
+            return cache_mutate
+
+        app.add_api_route(
+            "/dockflow/v1/cache/{key}/" + cache_operation,
+            cache_route(cache_operation, cache_fields),
+            methods=["POST"],
+            name="cache." + cache_operation,
         )
 
     for operation in ("pin", "unpin"):

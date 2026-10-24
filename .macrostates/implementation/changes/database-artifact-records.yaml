@@ -1,0 +1,29 @@
+schema_version: 1
+id: database-artifact-records
+summary: Move publication bookkeeping into the unified database through a shared library.
+origin:
+  commit: "032444d3686f5951cb0b2457e64a023ded502387"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.1"
+impact:
+  specification: major
+  implementation: major
+deliverables:
+  - dockflow-database
+  - dockflow-artifacts
+  - dockflow-pipelines
+requirements:
+  - requirement: SQL publication claims, manifests and recovery records (Artifacts 002/003; Pipelines 006/007/A36).
+    implementation: One immutable SQL record repository and physical schema shared with state/cache; storage retains bytes and a store identity marker.
+    verification: SQLite/PostgreSQL publication, independent processes, conflicts, interrupted completion, storage inspection and real S3.
+  - requirement: Standalone configuration and package independence (general 001/003; Artifacts 001/003).
+    implementation: Extract shared dockflow-database package, lazy optional PostgreSQL driver, local SQLite defaults and explicit remote database/project configuration.
+    verification: Constructor/configuration, import isolation, clean wheel installation and standalone source rebuilds.
+  - requirement: Consistent backup and restore (Pipelines 006/007/A36).
+    implementation: Include all project publication records and managed-root payloads, validate standalone publication checksums, and refuse missing additional roots.
+    verification: Portable SQL snapshots, filesystem/S3 backup/restore, corruption and omitted-root refusal, maintenance exclusion.
+evidence:
+  - validation/database-artifact-records.md
+gaps: []
+delivery_limits:
+  - Physical multi-host and additional native-platform deployment qualification is not claimed; checks use isolated processes and containers on one Linux host.

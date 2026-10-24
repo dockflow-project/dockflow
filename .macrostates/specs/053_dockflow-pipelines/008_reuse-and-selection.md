@@ -40,7 +40,7 @@ artifact; missing external data must be rechecked when the graph executes again.
 ## Signature format
 
 Use a versioned signature envelope with algorithm sha256 and format
-dockflow-task-signature-v1. Include:
+dockflow-task-signature-v2. Include:
 
 - Project identity, scope policy and resolved scope key/token.
 - The selected component's normalized executable definition, command/arguments,
@@ -106,8 +106,11 @@ and canonical metadata. The digest format is part of persisted compatibility.
 
 ## Candidate selection and substitution
 
-Select the latest compatible successful producing attempt by committed completion
-time, with attempt ID ascending as deterministic tie break. Before substitution
+For automatic reuse, use the selected registry artifact and atomic resolution in
+[Cache coordination](014_cache-coordination.md). Legacy unregistered results are
+misses. Explicit historical selection retains committed-output verification;
+where historical candidates are needed for partial-plan preflight, order by
+committed completion time descending and attempt ID ascending. Before substitution
 verify signature/profile equivalence, complete output-set commit, metadata
 consistency, required output accessibility and integrity, and retained lifecycle
 status. An unavailable/corrupt result is a cache miss even if history says success.
@@ -154,3 +157,10 @@ Active Run references and explicit retained pins protect source artifacts from
 cleanup. Pins survive process restarts until explicitly removed. Pinning affects
 retention, not equivalence or data integrity. Rebuild/reconciliation preserves
 reuse and manual-selection provenance.
+
+## Concurrent production
+
+[Cache coordination](014_cache-coordination.md) owns automatic claim-or-reuse,
+shared retry episodes, wait deadlines, verified registry hits, freshness and
+artifact-specific invalidation. These specialize candidate discovery without
+relaxing the eligibility, scope, canonical digest or manual selection rules above.

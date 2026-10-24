@@ -3,9 +3,9 @@
 import re
 
 import pytest
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.definitions import DefinitionError
-from dockflow_pipelines.errors import DockflowError
 from dockflow_pipelines.executor import resource_limits, task_volumes
 
 

@@ -3,8 +3,8 @@
 import json
 
 import pytest
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.config import load_settings
-from dockflow_pipelines.errors import DockflowError
 
 
 def config(tmp_path, artifacts="", other=""):
@@ -105,12 +105,14 @@ def test_effective_snapshot_retains_complete_nonsecret_origins(tmp_path, monkeyp
     assert origins["execution.timeout_seconds"] == "environment"
     assert origins["service.port"] == "option"
     assert origins["reuse.scope"] == "default"
-    assert origins["metadata.directory"] == "derived"
+    assert origins["state.database"] == "derived"
     assert origins["execution.work_directory"] == "derived"
     assert origins["artifacts.root"] == "default"
     assert origins["artifacts.managed_root"] == "derived"
     assert origins["config_path"] == "option"
-    assert snapshot["metadata_directory"] == str(tmp_path / "control/db")
+    assert snapshot["state_storage"]["database"] == str(
+        tmp_path / "control/state.sqlite"
+    )
     assert snapshot["work_directory"] == str(tmp_path / "control/work")
     assert snapshot["execution"]["timeout_seconds"] == 12
     assert snapshot["service"]["port"] == 8090
@@ -124,13 +126,13 @@ def test_config_selection_and_explicit_derived_fields(tmp_path, monkeypatch):
     path = config(
         tmp_path,
         'managed_root="published"',
-        '[metadata]\ndirectory="index"\n[execution]\nwork_directory="work"',
+        '[state]\ndatabase="index/state.sqlite"\n[execution]\nwork_directory="work"',
     )
     monkeypatch.setenv("DOCKFLOW_PIPELINES_CONFIG", str(path))
     sources = load_settings().effective()["sources"]
     assert sources["config_path"] == "environment"
     for key in (
-        "metadata.directory",
+        "state.database",
         "execution.work_directory",
         "artifacts.managed_root",
     ):
@@ -140,3 +142,38 @@ def test_config_selection_and_explicit_derived_fields(tmp_path, monkeypatch):
     path.rename(tmp_path / ".dockflow-pipelines.toml")
     monkeypatch.chdir(tmp_path)
     assert load_settings().effective()["sources"]["config_path"] == "discovery"
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        "run_lease_seconds=0",
+        "run_lease_seconds=nan",
+        "run_heartbeat_seconds=inf",
+        "run_heartbeat_seconds=true",
+        'run_lease_seconds="120"',
+        "run_lease_seconds=40\nrun_heartbeat_seconds=30",
+    ],
+)
+def test_invalid_run_lease_policy_is_side_effect_free(tmp_path, fields):
+    path = config(tmp_path, other="[execution]\n" + fields)
+    with pytest.raises(DockflowError):
+        load_settings(path)
+    assert list(tmp_path.iterdir()) == [path]
+
+
+def test_backend_selects_coordination_and_lease_environment_overrides(
+    tmp_path, monkeypatch
+):
+    path = config(
+        tmp_path,
+        other='[state]\nbackend="postgresql"\ndsn_env="DOCKFLOW_TEST_CONNECTION"',
+    )
+    monkeypatch.setenv("DOCKFLOW_PIPELINES_RUN_LEASE_SECONDS", "60")
+    monkeypatch.setenv("DOCKFLOW_PIPELINES_RUN_HEARTBEAT_SECONDS", "15")
+    settings = load_settings(path)
+    assert settings.execution["run_lease_seconds"] == 60
+    assert settings.execution["run_heartbeat_seconds"] == 15
+    assert settings.sources["execution.run_lease_seconds"] == "environment"
+    assert settings.cache["database"] == settings.state_storage
+    assert list(tmp_path.iterdir()) == [path]

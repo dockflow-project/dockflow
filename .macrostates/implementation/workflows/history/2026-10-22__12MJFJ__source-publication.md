@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Integration preparation`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `bounded`
 - Branch: `feat/initial-implementation`
@@ -77,7 +77,7 @@ would become stale at the first commit. Removed a trailing empty line from the
 Artifacts package metadata identified by the staged whitespace check. No runtime
 or product contract changed.
 
-## Closure and publication state
+## Definer-confirmed closure
 
 The Definer explicitly approved closure of this sole open workflow on 2026-10-22
 and authorized establishing the reviewed source on `main`, making the GitHub

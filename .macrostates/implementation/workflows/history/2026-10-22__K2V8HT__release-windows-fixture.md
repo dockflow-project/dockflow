@@ -33,7 +33,7 @@ Read the declared body before responding, so the server does not close with
 unread inbound data. Preserve every same/cross-origin redirect assertion and
 the real HTTP transport. No production behavior or security policy changes.
 
-## Verification and closure criteria
+## Definer-confirmed closure
 
 All 82 base-platform tests passed, including the 22 HTTP client cases. Ruff,
 formatting, composition integrity and diff checks passed. The first-release
@@ -42,7 +42,7 @@ rewriting the closed preparation record. Actual Windows confirmation remains a
 hosted check after submission; integration remains authorized only after all
 hosted checks pass.
 
-## Closure
+## Definer-confirmed closure
 
 The Definer explicitly approved closure and submission of this correction on
 2026-10-22, followed by the already authorized release integration once CI

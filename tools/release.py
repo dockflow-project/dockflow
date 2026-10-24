@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "dockflow-project/dockflow"
 IMAGE = "ghcr.io/dockflow-project/dockflow-pipelines"
-PACKAGES = ("cli", "pipelines", "artifacts")
+PACKAGES = ("cli", "pipelines", "artifacts", "database")
 
 
 def command(*args: str) -> str:
@@ -237,8 +237,9 @@ def verify(
     )
     hashes = {item["filename"]: item["sha256"] for item in receipt["artifacts"]}
     require(
-        len(hashes) == 6 and len(receipt["artifacts"]) == 6,
-        "Expected verification of six distributions",
+        len(hashes) == len(PACKAGES) * 2
+        and len(receipt["artifacts"]) == len(PACKAGES) * 2,
+        "Expected wheel and source verification for every distribution",
     )
     require(
         all(

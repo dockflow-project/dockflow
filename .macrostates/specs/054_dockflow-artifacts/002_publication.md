@@ -30,18 +30,30 @@ Source mutation detected while reading/publishing fails before completion.
 Immutable conditional writes are required, including on S3-compatible servers;
 do not silently fall back to unconditional overwrite.
 
-Control records live under .dockflow/dockflow-artifacts inside the artifact root, outside payload
-directories. They are versioned and contain no credentials. Receipt metadata is
-caller-owned JSON; library integrity fields remain separate. A successful
-publication followed by task/importer failure can leave an unreferenced complete
-artifact. Preserve it for retry; no automatic deletion or retention is promised.
+Publication claims and completion manifests live in the configured unified SQL
+database through the shared Dockflow database abstraction. Reserve the entire
+ancestor/leaf namespace in one short transaction before transferring bytes.
+Identical concurrent claims converge; conflicting claims roll back atomically.
+Completion is an immutable SQL record written only after payload verification.
+An interrupted identical publication may resume; a conflicting or malformed
+record must fail closed. No SQL transaction spans hashing or artifact transfer.
 
-The sibling `.dockflow/dockflow-pipelines` namespace belongs to the orchestrator;
-publication records do not share its database or lifecycle. Reserve the full
-`.dockflow` segment against user destinations and source inventory entries.
-Legacy `.dockflow-artifacts` records require an explicit fresh root/reset before
-publication or verification; fail before writing rather than ignore old claims.
-Do not automatically move records or silently adopt existing payloads.
+The artifact root retains only payloads, disposable staging and a small
+`.dockflow/storage.json` identity marker. The marker binds SQL records to a
+specific store independently of its mount path. Keep it with the payloads and
+validate it before accepting records. Receipts contain a logical `dockflow://`
+publication address in `manifest_uri`; it names the database record, not a JSON
+object in artifact storage. `Publisher.verify(destination)` resolves it.
+
+All writers sharing a publication root must use the same database and project ID.
+Project and storage identity scope every record. Receipt metadata remains
+caller-owned JSON, separate from integrity fields. Completed but unreferenced
+artifacts remain available for retry; no automatic retention is promised.
+Pipelines recovery descriptors and storage reservations use the same SQL database
+and backend abstraction. Artifact payload paths may themselves use `.dockflow`;
+reserve that namespace against user destinations and source inventory entries.
+Legacy sidecar layouts and older SQL schemas require fresh disposable state;
+no migration, implicit adoption or deletion of existing data is required.
 
 ## Deterministic publication IDs
 
@@ -103,3 +115,13 @@ changed inputs have another component directory under the same pipeline.
 Different pipeline names isolate both path and execution context. Run IDs are
 not added. Changing width as a pipeline grows is a declared destination/input
 change and can invalidate otherwise reusable executions.
+
+## Filesystem directory durability
+
+Before acknowledging publication, durably sync newly created destination/root
+directory entries through the required ancestor chain, in addition to payload
+files and their immediate parent. Storage identity creation follows the same
+rule. Flush failures fail publication before its SQL completion record; identical
+retry must establish the durability boundary even when payload files already
+exist. Qualify the supported POSIX filesystem behavior; instrumentation does not
+claim that actual power-loss recovery has been tested.

@@ -1,0 +1,29 @@
+schema_version: 1
+id: domain-persistence-cleanup
+summary: Replace virtual file state with explicit SQL domain repositories and remove obsolete persistence interfaces.
+origin:
+  commit: "032444d3686f5951cb0b2457e64a023ded502387"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.1"
+impact:
+  specification: major
+  implementation: major
+deliverables:
+  - dockflow-database
+  - dockflow-pipelines
+requirements:
+  - requirement: Domain persistence and one resource projection (Pipelines 006/007/A37).
+    implementation: Numeric journal sequences and repositories keyed by domain IDs replace the virtual file table, duplicated resources and optional index wrapper.
+    verification: Both SQL backends cover rollback, replay, corruption, orphan resources, stable aliases and portable backup/restore.
+  - requirement: Shared database abstraction and explicit current formats (Pipelines 007/A37).
+    implementation: Import the common database package directly; remove compatibility facades, alternate settings/definition shapes and historical artifact location inference.
+    verification: Full regressions, strict configuration/layout cases, independent wheel installs, source rebuilds and service-image execution.
+  - requirement: Atomic mutations and explicit execution authority (Pipelines 007/A37).
+    implementation: Domain snapshot events carry IDs and digests; metadata and database transactions share one reentrant lock with consistent acquisition order.
+    verification: Failure injection and bounded concurrent log/resource mutations on SQLite and PostgreSQL.
+evidence:
+  - validation/domain-persistence-cleanup.md
+gaps: []
+delivery_limits:
+  - No migration is provided; earlier database and backup formats require fresh state.
+  - Physical multi-host, additional native platforms and a specific serverless deployment remain unqualified.

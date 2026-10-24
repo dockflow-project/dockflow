@@ -8,7 +8,12 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from .canonical import loads
+from dockflow_database.errors import DockflowError
+
+from .cache import Lease, wait_for_resolution
+from .cache_registry import Registry, cache_error
+from .cache_storage import make_manifest
+from .canonical import digest, loads
 from .definitions import (
     Definition,
     DefinitionError,
@@ -19,7 +24,9 @@ from .definitions import (
     validate_parameters,
     validate_selection,
 )
+from .execution_choices import ExecutionChoices
 from .executor import ContainerFailed, ExecutionStopped, KFPAdapter, resource_limits
+from .lifecycle import stop_reason
 from .reuse import candidates, resolve_policy, task_signature
 
 
@@ -34,7 +41,11 @@ def _now() -> str:
 
 
 def _error(exc: BaseException, phase: str) -> dict[str, Any]:
-    return {"code": type(exc).__name__, "message": str(exc), "phase": phase}
+    return {
+        "code": getattr(exc, "code", type(exc).__name__),
+        "message": str(exc),
+        "phase": phase,
+    }
 
 
 def _type(contract: dict[str, Any]) -> dict[str, str]:
@@ -76,6 +87,8 @@ class _Execution:
         run: dict[str, Any],
         on_log: Callable[[str, str], None] | None = None,
     ):
+        self.choices = ExecutionChoices.from_record(run.get("execution_choices"))
+        settings = self.choices.bind(settings)
         self.store, self.artifacts, self.settings, self.run = (
             store,
             artifacts,
@@ -85,9 +98,7 @@ class _Execution:
         document = run.get("pipeline_spec")
         if document is None:
             record = store.get("definitions", run["definition_id"])
-            document = record.get(
-                "pipeline_spec", record.get("document", record.get("parsed"))
-            )
+            document = record["pipeline_spec"]
         self.definition: Definition = load_definition(document)
         self.selected = validate_selection(self.definition, run.get("selection"))
         self.records: dict[str, dict[str, Any]] = {}
@@ -101,60 +112,25 @@ class _Execution:
         self.sequence = 0
         self.failed = False
         self.stop_reason: str | None = None
+        self.cache_registry: Registry | None = None
+        self.cache_owner = str(uuid.uuid4())
+        self.cache_lease: Lease | None = None
+        self.cache_deadline: float | None = None
 
     def _policies(self) -> dict[str, Any]:
-        accepted = self.run.get("resolved_plan", {})
-        if "task_policies" in accepted:
-            return accepted["task_policies"]
-        policy_file = self.settings.policies.get("file")
-        if not policy_file:
-            return {}
-        content = loads(Path(policy_file).read_text())
-        if (
-            set(content) - {"schema_version", "definition_sha256", "tasks"}
-            or content.get("schema_version") != 1
-        ):
-            raise DefinitionError("Invalid local policies file")
-        if content.get("definition_sha256") != self.run.get(
-            "definition_sha256", self.definition.sha256
-        ):
-            raise DefinitionError("Stale policies file: definition_sha256 differs")
-        for path, policy in content.get("tasks", {}).items():
-            if path not in self.definition.tasks or set(policy) - {
-                "scope",
-                "scope_key",
-                "cache_safe",
-                "retry_safe",
-            }:
-                raise DefinitionError(f"Invalid task policy: {path}")
-        return content.get("tasks", {})
+        return self.choices.task_policies
 
     def put(self, kind: str, record: dict[str, Any]) -> None:
+        stored = self.store.put(kind, record)
         if kind == "runs":
-            current = self.store.get("runs", record["run_id"])
-            for field in (
-                "cancellation_requested",
-                "interruption_requested",
-                "stop_intent",
-            ):
-                if current.get(field):
-                    record[field] = current[field]
-            if current.get("interruption_requested"):
-                self.stop_reason = "interrupted"
-            elif (
-                current.get("cancellation_requested")
-                or current.get("state") == "cancelling"
-            ):
-                self.stop_reason = "cancelled"
-            if self.stop_reason and record.get("state") == "running":
-                record["state"] = "cancelling"
-            elif self.stop_reason and record.get("state") == "succeeded":
-                record["state"] = (
-                    "cancelled" if self.stop_reason == "cancelled" else "interrupted"
-                )
-        self.store.put(kind, record)
+            record.update(stored)
+            if reason := stop_reason(stored):
+                self.stop_reason = reason
 
     def stop(self) -> str | None:
+        if self.settings.state_storage["backend"] == "postgresql":
+            if reason := self.store.check_execution():
+                return reason
         if self.stop_reason:
             return self.stop_reason
         current = self.store.get("runs", self.run["run_id"])
@@ -210,23 +186,6 @@ class _Execution:
             task_id=attempt["task_id"],
             attempt_id=attempt["attempt_id"],
         )
-        attempt_dir = (
-            self.settings.state
-            / "runs"
-            / self.run["run_id"]
-            / "tasks"
-            / attempt["task_id"]
-            / "attempts"
-            / attempt["attempt_id"]
-            / "logs"
-        )
-        attempt_dir.mkdir(parents=True, exist_ok=True)
-        with (attempt_dir / (stream + ".log")).open("a", encoding="utf-8") as file:
-            file.write(text)
-            file.flush()
-            import os
-
-            os.fsync(file.fileno())
         if self.on_log is not None:
             self.on_log(stream, text)
 
@@ -344,7 +303,16 @@ class _Execution:
         if fixed:
             possible = [self.store.get("attempts", fixed)]
         else:
-            possible = candidates(self.store.list("attempts"), signature)
+            possible = candidates(
+                self.store.query(
+                    "attempts",
+                    filters={
+                        "signature.value": signature["value"],
+                        "state": "succeeded",
+                    },
+                ),
+                signature,
+            )
         rejections = []
         contracts = component.get("outputDefinitions", {})
         for attempt in possible:
@@ -430,7 +398,164 @@ class _Execution:
             )
         return None
 
-    def primitive(
+    def registry(self) -> Registry:
+        if self.cache_registry is None:
+            options = self.settings.cache
+            options = {
+                **options,
+                "storage_token": self.artifacts.storage_identity(),
+            }
+            self.cache_registry = Registry(options, self.settings.project_id)
+            self.cache_registry.initialize()
+        return self.cache_registry
+
+    def primitive(self, spec, arguments, record):
+        self.cache_deadline = None
+        while True:
+            self.cache_lease = None
+            retry_shared = False
+            try:
+                return self._primitive(spec, arguments, record)
+            except BaseException as exc:
+                if self.cache_lease is not None:
+                    registry = self.registry()
+                    storage_unavailable = (
+                        isinstance(exc, DockflowError)
+                        and exc.code == "ARTIFACT_UNAVAILABLE"
+                    )
+                    retry_shared = isinstance(exc, ContainerFailed) and record.get(
+                        "policy", {}
+                    ).get("retry_safe", False)
+                    try:
+                        registry.finish_failed(
+                            self.cache_lease.ownership,
+                            "PRODUCER_CANCELLED"
+                            if isinstance(exc, ExecutionStopped | KeyboardInterrupt)
+                            else "EXECUTION_FAILED"
+                            if isinstance(exc, ContainerFailed)
+                            else "ARTIFACT_UNAVAILABLE"
+                            if storage_unavailable
+                            else "VALIDATION_FAILED",
+                            retryable=retry_shared
+                            or storage_unavailable
+                            or isinstance(exc, ExecutionStopped | KeyboardInterrupt),
+                            cancelled=isinstance(
+                                exc, ExecutionStopped | KeyboardInterrupt
+                            ),
+                        )
+                    except DockflowError as failure:
+                        if failure.code != "OWNERSHIP_LOST":
+                            raise failure from exc
+                if not retry_shared:
+                    if (
+                        isinstance(exc, DockflowError)
+                        and exc.code == "CACHE_CANCELLED"
+                        and (reason := self.stop())
+                    ):
+                        raise ExecutionStopped(reason) from exc
+                    raise
+            finally:
+                if self.cache_lease is not None:
+                    self.cache_lease.__exit__(None, None, None)
+            # The next claim observes the persisted shared budget/cooldown.
+
+    def _resolve_cache(self, signature, spec, record, *, allow_claim=True):
+        registry = self.registry()
+        if self.cache_deadline is None:
+            self.cache_deadline = time.monotonic() + registry.options["wait_seconds"]
+        key = signature["value"]
+
+        def waiting(result):
+            if record.get("disposition") != "cache_wait":
+                record.update(
+                    disposition="cache_wait",
+                    cache={
+                        "key": key,
+                        "scope_id": registry.scope_id,
+                        "reason": result.reason,
+                    },
+                )
+                self.put("tasks", record)
+
+        while True:
+            result, started = wait_for_resolution(
+                registry,
+                key,
+                self.cache_owner,
+                self.run["run_id"],
+                record["task_id"],
+                self.stop,
+                waiting,
+                deadline=self.cache_deadline,
+                allow_claim=allow_claim,
+            )
+            if result.kind == "MISS":
+                return None
+            if result.kind == "PRODUCE":
+                assert result.ownership is not None
+                self.cache_lease = Lease(registry, result.ownership, started)
+                self.cache_lease.__enter__()
+                self.cache_lease.check()
+                record["cache"] = {
+                    "key": key,
+                    "scope_id": registry.scope_id,
+                    "attempt_id": result.ownership.attempt_id,
+                    "fence": result.ownership.fencing_token,
+                }
+                return None
+            artifact = result.artifact
+            assert artifact is not None
+            manifest = artifact["manifest"]
+            if (
+                digest(manifest) != artifact["manifest_digest"]
+                or manifest["signature"] != key
+                or manifest["contract"] != spec.component.get("outputDefinitions", {})
+            ):
+                raise cache_error(
+                    "CACHE_CONFLICT", "Cache manifest or output contract differs"
+                )
+            try:
+                descriptors = self.artifacts.verify_cache(
+                    manifest, registry.options["storage_identity"]
+                )
+            except DockflowError as exc:
+                if exc.code != "CACHE_CORRUPT":
+                    raise
+                registry.event("validation_failure", key, reason="CACHE_CORRUPT")
+                try:
+                    registry.invalidate(
+                        key, artifact["artifact_id"], "CONFIRMED_MISSING_OR_CORRUPT"
+                    )
+                except DockflowError as conflict:
+                    if conflict.code != "CACHE_CONFLICT":
+                        raise
+                continue
+            producer = self.store.import_cache_result(manifest, descriptors)
+            record.update(
+                outputs=producer["outputs"],
+                output_parameters=producer["output_parameters"],
+                state="reused",
+                disposition="reused",
+                reuse={
+                    "producer_attempt_id": producer["attempt_id"],
+                    "reason": "verified_registry_artifact",
+                    "rejections": [],
+                },
+                cache={
+                    "key": key,
+                    "scope_id": registry.scope_id,
+                    "artifact_id": artifact["artifact_id"],
+                    "manifest_digest": artifact["manifest_digest"],
+                },
+            )
+            self.put("tasks", record)
+            registry.event("hit", key, attempt_id=producer["attempt_id"])
+            return {
+                "parameters": producer["output_parameters"],
+                "artifacts": producer["outputs"],
+            }
+
+    def _primitive(
         self,
         spec: TaskSpec,
         arguments: dict[str, dict[str, Any]],
@@ -484,10 +609,40 @@ class _Execution:
             if spec.name not in self.selected
             else None
         )
-        if explicit or planned or can_reuse:
+        if planned and not explicit:
+            # A preflight historical choice does not override later registry
+            # invalidation, replacement or freshness expiry.
+            view = self.registry().inspect(signature["value"])
+            selected = next(
+                (
+                    item
+                    for item in view["artifacts"]
+                    if item["artifact_id"] == view["entry"]["published_artifact_id"]
+                ),
+                None,
+            )
+            if (
+                not selected
+                or selected["producer_attempt_id"] != planned.get("attempt_id")
+                or selected["state"] != "AVAILABLE"
+                or (
+                    selected["valid_until"] is not None
+                    and selected["valid_until"] <= view["registry_now"]
+                )
+            ):
+                raise DefinitionError(
+                    "Accepted historical cache producer is no longer eligible"
+                )
+        if explicit or planned:
             if reused := self.reusable(
                 signature, spec.component, record, explicit=explicit, planned=planned
             ):
+                return reused
+        if can_reuse:
+            reused = self._resolve_cache(
+                signature, spec, record, allow_claim=spec.name in self.selected
+            )
+            if reused is not None:
                 return reused
         if spec.name not in self.selected:
             record.update(state="skipped", disposition="omitted", error=None)
@@ -499,9 +654,13 @@ class _Execution:
             raise DefinitionError(
                 f"{spec.name}: automatic retry requires a definition-keyed retry_safe policy"
             )
+        if self.cache_lease is not None:
+            count = 0  # Registry episodes, rather than nested Run-local budgets.
         for ordinal in range(count + 1):
             attempt = {
-                "attempt_id": _id("attempt"),
+                "attempt_id": self.cache_lease.ownership.attempt_id
+                if self.cache_lease
+                else _id("attempt"),
                 "run_id": self.run["run_id"],
                 "task_id": record["task_id"],
                 "state": "running",
@@ -567,7 +726,8 @@ class _Execution:
                     on_log=lambda stream, text, attempt=attempt: self.log(
                         attempt, stream, text
                     ),
-                    should_stop=self.stop,
+                    should_stop=lambda: self.stop()
+                    or (self.cache_lease.should_stop() if self.cache_lease else None),
                     on_interrupt=self.request_interruption,
                     shutdown_grace=self.settings.execution.get(
                         "shutdown_grace_seconds", 30
@@ -575,6 +735,9 @@ class _Execution:
                 )
                 attempt.update(observation)
                 phase = "validation"
+                if self.cache_lease is not None:
+                    self.cache_lease.check()
+                    self.registry().begin_validation(self.cache_lease.ownership)
                 # Tasks get isolated copies, then consistency is checked before
                 # accepting any outputs. No hard links into published inputs.
                 from .artifacts import inventory
@@ -623,11 +786,48 @@ class _Execution:
                             "attempt_id": attempt["attempt_id"],
                             "definition_id": self.run["definition_id"],
                             "output_name": name,
+                            **(
+                                {"cache_namespace": "cache-v1"}
+                                if self.cache_lease
+                                else {}
+                            ),
                         },
                         metadata=artifact.metadata,
                     )
                 if reason := self.stop():
                     raise ExecutionStopped(reason)
+                if self.cache_lease is not None:
+                    self.cache_lease.check()
+                    registry = self.registry()
+                    manifest = make_manifest(
+                        published,
+                        parameters,
+                        contracts,
+                        {
+                            "run_id": self.run["run_id"],
+                            "task_id": record["task_id"],
+                            "attempt_id": attempt["attempt_id"],
+                            "finished_at": _now(),
+                        },
+                        signature["value"],
+                        registry.options["storage_identity"],
+                    )
+                    # The store verifies sealed bytes before the registry can
+                    # select this descriptor. No database transaction spans I/O.
+                    self.artifacts.verify_cache(
+                        manifest, registry.options["storage_identity"]
+                    )
+                    self.cache_lease.check()
+                    committed_cache = self.store.publish_cache_result(
+                        registry.options, self.cache_lease.ownership, manifest
+                    )
+                    for descriptor in published.values():
+                        descriptor["cache_origin"] = {
+                            "artifact_id": committed_cache["artifact_id"],
+                            "manifest_digest": committed_cache["manifest_digest"],
+                            "producer_attempt_id": attempt["attempt_id"],
+                        }
+                        self.store.put("artifacts", descriptor)
                 phase = "commit"
                 self.store.commit_output_set(
                     self.run["run_id"],
@@ -657,17 +857,7 @@ class _Execution:
                 # Once committed, recovery reconciles this attempt; computation
                 # is never repeated because a projection write failed.
                 if phase == "commit":
-                    marker = (
-                        self.settings.state
-                        / "runs"
-                        / self.run["run_id"]
-                        / "tasks"
-                        / record["task_id"]
-                        / "attempts"
-                        / attempt["attempt_id"]
-                        / "output-set.json"
-                    )
-                    if marker.exists():
+                    if self.store.has_output_set(attempt["attempt_id"]):
                         attempt.update(
                             reconciliation_required=True, error=_error(exc, phase)
                         )
@@ -675,6 +865,8 @@ class _Execution:
                         raise
                     if reason := self.stop():
                         exc = ExecutionStopped(reason)
+                if not isinstance(exc, KeyboardInterrupt) and (reason := self.stop()):
+                    exc = ExecutionStopped(reason)
                 if isinstance(exc, KeyboardInterrupt):
                     self.request_interruption()
                     confirmed = self.adapter.stop(
@@ -701,13 +893,18 @@ class _Execution:
                     attempt["exit_status"] = exc.exit_code
                 self.put("attempts", attempt)
                 if ordinal < count and isinstance(exc, ContainerFailed):
-                    duration = float(str(retry.get("backoffDuration", "0s"))[:-1])
-                    duration *= float(retry.get("backoffFactor", 2)) ** ordinal
-                    duration = min(
-                        duration,
-                        float(str(retry.get("backoffMaxDuration", "300s"))[:-1]),
-                        300,
+                    cap = min(
+                        float(str(retry.get("backoffMaxDuration", "300s"))[:-1]), 300
                     )
+                    duration = min(
+                        float(str(retry.get("backoffDuration", "0s"))[:-1]), cap
+                    )
+                    # Clamp each multiplication to avoid exponent overflow,
+                    # including zero-duration retries with a large valid factor.
+                    for _ in range(ordinal):
+                        duration = min(
+                            duration * float(retry.get("backoffFactor", 2)), cap
+                        )
                     until = time.monotonic() + duration
                     while time.monotonic() < until:
                         if reason := self.stop():
@@ -967,23 +1164,22 @@ class _Execution:
             elif isinstance(exc, KeyboardInterrupt):
                 state = "interrupted"
             self.run.update(state=state, error=_error(exc, "execution"))
-            for record in self.records.values():
-                if record["state"] in {"pending", "running"}:
-                    record.update(
-                        state="blocked", error={"message": "Upstream execution stopped"}
-                    )
-                    self.put("tasks", record)
             if any(
                 attempt.get("reconciliation_required")
-                for attempt in self.store.list("attempts")
-                if attempt.get("run_id") == self.run["run_id"]
+                for attempt in self.store.query(
+                    "attempts",
+                    filters={
+                        "run_id": self.run["run_id"],
+                        "reconciliation_required": True,
+                    },
+                )
             ):
                 self.run["reconciliation_required"] = True
         finally:
             if self.adapter is not None:
                 self.adapter.close()
             self.run["finished_at"] = _now()
-            self.put("runs", self.run)
+            self.run.update(self.store.finish_run(self.run))
         return self.run
 
 
@@ -995,7 +1191,26 @@ def execute_run(
     *,
     on_log: Callable[[str, str], None] | None = None,
 ) -> dict[str, Any]:
-    return _Execution(store, artifacts, settings, run, on_log=on_log).execute()
+    from .metadata import ControlStore
+
+    def execute():
+        try:
+            execution = _Execution(store, artifacts, settings, run, on_log=on_log)
+        except (DockflowError, DefinitionError, ValueError) as exc:
+            return store.finish_run(
+                {
+                    **run,
+                    "state": "failed",
+                    "finished_at": _now(),
+                    "error": _error(exc, "execution_configuration"),
+                }
+            )
+        return execution.execute()
+
+    if isinstance(store, ControlStore):
+        with store.run_owner(run["run_id"], settings.execution):
+            return execute()
+    return execute()
 
 
 def validate_invocation(
@@ -1145,7 +1360,6 @@ def validate_invocation(
         pass
 
     adapter: KFPAdapter | None = None
-    historical = store.list("attempts")
 
     def graph(
         component: dict[str, Any], parent: dict[str, dict[str, Any]], prefix: str = ""
@@ -1303,7 +1517,16 @@ def validate_invocation(
                                 executor["container"], settings.execution
                             ),
                         )
-                        for attempt in candidates(historical, signature):
+                        for attempt in candidates(
+                            store.query(
+                                "attempts",
+                                filters={
+                                    "signature.value": signature["value"],
+                                    "state": "succeeded",
+                                },
+                            ),
+                            signature,
+                        ):
                             try:
                                 output = check_attempt(attempt, spec)
                             except DefinitionError:

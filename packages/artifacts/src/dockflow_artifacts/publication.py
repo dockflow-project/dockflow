@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
+import functools
 import hashlib
+import io
 import json
 import re
 import shutil
 import string
 import tempfile
+import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from ._paths import CONTROL, canonical, file_info, inventory, no_links, relative
-from ._storage import FileStore, make_store, put_record
-from .errors import ArtifactError, IntegrityError
+from dockflow_database import ArtifactRecords, Database, DockflowError
+from dockflow_database.records import configured_database
+
+from ._paths import canonical, file_info, inventory, no_links, relative
+from ._storage import FileStore, make_store
+from .errors import ArtifactError, ConflictError, IntegrityError
 
 
 @dataclass(frozen=True)
@@ -84,10 +90,40 @@ def step_path(
     )
 
 
+def _publication_errors(method):
+    @functools.wraps(method)
+    def call(*args, **kwargs):
+        try:
+            return method(*args, **kwargs)
+        except DockflowError as error:
+            exception = ConflictError if error.code == "CONFLICT" else ArtifactError
+            raise exception(error.message) from None
+        except OSError:
+            raise ArtifactError(
+                "Artifact publication I/O failed; check storage access and durability"
+            ) from None
+
+    return call
+
+
 class Publisher:
     """Publish immutable local contents below an explicitly configured storage root."""
 
-    def __init__(self, root: str | Path, *, s3: dict[str, Any] | None = None):
+    @_publication_errors
+    def __init__(
+        self,
+        root: str | Path,
+        *,
+        s3: dict[str, Any] | None = None,
+        database: dict | Database | None = None,
+        project_id: str = "default",
+    ):
+        if not isinstance(project_id, str) or not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", project_id
+        ):
+            raise ArtifactError(
+                "Project ID must contain safe letters, digits, _, - or ."
+            )
         options = dict(s3 or {})
         allowed = {
             "endpoint_url",
@@ -121,10 +157,27 @@ class Publisher:
                     "S3 endpoint must be HTTP(S) without credentials or query"
                 )
         self._store = make_store(root, options)
+        if database is None:
+            if not isinstance(self._store, FileStore):
+                raise ArtifactError(
+                    "Remote artifact storage requires explicit database configuration"
+                )
+            database = {
+                "backend": "sqlite",
+                "database": str(self._store.root.parent / ".dockflow/state.sqlite"),
+            }
+        self.database = configured_database(database)
+        if (
+            isinstance(self._store, FileStore)
+            and self.database.backend == "sqlite"
+            and Path(self.database.options["database"]).is_relative_to(self._store.root)
+        ):
+            raise ArtifactError("SQLite database must be outside the artifact root")
+        self.project_id = project_id
 
     @classmethod
     def from_config(cls, path: str | Path) -> Publisher:
-        """Read schema-version 1 JSON configuration explicitly at invocation time."""
+        """Read schema-version 2 JSON configuration explicitly at invocation time."""
         raw = Path(path).read_bytes()
         if len(raw) > 1024 * 1024:
             raise ArtifactError("Publication configuration is too large")
@@ -136,29 +189,68 @@ class Publisher:
             ) from None
         if (
             not isinstance(config, dict)
-            or set(config) - {"schema_version", "root", "s3"}
+            or set(config) - {"schema_version", "root", "s3", "database", "project_id"}
             or type(config.get("schema_version")) is not int
-            or config["schema_version"] != 1
+            or config["schema_version"] != 2
             or not isinstance(config.get("root"), str)
             or ("s3" in config and not isinstance(config["s3"], dict))
         ):
             raise ArtifactError(
-                "Expected schema_version=1, root and optional s3 configuration"
+                "Expected schema_version=2, root, database and optional s3/project_id configuration"
             )
-        return cls(config["root"], s3=config.get("s3"))
+        options = config.get("database")
+        if (
+            isinstance(options, dict)
+            and options.get("backend") == "sqlite"
+            and isinstance(options.get("database"), str)
+        ):
+            options = {
+                **options,
+                "database": str(
+                    (Path(path).absolute().parent / options["database"]).absolute()
+                ),
+            }
+        return cls(
+            config["root"],
+            s3=config.get("s3"),
+            database=options,
+            project_id=config.get("project_id", "default"),
+        )
 
-    @staticmethod
-    def _control(category: str, destination: str) -> str:
-        identity = hashlib.sha256(destination.encode()).hexdigest()
-        return f"{CONTROL}/{category}/{identity}.json"
+    def _records(self, *, create: bool) -> ArtifactRecords:
+        marker = ".dockflow/storage.json"
+        raw = self._store.get(marker)
+        if raw is None and create:
+            self._store.put(
+                marker,
+                io.BytesIO(
+                    canonical(
+                        {
+                            "format": "dockflow-artifact-store-v1",
+                            "identity": str(uuid.uuid4()),
+                        }
+                    )
+                ),
+            )
+            raw = self._store.get(marker)
+        try:
+            value = json.loads(raw or b"null")
+            if value["format"] != "dockflow-artifact-store-v1":
+                raise ValueError
+            identity = str(uuid.UUID(value["identity"]))
+        except (ValueError, TypeError, KeyError, AttributeError):
+            raise IntegrityError(
+                "Artifact storage identity is missing or invalid"
+            ) from None
+        if create and isinstance(self._store, FileStore):
+            self._store.sync(marker)
+        return ArtifactRecords(self.database, self.project_id, identity)
 
     def _receipt(self, manifest: dict[str, Any]) -> Publication:
         base = self._store.uri
         return Publication(
             uri=base + "/" + manifest["destination"],
-            manifest_uri=base
-            + "/"
-            + self._control("manifests", manifest["destination"]),
+            manifest_uri=f"dockflow://{self.project_id}/publications/{self._records(create=False).storage_id}/{hashlib.sha256(manifest['destination'].encode()).hexdigest()}",
             digest=manifest["digest"],
             kind=manifest["kind"],
             artifact_type=manifest["artifact_type"],
@@ -166,7 +258,9 @@ class Publisher:
         )
 
     def _check_layout(self) -> None:
-        if self._store.has_prefix(".dockflow-artifacts"):
+        if self._store.has_prefix(".dockflow-artifacts") or self._store.has_prefix(
+            ".dockflow/dockflow-artifacts"
+        ):
             raise ArtifactError(
                 "Legacy .dockflow-artifacts records found; use a fresh publication "
                 "root or reset disposable artifacts before using the new layout"
@@ -188,11 +282,12 @@ class Publisher:
         ):
             raise IntegrityError("Published directory inventory changed")
 
+    @_publication_errors
     def verify(self, destination: str) -> Publication:
         """Verify all payload bytes of a completed publication and return its receipt."""
         destination = relative(destination)
         self._check_layout()
-        raw = self._store.get(self._control("manifests", destination))
+        raw = self._records(create=False).get("publication-manifests", destination)
         if raw is None:
             raise IntegrityError("Publication has no completion manifest")
         try:
@@ -230,6 +325,7 @@ class Publisher:
                 raise
             raise IntegrityError("Invalid publication manifest") from None
 
+    @_publication_errors
     def publish(
         self,
         source: str | Path,
@@ -264,24 +360,22 @@ class Publisher:
         encoded = canonical(manifest)
         if len(encoded) > 16 * 1024 * 1024:
             raise ArtifactError("Publication inventory exceeds the 16 MiB record limit")
-        # Reserve ancestors before the leaf: a directory publication cannot later
-        # overlap a separately published child, even with concurrent writers.
+        # The whole namespace reservation is atomic; no SQL transaction spans uploads.
+        records = self._records(create=True)
         parts = destination.split("/")
-        for index in range(1, len(parts)):
-            parent = "/".join(parts[:index])
-            put_record(
-                self._store,
-                self._control("claims", parent),
-                canonical(
-                    {
-                        "schema_version": 1,
-                        "kind": "namespace",
-                        "path": parent,
-                    }
-                ),
+        claims = {
+            "/".join(parts[:index]): canonical(
+                {
+                    "schema_version": 1,
+                    "kind": "namespace",
+                    "path": "/".join(parts[:index]),
+                }
             )
-        put_record(self._store, self._control("claims", destination), encoded)
-        completed = self._store.get(self._control("manifests", destination))
+            for index in range(1, len(parts))
+        }
+        claims[destination] = encoded
+        records.put_many("publication-claims", claims)
+        completed = records.get("publication-manifests", destination)
         if completed is not None:
             if completed != encoded:
                 raise IntegrityError(
@@ -308,5 +402,5 @@ class Publisher:
         if inventory(source) != (kind, entries, digest):
             raise IntegrityError("Source changed during publication")
         self._verify_contents(manifest)
-        put_record(self._store, self._control("manifests", destination), encoded)
+        records.put("publication-manifests", destination, encoded)
         return self._receipt(manifest)

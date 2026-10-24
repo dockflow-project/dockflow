@@ -43,21 +43,22 @@ partially uploaded result.
 
 ## Direct and service execution
 
-In direct mode the CLI owns state and executes in the foreground. In service
-mode one persistent API process owns state and accepts requests from the browser,
-CLI or HTTP clients. Both use the same application operations and artifact rules.
+In direct mode the CLI coordinates a foreground Run. In service mode persistent
+API processes accept requests from the browser, CLI or HTTP clients. Both use the same application operations and artifact rules.
 The service uses isolated worker processes for execution while retaining control
 of metadata mutations.
 
-Each project has at most one active Run and one executing task. The service can
-queue additional Runs; this is not a distributed scheduler. Runs move through
+SQLite projects have one active Run and executing task. PostgreSQL supports
+concurrent Runs across coordinators, each with sequential tasks. The service can
+queue additional Runs; PostgreSQL services claim different queued Runs. Runs move through
 `queued`, `running` and optionally `cancelling`, then finish as `succeeded`,
 `failed`, `cancelled` or `interrupted`.
 
-An OS lock protects the state directory. Its diagnostic `owner.lock` records a
-unique acquisition ID, host, PID, mode and optional service endpoint. Its contents
-are not a lease. See [persistence](persistence.md#shared-state-and-its-owner) before
-sharing state or recovering from a process crash.
+SQLite uses a local database-inode lock. PostgreSQL uses per-Run leases and a
+shared maintenance gate. Coordinator diagnostics live in SQL and are informational;
+Run authority is established by the database ownership protocol. See
+[persistence](persistence.md#ownership-and-isolated-environments) for shared state
+and process recovery.
 
 ## Identity and immutability
 

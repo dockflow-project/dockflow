@@ -1,7 +1,7 @@
 """Versioned record identities shared by persistence and its adapters.
 
 This module is pure: importing identity helpers never imports a native runtime,
-opens an index, creates state, or acquires execution ownership.
+opens a database, creates state, or acquires execution ownership.
 """
 
 from __future__ import annotations
@@ -9,8 +9,6 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-SCHEMA_VERSION = 1
-MAPPING_VERSION = 1
 COLLECTIONS = {
     "pipelines": "pipeline",
     "components": "component",

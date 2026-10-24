@@ -9,14 +9,18 @@ import re
 import shutil
 import stat
 import tempfile
+import time
 import uuid
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote, urlsplit
 
+from dockflow_database import ArtifactRecords
+from dockflow_database.errors import DockflowError
+
 from .canonical import digest, json_bytes, loads, validate_json
-from .errors import DockflowError
-from .metadata import ControlStore, atomic_write, new_id, utc_now
+from .metadata import ControlStore
+from .records import new_id, utc_now
 
 METADATA_TYPES = {"system.Metrics", "system.ClassificationMetrics"}
 BUILTIN_TYPES = {
@@ -308,26 +312,151 @@ class ArtifactStore:
                 "s3",
                 endpoint_url=endpoint,
                 verify=verify,
-                config=config(s3={"addressing_style": "path"}),
+                config=config(
+                    s3={"addressing_style": "path"},
+                    connect_timeout=5,
+                    read_timeout=10,
+                    retries={"max_attempts": 2, "mode": "standard"},
+                ),
             )
         return self._client
 
-    def managed_paths(self, descriptor: dict[str, Any]) -> tuple[str, str]:
-        """Content and recovery paths relative to the configured managed root.
+    def storage_identity(self, *, create: bool = True) -> str:
+        """Resolve a persisted random store identity, independent of mount path."""
+        relative = ".dockflow/storage.json"
+        if self.backend == "filesystem":
+            path = self.managed_root / relative
+            _no_links(path)
+            if create and not path.exists():
+                path.parent.mkdir(parents=True, exist_ok=True)
+                temporary = path.with_name(".storage-" + uuid.uuid4().hex)
+                try:
+                    with temporary.open("xb") as stream:
+                        stream.write(
+                            json_bytes(
+                                {
+                                    "format": "dockflow-artifact-store-v1",
+                                    "identity": str(uuid.uuid4()),
+                                }
+                            )
+                        )
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    try:
+                        os.link(temporary, path)
+                    except FileExistsError:
+                        pass
+                    from .metadata import _fsync_directory
 
-        Old descriptors remain readable/restorable without rewriting their URIs.
-        S3's old implicit managed/ child was part of that historical layout.
-        """
-        artifact_id = _storage_segment(descriptor["artifact_id"])
-        layout = descriptor.get("storage_layout")
-        if layout in {"kfp-v1", "kfp-v2"}:
-            content = str(_relative_path(descriptor["managed_path"]))
-            namespace = "artifacts" if layout == "kfp-v1" else "dockflow-pipelines"
-            return content, f".dockflow/{namespace}/{artifact_id}/artifact.json"
-        if descriptor.get("storage_layout") is not None:
+                    _fsync_directory(path.parent)
+                finally:
+                    temporary.unlink(missing_ok=True)
+            if create:
+                from .metadata import _fsync_directory
+
+                with path.open("rb") as stream:
+                    os.fsync(stream.fileno())
+                for ancestor in (path.parent, *path.parent.parents):
+                    _fsync_directory(ancestor)
+            try:
+                content = loads(path.read_bytes())
+            except OSError:
+                raise DockflowError(
+                    "Artifact storage is inaccessible or uninitialized",
+                    "ARTIFACT_UNAVAILABLE",
+                    503,
+                ) from None
+        else:
+            client = self._s3()
+            key = self.object_key(relative)
+            if create:
+                try:
+                    client.put_object(
+                        Bucket=self.options["bucket"],
+                        Key=key,
+                        Body=json_bytes(
+                            {
+                                "format": "dockflow-artifact-store-v1",
+                                "identity": str(uuid.uuid4()),
+                            }
+                        ),
+                        IfNoneMatch="*",
+                    )
+                except Exception as exc:
+                    code = str(
+                        getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+                    )
+                    if code not in {
+                        "412",
+                        "PreconditionFailed",
+                        "ConditionalRequestConflict",
+                        "409",
+                    }:
+                        raise DockflowError(
+                            "Cannot initialize artifact storage",
+                            "ARTIFACT_UNAVAILABLE",
+                            503,
+                        ) from None
+            try:
+                response = client.get_object(Bucket=self.options["bucket"], Key=key)
+                with response["Body"] as body:
+                    content = loads(body.read(4097))
+            except Exception:
+                raise DockflowError(
+                    "Artifact storage is inaccessible or uninitialized",
+                    "ARTIFACT_UNAVAILABLE",
+                    503,
+                ) from None
+        if content.get("format") != "dockflow-artifact-store-v1" or not isinstance(
+            content.get("identity"), str
+        ):
+            raise DockflowError(
+                "Artifact store identity is incompatible", "CACHE_CONFLICT", 409
+            )
+        try:
+            return str(uuid.UUID(content["identity"]))
+        except ValueError:
+            raise DockflowError(
+                "Artifact store identity is incompatible", "CACHE_CONFLICT", 409
+            ) from None
+
+    def artifact_records(self, *, create: bool = True) -> ArtifactRecords:
+        return ArtifactRecords(
+            self.control.database.adapter,
+            self.control.project_id,
+            self.storage_identity(create=create),
+            writer=self.control.database.transaction,
+        )
+
+    def recovery_descriptor(self, artifact_id: str) -> dict:
+        raw = self.artifact_records(create=False).get(
+            "pipeline-descriptors", artifact_id
+        )
+        if raw is None:
+            raise DockflowError(
+                "Artifact recovery descriptor is missing", "NOT_FOUND", 404
+            )
+        descriptor = loads(raw)
+        content = self.managed_content_path(descriptor)
+        uri = f"dockflow://{self.control.project_id}/artifacts/{artifact_id}"
+        descriptor.update(
+            uri=uri,
+            descriptor_uri=uri,
+            content_uri=(
+                None
+                if descriptor["payload_kind"] == "metadata"
+                else (self.managed_root / content).as_uri()
+                if self.backend == "filesystem"
+                else "s3://" + self.options["bucket"] + "/" + self.object_key(content)
+            ),
+        )
+        return descriptor
+
+    def managed_content_path(self, descriptor: dict[str, Any]) -> str:
+        """Resolve a current immutable payload locator relative to the managed root."""
+        if descriptor.get("storage_layout") not in {"kfp-v2", "cache-v1"}:
             raise DockflowError("Unsupported managed artifact storage layout")
-        parent = f"{'managed/' if self.backend == 's3' else ''}{artifact_id}"
-        return f"{parent}/payload", f"{parent}/artifact.json"
+        return str(_relative_path(descriptor["managed_path"]))
 
     def object_key(self, relative: str) -> str:
         return "/".join(
@@ -357,7 +486,11 @@ class ArtifactStore:
                 _storage_segment(producer["output_name"]),
             ]
             relative = "/".join(parts)
-        descriptor.update(storage_layout="kfp-v2", managed_path=relative)
+        layout = "kfp-v2"
+        if producer and producer.get("cache_namespace") == "cache-v1":
+            relative = ".dockflow/dockflow-pipelines/cache-v1/" + relative
+            layout = "cache-v1"
+        descriptor.update(storage_layout=layout, managed_path=relative)
 
     def _admit(self, uri: str) -> tuple[str, str, tuple[str, ...]]:
         scheme, authority, parts = _uri_parts(uri)
@@ -590,9 +723,7 @@ class ArtifactStore:
         version: str | None = None,
     ) -> dict[str, Any]:
         artifact_id = new_id("artifact")
-        descriptor_uri = (
-            self.control.state / "artifacts" / f"{artifact_id}.json"
-        ).as_uri()
+        descriptor_uri = f"dockflow://{self.control.project_id}/artifacts/{artifact_id}"
         return {
             "schema_version": 1,
             "kind": "artifact",
@@ -664,22 +795,129 @@ class ArtifactStore:
         return descriptor
 
     def _publish_managed(self, source: Path | None, descriptor: dict[str, Any]) -> None:
+        coordinated = (descriptor.get("producer") or {}).get(
+            "cache_namespace"
+        ) == "cache-v1"
+        for ordinal in range(3 if coordinated else 1):
+            try:
+                self._publish_managed_once(source, descriptor)
+                return
+            except Exception as exc:
+                provider_code = str(
+                    getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+                )
+                transient = (
+                    isinstance(exc, PermissionError | TimeoutError | ConnectionError)
+                    or isinstance(exc, OSError)
+                    and not isinstance(exc, FileNotFoundError)
+                    or isinstance(exc, DockflowError)
+                    and exc.code in {"UNAVAILABLE", "ARTIFACT_UNAVAILABLE"}
+                    or provider_code
+                    in {
+                        "500",
+                        "503",
+                        "SlowDown",
+                        "ServiceUnavailable",
+                        "RequestTimeout",
+                        "409",
+                        "ConditionalRequestConflict",
+                    }
+                    or type(exc).__name__
+                    in {
+                        "EndpointConnectionError",
+                        "ConnectionClosedError",
+                        "ReadTimeoutError",
+                        "ConnectTimeoutError",
+                    }
+                )
+                if not coordinated or not transient:
+                    raise
+                if ordinal == 2:
+                    raise DockflowError(
+                        "Cache storage finalization is unavailable",
+                        "ARTIFACT_UNAVAILABLE",
+                        503,
+                    ) from None
+                time.sleep(0.05 * 2**ordinal)
+
+    def _put_cache_object(
+        self, client, bucket: str, key: str, body, checksum: str
+    ) -> None:
+        """Recover an ambiguous conditional PUT by verifying identical bytes."""
+        try:
+            client.put_object(Bucket=bucket, Key=key, Body=body, IfNoneMatch="*")
+        except Exception as exc:
+            code = str(getattr(exc, "response", {}).get("Error", {}).get("Code", ""))
+            if code not in {"412", "PreconditionFailed"}:
+                raise
+            response = client.get_object(Bucket=bucket, Key=key)
+            observed = hashlib.sha256()
+            with response["Body"] as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    observed.update(chunk)
+            if observed.hexdigest() != checksum:
+                raise DockflowError(
+                    "Immutable cache object differs", "CACHE_CONFLICT", 409
+                ) from None
+
+    def _publish_managed_once(
+        self, source: Path | None, descriptor: dict[str, Any]
+    ) -> None:
         self._set_managed_path(descriptor)
         artifact_id = descriptor["artifact_id"]
-        content_path, recovery_path = self.managed_paths(descriptor)
+        content_path = self.managed_content_path(descriptor)
+        recovery_key = artifact_id
+        records = self.artifact_records()
+        records.put(
+            "pipeline-claims", content_path, json_bytes({"artifact_id": artifact_id})
+        )
+        completed = records.get("pipeline-descriptors", recovery_key)
+
+        def complete():
+            portable = {
+                key: value
+                for key, value in descriptor.items()
+                if key not in {"uri", "content_uri", "descriptor_uri"}
+            }
+            records.put("pipeline-descriptors", recovery_key, json_bytes(portable))
+
         if self.backend == "filesystem":
             destination = self.managed_root / content_path
-            recovery = self.managed_root / recovery_path
             parent = destination.parent
             _no_links(destination)
-            _no_links(recovery)
             if source is not None and (
                 source == destination
                 or destination.is_relative_to(source)
                 or source.is_relative_to(destination)
             ):
                 raise DockflowError("Managed artifact destination overlaps its source")
-            if destination.exists() or recovery.exists():
+            coordinated = descriptor.get("storage_layout") == "cache-v1"
+            if coordinated and (destination.exists() or completed is not None):
+                descriptor["content_uri"] = (
+                    destination.as_uri() if source is not None else None
+                )
+                if source is not None and inventory(destination) != {
+                    key: descriptor[key]
+                    for key in (
+                        "payload_kind",
+                        "inventory",
+                        "size_bytes",
+                        "fingerprint",
+                    )
+                }:
+                    raise DockflowError(
+                        "Finalized cache bytes differ", "CACHE_CONFLICT", 409
+                    )
+                if os.name != "nt":
+                    from .metadata import _fsync_directory
+
+                    for ancestor in (parent, *parent.parents):
+                        if not ancestor.is_relative_to(self.managed_root):
+                            break
+                        _fsync_directory(ancestor)
+                complete()
+                return
+            if destination.exists() or completed is not None:
                 raise DockflowError(
                     "Artifact destination already exists", code="CONFLICT", status=409
                 )
@@ -701,14 +939,39 @@ class ArtifactStore:
                         },
                     )
                     descriptor["content_uri"] = destination.as_uri()
+                    if descriptor.get("storage_layout") == "cache-v1":
+                        paths = (
+                            [temporary, *temporary.rglob("*")]
+                            if temporary.is_dir()
+                            else [temporary]
+                        )
+                        for item in paths:
+                            item.chmod(0o555 if item.is_dir() else 0o444)
+                        from .metadata import _fsync_directory
+
+                        for item in sorted(
+                            paths, key=lambda item: len(item.parts), reverse=True
+                        ):
+                            if item.is_dir():
+                                _fsync_directory(item)
+                            else:
+                                with item.open("rb") as stream:
+                                    os.fsync(stream.fileno())
                     os.rename(temporary, destination)
-                atomic_write(recovery, json_bytes(descriptor), exclusive=True)
                 if os.name != "nt":
                     fd = os.open(parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
                     try:
                         os.fsync(fd)
                     finally:
                         os.close(fd)
+                    if descriptor.get("storage_layout") == "cache-v1":
+                        from .metadata import _fsync_directory
+
+                        for ancestor in parent.parents:
+                            if not ancestor.is_relative_to(self.managed_root):
+                                break
+                            _fsync_directory(ancestor)
+                complete()
             finally:
                 if temporary.is_dir():
                     shutil.rmtree(temporary)
@@ -718,40 +981,46 @@ class ArtifactStore:
             client = self._s3()
             bucket = self.options["bucket"]
             key = self.object_key(content_path)
-            recovery_key = self.object_key(recovery_path)
-            if any(
-                item["Key"] == key or item["Key"].startswith(key + "/")
-                for page in client.get_paginator("list_objects_v2").paginate(
-                    Bucket=bucket, Prefix=key
+            occupied = (
+                any(
+                    item["Key"] == key or item["Key"].startswith(key + "/")
+                    for page in client.get_paginator("list_objects_v2").paginate(
+                        Bucket=bucket, Prefix=key
+                    )
+                    for item in page.get("Contents", [])
                 )
-                for item in page.get("Contents", [])
-            ) or client.list_objects_v2(
-                Bucket=bucket, Prefix=recovery_key, MaxKeys=1
-            ).get("KeyCount", 0):
+                or completed is not None
+            )
+            if occupied and descriptor.get("storage_layout") != "cache-v1":
                 raise DockflowError(
                     "Managed S3 artifact prefix already exists",
                     code="CONFLICT",
                     status=409,
                 )
+
+            def upload(path, object_key):
+                if descriptor.get("storage_layout") != "cache-v1":
+                    client.upload_file(str(path), bucket, object_key)
+                    return
+                if path.stat().st_size > 5 * 1024**3:
+                    raise DockflowError(
+                        "Coordinated S3 cache files are limited to 5 GiB; disable caching for larger outputs",
+                        "CACHE_VALIDATION_FAILED",
+                        409,
+                    )
+                with path.open("rb") as stream:
+                    self._put_cache_object(
+                        client, bucket, object_key, stream, _hash_file(path)[1]
+                    )
+
             if source is not None:
                 descriptor["content_uri"] = f"s3://{bucket}/{key}"
                 if descriptor["payload_kind"] == "file":
-                    client.upload_file(str(source), bucket, key)
+                    upload(source, key)
                 else:
                     for entry in descriptor["inventory"]:
                         if entry["kind"] == "file":
-                            client.upload_file(
-                                str(source / entry["path"]),
-                                bucket,
-                                key + "/" + entry["path"],
-                            )
-            # This recognized recovery descriptor carries directory/empty-root kind.
-            client.put_object(
-                Bucket=bucket,
-                Key=recovery_key,
-                Body=json_bytes(descriptor),
-                ContentType="application/json",
-            )
+                            upload(source / entry["path"], key + "/" + entry["path"])
             with tempfile.TemporaryDirectory(
                 prefix="dockflow-verify-upload-"
             ) as directory:
@@ -772,8 +1041,77 @@ class ArtifactStore:
                             code="CONFLICT",
                             status=409,
                         )
+            complete()
         else:
             raise DockflowError(f"Unsupported artifact backend: {self.backend}")
+
+    def verify_cache(self, manifest: dict, storage_identity: str) -> dict:
+        """Verify the entire portable output set before binding any local output."""
+        from .cache_storage import local_descriptors, validate_manifest
+
+        validate_manifest(
+            manifest, storage_identity, manifest["producer"]["attempt_id"]
+        )
+        descriptors = local_descriptors(manifest, self)
+        for descriptor in descriptors.values():
+            self._validate_inventory(descriptor)
+            try:
+                if descriptor["payload_kind"] == "metadata":
+                    expected = digest(
+                        {
+                            "kind": "metadata",
+                            "type": descriptor["type"],
+                            "metadata": descriptor["metadata"],
+                        }
+                    )
+                    if descriptor["fingerprint"]["value"] != expected:
+                        raise DockflowError(
+                            "Cache metadata digest differs", "CACHE_CORRUPT", 409
+                        )
+                else:
+                    with tempfile.TemporaryDirectory(
+                        prefix="dockflow-cache-read-"
+                    ) as directory:
+                        target = Path(directory) / "payload"
+                        self._download_descriptor(descriptor, target)
+                        if inventory(target) != {
+                            key: descriptor[key]
+                            for key in (
+                                "payload_kind",
+                                "inventory",
+                                "size_bytes",
+                                "fingerprint",
+                            )
+                        }:
+                            raise DockflowError(
+                                "Cache content digest differs", "CACHE_CORRUPT", 409
+                            )
+            except FileNotFoundError:
+                raise DockflowError(
+                    "Published cache bytes are missing", "CACHE_CORRUPT", 409
+                ) from None
+            except DockflowError as exc:
+                if exc.code in {"NOT_FOUND", "CACHE_CORRUPT", "CONFLICT"}:
+                    raise DockflowError(
+                        "Published cache bytes failed verification",
+                        "CACHE_CORRUPT",
+                        409,
+                    ) from None
+                raise DockflowError(
+                    "Cache storage is inaccessible", "ARTIFACT_UNAVAILABLE", 503
+                ) from None
+            except Exception as exc:
+                code = str(
+                    getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+                )
+                if code in {"404", "NoSuchKey", "NotFound"}:
+                    raise DockflowError(
+                        "Published cache bytes are missing", "CACHE_CORRUPT", 409
+                    ) from None
+                raise DockflowError(
+                    "Cache storage is inaccessible", "ARTIFACT_UNAVAILABLE", 503
+                ) from None
+        return descriptors
 
     def get(self, artifact_id: str) -> dict[str, Any]:
         descriptor = self.control.get("artifacts", artifact_id)
@@ -862,10 +1200,9 @@ class ArtifactStore:
                 code="CONFLICT",
                 status=409,
             )
-        if (
-            self.backend == "filesystem"
-            and destination.is_relative_to(self.managed_root)
-        ) or destination.is_relative_to(self.control.state / "artifacts"):
+        if self.backend == "filesystem" and destination.is_relative_to(
+            self.managed_root
+        ):
             raise DockflowError(
                 "Materialization destination overlaps durable artifact storage"
             )

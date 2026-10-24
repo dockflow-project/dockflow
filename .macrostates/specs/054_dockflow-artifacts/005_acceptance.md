@@ -35,3 +35,16 @@ parameter/version/context changes, input content changes, invalid inputs and
 path-independent staging. Verify pipeline-computed widths at 9/10 and 99/100
 boundaries. Qualify identical native cache reuse, different parameter paths,
 and distinct pipeline/exploration contexts without overwriting earlier outputs.
+
+Verify publication with real SQLite and PostgreSQL, independent processes,
+conflicting/overlapping destinations, lost completion responses, interrupted
+payload transfer and database failures. Inspect filesystem and S3 roots to prove
+claims/manifests/recovery descriptors are SQL-only. Verify shared database use
+with Pipelines, project isolation, maintenance exclusion, consistent backup and
+restore, read-only verification and secret-safe failure diagnostics.
+
+Verify ancestor-directory durability for new roots and nested destinations,
+including identity creation, concurrent creation and identical retries. Inject
+file/directory flush failures and verify no SQL completion is acknowledged until
+durability succeeds. Keep measured power-loss/platform qualification separate
+from syscall-order assertions.

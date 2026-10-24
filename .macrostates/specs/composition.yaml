@@ -53,7 +53,7 @@ packages:
     repository: https://github.com/Macrostates/macrostates-python-project-1.git
     tag: v3.0.0
 - name: dockflow
-  version: 0.5.0
+  version: 1.0.0
   path: 051_dockflow
   entrypoint: README.md
   source:
@@ -65,13 +65,13 @@ packages:
   source:
     type: local
 - name: dockflow-pipelines
-  version: 4.1.1
+  version: 11.0.0
   path: 053_dockflow-pipelines
   entrypoint: README.md
   source:
     type: local
 - name: dockflow-artifacts
-  version: 2.1.1
+  version: 3.1.0
   path: 054_dockflow-artifacts
   entrypoint: README.md
   source:

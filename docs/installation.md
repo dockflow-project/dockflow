@@ -13,8 +13,7 @@ installation and execution support.
 ## Requirements
 
 - Python 3.13.17 is the development default; package metadata requires Python 3.12
-  or newer. The runtime depends on MLMD wheels, so Python/platform availability
-  is narrower than the CLI's pure Python requirements.
+  or newer. Execution/provider dependencies retain their own platform qualification.
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.5 or newer manages the workspace.
 - Use patched certificate stores and package tools; see [certificate maintenance](certificate-maintenance.md).
 - Direct execution or an execution service needs a running Docker daemon for
@@ -107,15 +106,17 @@ covered by this exception.
 
 ## Select only the needed capabilities
 
-Dockflow has three installable distributions. They share one application version;
+Dockflow has four installable distributions: CLI, Pipelines, Artifacts and the
+shared Database library. They share one application version;
 a source checkout installs the local workspace members:
 
 | Distribution / extra | Purpose |
 | --- | --- |
-| `dockflow-artifacts` | Independent filesystem publication and integrity API; optional `s3` and `kfp` extras. |
+| `dockflow-database` | Shared SQLite/PostgreSQL adapter and physical schema; optional `postgresql` driver. |
+| `dockflow-artifacts` | Independent publication and integrity API; optional `postgresql`, `s3` and `kfp` extras. |
 | `dockflow-cli` | Shared `dockflow` executable and installed command discovery. |
 | `dockflow-pipelines` | Pipeline commands, remote client and definition validation. |
-| `dockflow-pipelines[runtime]` | KFP DockerRunner, Docker SDK and MLMD for execution. |
+| `dockflow-pipelines[runtime]` | KFP DockerRunner and Docker SDK for execution. |
 | `dockflow-pipelines[service]` | FastAPI/Uvicorn HTTP serving. Execution also needs `runtime`. |
 | `dockflow-pipelines[s3]` | S3-compatible artifact storage; combine with the other extras as needed. |
 
@@ -124,7 +125,7 @@ do not remove dependencies from an existing development environment:
 
 ```bash
 uv venv .venv-client --python 3.13
-uv pip install --python .venv-client/bin/python ./packages/cli ./packages/pipelines
+uv pip install --python .venv-client/bin/python ./packages/database ./packages/artifacts ./packages/cli ./packages/pipelines
 .venv-client/bin/dockflow pipelines --endpoint http://127.0.0.1:8080 runs list
 ```
 

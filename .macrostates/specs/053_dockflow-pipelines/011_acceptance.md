@@ -6,7 +6,7 @@ The full initial-release contract is the set of required behaviors in this
 package, not the ability to start a container or run one happy-path task.
 Structural specification checks do not qualify an implementation.
 Before advertising a capability, record exact source commit, application/spec
-identities, SDK/IR/API/MLMD/engine/image versions, Python/OS/architecture and test
+identities, SDK/IR/API/database/engine/image versions, Python/OS/architecture and test
 results for the combination. Preserve failure evidence and known limitations.
 
 A smaller milestone may be released only with an accurate capabilities manifest,
@@ -25,13 +25,13 @@ have separate qualification surfaces.
 | A05 | File/directory, empty-directory and metadata-only artifact outputs preserve type/metadata/contents; named bindings and executor placeholders resolve correctly. |
 | A06 | External reference registration, managed import and standard importer provenance remain distinct; mutable source changes are detected, and file paths are evaluated in the executor namespace. |
 | A07 | Filesystem and MinIO profiles materialize inputs and publish complete outputs; missing/corrupt/partial outputs never become reusable results. |
-| A08 | Crash injection before/during payload transfer, output-set commit and MLMD indexing reconciles idempotently with stable IDs, correct stop/commit ordering and no duplicated computation. |
+| A08 | Crash injection before/during payload transfer, output-set commit and SQL projection reconciles idempotently with stable IDs, correct stop/commit ordering and no duplicated computation. |
 | A09 | Repeated Runs reuse equivalent task results; changed implementation/image/input/parameter misses; downstream-only changes preserve upstream reuse; explicit KFP disablement wins. |
 | A10 | global/keyed/run/none scope, missing keys, nondeterministic resolver behavior, stale unavailable candidates and deterministic producer selection match the reuse contract. |
 | A11 | Partial static-graph selection resolves omitted prerequisites, records manual/historical choices and protects pins; unresolved/ambiguous/conditional-boundary selections reject. |
 | A12 | Reference/managed paths, URI prefixes, symlinks, special files and forbidden nested paths are handled as specified; cleanup cannot delete external inputs, source code or protected artifacts. |
 | A12a | An explicit filesystem managed_root stores imports and outputs directly below that directory; default/root layouts remain compatible. Relative paths, environment precedence, conflicting/S3 roots, overlap rejection, managed-source admission, backup/restore and legacy backups are exercised. Reference registration creates no payload folder. |
-| A13 | Competing CLI/service writers fail before control/index mutation, including same-host bind-mount aliases; stable OS-lock inode and fresh owner UUID/hostname/PID/mode/project/time/endpoint diagnostics preserve exclusive ownership. One active Run/attempt, bounded durable FIFO queue and full queue rejection survive restart. |
+| A13 | Competing CLI/service writers fail before control/index mutation, including same-host bind-mount aliases; stable SQLite database inode or pinned PostgreSQL session and fresh owner UUID/hostname/PID/mode/project/time/endpoint diagnostics preserve exclusive ownership. One active Run/attempt, bounded durable FIFO queue and full queue rejection survive restart. |
 | A14 | Ctrl+C, cancellation, timeout, abrupt process loss and service shutdown retain evidence, confirm container stops and block replacement while execution is uncertain. |
 | A15 | Retry default zero and admitted bounded retries preserve attempt history and isolated writes; unsafe external effects and unchanged validation failures do not auto-repeat. |
 | A16 | Conditional import/acquire and OneOf converge correctly; skipped tasks have no fabricated attempts/results; unsupported loops/platform/GPU requirements reject. |
@@ -41,7 +41,7 @@ have separate qualification surfaces.
 | A20 | metadata check/rebuild and offline replacement, backup/restore, availability transitions and retained history reconstruct the same IDs/lineage without pretending missing bytes exist. |
 | A21 | Same compiled image references work under admitted pull policies; missing images, registry trust, inner/outer networking and actual image digest/platform recording are verified. |
 | A22 | Unmodified generic service image accepts arbitrary compatible consuming definitions through configured read-only mounts or KFP upload, with separately registry-pushed images; health/readiness, state volumes and ordinary shutdown preserve data, without a project-specific long-running service. |
-| A23 | Every advertised Python/platform/artifact combination passes its required native checks; source-built MLMD/runtime images have reproducible evidence and no emulation-only claim. |
+| A23 | Every advertised Python/platform/artifact combination passes its required native checks; runtime images have reproducible evidence and no emulation-only claim. |
 | A24 | Logging, redacted configuration and its file/environment/option/default/derived origins, provider credentials and error output meet their contracts; inspect newly admitted Run snapshots through CLI/API, retain their admission-time origins after settings change, and read older records without inventing missing provenance; secrets do not enter manifests, cache signatures, task environment or exported logs by accident. |
 | A25 | Actual pinned KFP SDK uploads a raw compiled YAML/JSON pipeline and a named new version, inspects embedded components, then executes by returned IDs/default; original bytes, names, associations and defaults survive refresh, restart and metadata rebuild. |
 | A26 | Upload bounds, malformed/duplicate multipart/query fields, UTF-8/syntax errors, unsupported archives/URLs/namespaces/features, duplicate names, and configuration/API ownership conflicts reject without usable partial catalog entries; same bytes in different pipeline/version associations retain distinct immutable IDs and historical Runs. |
@@ -60,7 +60,7 @@ observable contract; avoid tests that merely duplicate implementation structure.
 ## Incremental delivery
 
 1. Prove compiled KFP loading, DockerRunner adaptation, URI/path binding,
-   confirmed exit/stop handling, SQLite/MLMD writes and dependency installation.
+   confirmed exit/stop handling, SQLite/PostgreSQL writes and dependency installation.
 2. Deliver direct execution of a static pipeline with durable artifacts,
    manifests/logs, ownership, inspection and failure recovery.
 3. Add verified reuse, scopes, manual historical bindings, partial static
@@ -100,3 +100,89 @@ including artifact.json inside directory payloads. Reject path traversal and
 destination symlinks/collisions. Exercise backup/restore of the new layout and
 legacy descriptor-driven reads without relocating identities. Qualify actual
 Docker execution and an example training/inference workflow using recorded URIs.
+
+## Distributed cache extension
+
+A32 requires the independent-process backend conformance, contention, crash,
+stale-owner, storage, retry and migration scenarios in
+[Cache coordination](014_cache-coordination.md#17-test-requirements).
+Real PostgreSQL evidence is required before claiming shared-host support.
+
+## Database-authoritative state acceptance
+
+A33 requires SQLite and real PostgreSQL tests for complete retained Run history,
+exact definition bytes, log ordering, artifact descriptors/lineage, queue and
+idempotency across fresh isolated environments with different local state roots.
+No PostgreSQL history may depend on local JSON/MLMD files. Validate project
+isolation, numeric KFP aliases, SQL rollback of partial registration/output-set
+projections, process contention/death, session loss and stale mutation refusal.
+Portable backup/export and empty-project restore must preserve identities on both
+backends; unknown/corrupt schemas and legacy file history fail explicitly.
+A new daemon cannot resolve an unfinished attempt from another daemon. Recovery
+retires stopped container handles before dispatch so stale workers cannot start
+them after reconciliation. Database ownership does not promise exactly-once
+component side effects. No historical file migration is required.
+
+
+### A34: Unified database
+
+Exercise SQLite and real PostgreSQL through the shared adapter. Verify both
+initialization orders create one complete versioned schema, cache operations
+progress with state ownership held, restart retains both domains, alternate
+cache connections are rejected, and unknown/incomplete schemas fail closed.
+Export and restore one project with all cache namespaces and fences, excluding
+other projects, preserving cache-only bytes and store identity. Existing cache
+conformance and execution/recovery suites remain required.
+
+
+### A35: Concurrent PostgreSQL Runs
+
+Exercise independent PostgreSQL processes in one project, including simultaneous
+admission, idempotency, queue-capacity enforcement, different concurrent Runs and
+competing claims for one Run. Verify database-time expiry, renewal, increasing
+fences, stale mutation/publication rejection, cancellation from another process,
+crashed-owner recovery and live-Run isolation. Preserve correct-daemon checks and
+refuse unconfirmed replacement execution. Maintenance excludes all coordinators
+and cache transactions. Run the same local SQLite regressions to preserve one
+owner/Run behavior. Test actual direct and service worker paths and complete
+artifact/provenance outcomes; protocol-only tests do not establish runtime support.
+
+A35 also exercises committed-cache reuse while its producing Run is still live:
+the consumer retains complete provenance without altering the producer lifecycle.
+Concurrent same-key execution must produce one actual computation and a waiting
+consumer; later reuse must preserve original producer and artifact identities.
+
+### A36. SQL artifact bookkeeping
+
+Publish and reuse filesystem/S3 artifacts with SQLite and PostgreSQL. Confirm
+reservations, completion manifests and recovery descriptors persist only in the
+unified database; storage retains payloads and its identity marker. Test retries,
+partial transfers, concurrent/conflicting writers and stale execution fences.
+Back up/restore publication records and both journal-backed and cache-only bytes.
+Standalone Artifacts shares the same adapter without importing Pipelines or CLI.
+
+### A37. Domain persistence cleanup
+
+Exercise direct domain repositories on SQLite and PostgreSQL with numeric event
+sequences, a single resource projection, exact source bytes, output commitments,
+cache observations and retained log snapshots. Verify atomic rollback of events,
+counters and projections, corruption/orphan detection, projection rebuild and
+stable KFP aliases. Verify read-only checks, fenced execution, service recovery,
+cache reuse and project backup/restore without virtual filesystem metadata keys
+or compatibility import shims. Real payload/executor/backup files remain supported.
+
+### A38. Conformance corrections and selective repositories
+
+Inject queue-read, periodic-recovery and worker-start failures and verify dead
+schedulers revoke readiness/admission while retaining accepted work. Exercise
+A/B/A source rollback through direct and remote named submissions. Execute queued
+Runs after restart with different coordinator settings and retain admitted limits;
+refuse incompatible mounts/caps explicitly. Reconcile crashes before container
+creation, after creation and after output commitment with consistent Run/Task/
+Attempt outcomes. Reject malformed scalar IR before persistent acceptance.
+
+Inject corruption and orphan rows into every derived domain repository and repair
+them through rebuild without losing stable aliases. Verify stable bounded source
+capture with symlinks, nonregular files, oversize data and observed mutation.
+Exercise indexed SQL filtering/paging, queue selection and log ranges with unrelated
+large history, both database backends, stable tokens and backup/rebuild consistency.

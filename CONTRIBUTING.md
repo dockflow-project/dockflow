@@ -98,7 +98,7 @@ uv run python tools/verify_packages.py
 ```
 
 Keep test credentials outside source control. Package verification builds all
-three distributions, checks standalone Artifacts imports without optional
+four distributions, checks standalone Artifacts imports without optional
 dependencies, and rebuilds every sdist outside the checkout.
 
 ## Documentation and examples
@@ -207,18 +207,19 @@ work; only `tmp/.gitkeep` is tracked.
 
 ## Preparing and publishing a release
 
-All three distributions share root `VERSION`. Work on a release branch, update
+All four distributions share root `VERSION`. Work on a release branch, update
 that file, run `uv run python tools/version.py --sync`, and refresh `uv.lock`
 without unrelated upgrades. Update the changelog, package documentation and
 generated API reference. Complete the existing specification/implementation
 baseline review and workflow closure before submitting reviewed integration;
 see the [release policy](.macrostates/specs/051_dockflow/004_releases.md).
 
-Publication uses three separate PyPI publishers. Each has owner
+Publication uses four separate PyPI publishers. Each has owner
 `dockflow-project`, repository `dockflow` and workflow filename `publish.yaml`:
 
 | PyPI project | GitHub environment |
 | --- | --- |
+| `dockflow-database` | `pypi-database` |
 | `dockflow-cli` | `pypi-cli` |
 | `dockflow-pipelines` | `pypi-pipelines` |
 | `dockflow-artifacts` | `pypi-artifacts` |
@@ -232,7 +233,7 @@ must be made public and its anonymous pull verified before announcing it.
 After reviewed integration and successful CI on that exact main commit:
 
 1. Manually run **Build release candidate (no publication)** on `main`.
-   It builds the three wheels/sdists once, verifies clean installation and
+   It builds the four wheels/sdists once, verifies clean installation and
    independent sdist rebuilding, builds the service using those wheels, and
    runs a disposable Docker-in-Docker deployment check. It retains the tested
    image archive, package files, verification receipts and a hash manifest as
@@ -247,7 +248,7 @@ After reviewed integration and successful CI on that exact main commit:
 3. Manually run **Publish approved release** on the same main commit, supplying
    the candidate run ID and reviewed manifest SHA-256. Approve the protected
    environments for that candidate. The workflow checks provenance, annotated
-   tags and every file hash, publishes CLI before the other packages, loads and
+   tags and every file hash, publishes Database and CLI before Artifacts, then Pipelines, loads and
    pushes the preserved service image, and creates the shared GitHub release
    with verification assets. No package or image is rebuilt during publication.
 4. Verify all PyPI file hashes and public installation, the GHCR image digest
@@ -277,3 +278,27 @@ Candidate 39787991471 must not be resumed: its image contains affected CA
 bundles. The existing 0.1.0 tags and CLI files are immutable. Version 0.1.1 uses a
 new coordinated candidate and needs approval for its exact manifest before
 publication.
+
+## Cache conformance
+
+Ordinary tests include SQLite coordination, independent-process contention and
+fault tests. To exercise PostgreSQL, provide a disposable database through
+`DOCKFLOW_TEST_CACHE_POSTGRES_DSN` and run:
+
+```bash
+uv run --locked --all-extras pytest packages/pipelines/tests/integration/test_cache_registry.py
+```
+
+The suite uses fresh scopes and retains fencing records; drop the disposable
+database/container after the run. CI supplies a pinned PostgreSQL service on
+Linux for both supported Python targets. Tests include repeated barriers of 20
+spawned processes and producer termination; do not replace these with thread mocks.
+Real S3 tests additionally use `DOCKFLOW_TEST_CACHE_S3_ENDPOINT` and standard
+AWS-compatible test credentials, creating/removing only a unique test bucket:
+
+```bash
+uv run --locked --all-extras pytest packages/pipelines/tests/integration/test_cache_s3.py
+```
+
+Use disposable local test providers and never export resolved connection strings,
+credentials, host paths or raw provider logs into validation records.

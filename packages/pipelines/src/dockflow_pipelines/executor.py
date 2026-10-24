@@ -16,7 +16,12 @@ from typing import Any, cast
 from unittest.mock import patch
 
 from .container_logs import ContainerLogs
-from .definitions import DefinitionError, UnsupportedCapability, validate_parameter
+from .definitions import (
+    DefinitionError,
+    UnsupportedCapability,
+    resource_value,
+    validate_parameter,
+)
 
 
 class ExecutionStopped(RuntimeError):
@@ -378,37 +383,20 @@ def resource_limits(
     resources = container.get("resources", {})
     cpu = configured.get("cpu_limit")
     memory = configured.get("memory_limit_bytes")
-    compiled_cpu = resources.get("resourceCpuLimit", resources.get("cpuLimit"))
-    if compiled_cpu is not None:
-        if isinstance(compiled_cpu, str) and compiled_cpu.endswith("m"):
-            compiled_cpu = float(compiled_cpu[:-1]) / 1000
-        compiled_cpu = float(compiled_cpu)
-        cpu = min(float(cpu), compiled_cpu) if cpu is not None else compiled_cpu
-    compiled_memory = resources.get("resourceMemoryLimit", resources.get("memoryLimit"))
-    if compiled_memory is not None:
-        if isinstance(compiled_memory, str):
-            import re
-
-            match = re.fullmatch(
-                r"(\d+(?:\.\d+)?)([EPTGMK]i?|[eptgmk])?", compiled_memory
-            )
-            if not match:
-                raise UnsupportedCapability("Unsupported compiled memory limit")
-            number, unit = match.groups()
-            power = (
-                "KMGTPE".find((unit or "").upper().replace("I", "")) + 1 if unit else 0
-            )
-            compiled_memory = float(number) * (
-                (1024 if unit and "i" in unit else 1000) ** power
-            )
-        else:
-            # Legacy numeric memoryLimit is decimal gigabytes in the KFP IR.
-            compiled_memory = float(compiled_memory) * 1_000_000_000
-        memory = (
-            min(int(memory), int(compiled_memory))
-            if memory is not None
-            else int(compiled_memory)
-        )
+    for names in (
+        ("cpuLimit", "resourceCpuLimit"),
+        ("memoryLimit", "resourceMemoryLimit"),
+    ):
+        if all(name in resources for name in names):
+            raise DefinitionError("Conflicting compiled resource aliases")
+    for field in ("cpuLimit", "resourceCpuLimit"):
+        if field in resources:
+            value = resource_value(field, resources[field])
+            cpu = min(float(cpu), value) if cpu is not None else value
+    for field in ("memoryLimit", "resourceMemoryLimit"):
+        if field in resources:
+            value = int(resource_value(field, resources[field]))
+            memory = min(int(memory), value) if memory is not None else value
     result: dict[str, Any] = {}
     if configured.get("task_mounts"):
         result["dockflow_mounts"] = configured["task_mounts"]

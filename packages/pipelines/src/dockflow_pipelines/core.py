@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import functools
 import hashlib
 import hmac
 import json
@@ -16,6 +17,8 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any
 
+from dockflow_database.errors import DockflowError
+
 from .canonical import digest, loads, validate_json
 from .config import Settings
 from .definitions import (
@@ -26,9 +29,9 @@ from .definitions import (
     validate_parameters,
     validate_selection,
 )
-from .errors import DockflowError
+from .execution_choices import ExecutionChoices
+from .records import TERMINAL
 
-TERMINAL = {"succeeded", "failed", "cancelled", "interrupted"}
 RUN_FIELDS = {
     "definition_id",
     "pipeline_spec",
@@ -107,14 +110,21 @@ def capabilities(settings: Settings | None = None) -> dict:
             "partial_selection",
             "pipeline_uploads",
             "web_interface",
+            "coordinated_artifact_cache",
+            "database_execution_state",
+            "concurrent_postgresql_runs",
         ],
         "backends": {
             "execution": "KFP DockerRunner",
-            "metadata": "MLMD SQLite",
+            "metadata": ["sqlite", "postgresql"],
             "artifacts": ["filesystem", "s3"],
+            "cache": ["sqlite", "postgresql"],
         },
         "limits": {
             "active_runs": 1,
+            "active_runs_scope": "project"
+            if settings is None or settings.state_storage["backend"] == "sqlite"
+            else "coordinator",
             "task_parallelism": 1,
             "queue_capacity": settings.service["queue_capacity"] if settings else 100,
         },
@@ -129,6 +139,15 @@ def capabilities(settings: Settings | None = None) -> dict:
     }
 
 
+def _project_mutation(method):
+    @functools.wraps(method)
+    def serialized(self, *args, **kwargs):
+        with self.mutex, self.store.database.transaction():
+            return method(self, *args, **kwargs)
+
+    return serialized
+
+
 class Core:
     def __init__(self, settings: Settings):
         from .artifacts import ArtifactStore
@@ -136,17 +155,26 @@ class Core:
 
         self.settings = settings
         self.store = ControlStore(
-            settings.state, settings.project_id, settings.metadata_directory
+            settings.state,
+            settings.project_id,
+            storage=settings.state_storage,
         )
+        settings.cache["database"] = dict(self.store.database.options)
         self.artifacts = ArtifactStore(self.store, settings.artifacts)
         self.mutex = threading.RLock()
 
     def initialize(self) -> None:
         self.store.initialize()
-        if not (self.settings.state / "pagination.json").exists():
-            self.store.write(
-                "pagination.json", {"schema_version": 1, "key": secrets.token_hex(32)}
-            )
+        from .cache_registry import Registry
+
+        self.settings.cache["storage_token"] = self.artifacts.storage_identity()
+        Registry(self.settings.cache, self.settings.project_id).initialize()
+        with self.store.database.transaction():
+            if self.store.project_metadata("pagination") is None:
+                self.store.set_project_metadata(
+                    "pagination",
+                    {"schema_version": 1, "key": secrets.token_hex(32)},
+                )
 
     def _definition(self, request: dict) -> Definition:
         if ("definition_id" in request) == ("pipeline_spec" in request):
@@ -186,6 +214,7 @@ class Core:
             "parameters": parameters,
         }
 
+    @_project_mutation
     def snapshot(
         self,
         definition: Definition,
@@ -193,15 +222,17 @@ class Core:
         pipeline_id: str | None = None,
         registration_origin: str | None = None,
     ) -> dict:
-        existing = [
-            item
-            for item in self.store.list("definitions")
-            if item.get("sha256") == definition.sha256
-            and item.get("profile") == definition.to_record().get("profile")
-            and item.get("pipeline_id") == pipeline_id
-            and item.get("name") == name
-            and item.get("registration_origin") == registration_origin
-        ]
+        existing = self.store.database.queries.select(
+            "definitions",
+            filters={
+                "sha256": definition.sha256,
+                "profile": definition.to_record().get("profile"),
+                "pipeline_id": pipeline_id,
+                "name": name,
+                "registration_origin": registration_origin,
+            },
+            limit=1,
+        )
         if existing:
             return existing[0]
         record, components = self._snapshot_records(
@@ -219,7 +250,7 @@ class Core:
         pipeline_id: str | None,
         registration_origin: str | None,
     ) -> tuple[dict, list[dict]]:
-        from .metadata import new_id, utc_now
+        from .records import new_id, utc_now
 
         record = {
             **definition.to_record(),
@@ -261,7 +292,7 @@ class Core:
         pipeline_id: str | None = None,
     ) -> tuple[dict, dict]:
         """Validate first, then accept a catalog/version and its exact source once."""
-        from .metadata import new_id, utc_now
+        from .records import new_id, utc_now
 
         definition = checked_definition(source)
         if not isinstance(description, str) or len(description) > 4096:
@@ -272,12 +303,16 @@ class Core:
             raise DockflowError(
                 "name/display_name must contain 1–256 nonblank characters"
             )
-        with self.mutex:
+        with self.mutex, self.store.database.transaction():
             self.store.ensure_reconciled()
             if pipeline_id is None:
                 if name in self.settings.definitions["pipelines"] or any(
                     item.get("registration") and item["name"] == name
-                    for item in self.store.list("pipelines")
+                    for item in self.store.database.queries.select(
+                        "pipelines",
+                        filters={"name": name, "registration": True},
+                        limit=1,
+                    )
                 ):
                     raise DockflowError("Pipeline name already exists", "CONFLICT", 409)
                 catalog = {
@@ -299,8 +334,11 @@ class Core:
                     )
                 if any(
                     item.get("version_name") == name
-                    for item in self.store.list("definitions")
-                    if item.get("pipeline_id") == pipeline_id
+                    for item in self.store.database.queries.select(
+                        "definitions",
+                        filters={"pipeline_id": pipeline_id, "sort_name": name},
+                        limit=1,
+                    )
                 ):
                     raise DockflowError(
                         "Pipeline version name already exists", "CONFLICT", 409
@@ -321,17 +359,23 @@ class Core:
             )
             return self.store.get("pipelines", catalog["pipeline_id"]), accepted
 
+    @_project_mutation
     def refresh(self, name: str | None = None) -> dict:
-        from .metadata import new_id, utc_now
+        from .records import new_id, utc_now
 
         report = {"added": [], "updated": [], "unavailable": [], "diagnostics": []}
         for collection in ("pipelines", "components"):
             registrations = self.settings.definitions[collection]
             catalogs = {
                 item["name"]: item
-                for item in self.store.list(collection)
-                if item.get("registration")
-                and item.get("registration_origin", "configuration") == "configuration"
+                for item in self.store.query(
+                    collection,
+                    filters={
+                        "registration": True,
+                        "registration_origin": "configuration",
+                        **({"name": name} if name is not None else {}),
+                    },
+                )
             }
             for alias in sorted(set(catalogs) | set(registrations)):
                 if name is not None and alias != name:
@@ -345,7 +389,11 @@ class Core:
                     if catalog is None:
                         if any(
                             item.get("registration") and item["name"] == alias
-                            for item in self.store.list(collection)
+                            for item in self.store.query(
+                                collection,
+                                filters={"name": alias, "registration": True},
+                                limit=1,
+                            )
                         ):
                             raise DockflowError(
                                 "Name conflicts with an API registration",
@@ -392,10 +440,14 @@ class Core:
             registrations = self.settings.definitions[collection]
             catalogs = {
                 item["name"]: item
-                for item in self.store.list(collection)
-                if item.get("registration")
-                and item.get("available")
-                and item.get("registration_origin", "configuration") == "configuration"
+                for item in self.store.query(
+                    collection,
+                    filters={
+                        "registration": True,
+                        "registration_origin": "configuration",
+                    },
+                )
+                if item.get("available")
             }
             if set(catalogs) != set(registrations):
                 return False
@@ -429,8 +481,11 @@ class Core:
             catalog = next(
                 (
                     item
-                    for item in self.store.list("pipelines")
-                    if item.get("registration") and item["name"] == operand
+                    for item in self.store.database.queries.select(
+                        "pipelines",
+                        filters={"name": operand, "registration": True},
+                        limit=1,
+                    )
                 ),
                 None,
             )
@@ -456,8 +511,9 @@ class Core:
             )
         catalog = next(
             item
-            for item in self.store.list("pipelines")
-            if item["name"] == operand and item.get("registration")
+            for item in self.store.database.queries.select(
+                "pipelines", filters={"name": operand, "registration": True}, limit=1
+            )
         )
         return self.store.get("definitions", catalog["definition_id"])
 
@@ -496,8 +552,9 @@ class Core:
                 )
         return inputs
 
+    @_project_mutation
     def create_experiment(self, name: str, description: str = "") -> dict:
-        from .metadata import new_id, utc_now
+        from .records import new_id, utc_now
 
         if (
             not isinstance(name, str)
@@ -506,7 +563,9 @@ class Core:
             or len(description) > 4096
         ):
             raise DockflowError("Invalid experiment name or description")
-        if any(item["display_name"] == name for item in self.store.list("experiments")):
+        if self.store.database.queries.count(
+            "experiments", filters={"sort_name": name}
+        ):
             raise DockflowError(
                 "Experiment display_name already exists", "CONFLICT", 409
             )
@@ -522,9 +581,13 @@ class Core:
         )
 
     def submit(
-        self, request: dict, idempotency_key: str | None = None
+        self,
+        request: dict,
+        idempotency_key: str | None = None,
+        *,
+        reserve: bool = False,
     ) -> tuple[dict, bool]:
-        from .metadata import new_id, utc_now
+        from .records import new_id, utc_now
 
         self.store.ensure_reconciled()
         only_fields(request, RUN_FIELDS)
@@ -538,14 +601,10 @@ class Core:
                 "Idempotency-Key must be 1–128 printable ASCII characters"
             )
         if idempotency_key:
-            previous = next(
-                (
-                    item
-                    for item in self.store.list("runs")
-                    if item.get("idempotency_key") == idempotency_key
-                ),
-                None,
+            prior = self.store.database.queries.select(
+                "runs", filters={"idempotency_key": idempotency_key}, limit=1
             )
+            previous = prior[0] if prior else None
             if (
                 previous
                 and previous.get("submitted_request_digest") == submitted_request_digest
@@ -634,18 +693,13 @@ class Core:
         except (DefinitionError, ValueError, TypeError) as exc:
             raise DockflowError(str(exc)) from exc
         request_digest = digest(normalized)
-        with self.mutex:
-            runs = self.store.list("runs")
+        with self.mutex, self.store.database.transaction():
             if idempotency_key:
-                previous = next(
-                    (
-                        item
-                        for item in runs
-                        if item.get("idempotency_key") == idempotency_key
-                    ),
-                    None,
+                prior = self.store.database.queries.select(
+                    "runs", filters={"idempotency_key": idempotency_key}, limit=1
                 )
-                if previous:
+                if prior:
+                    previous = prior[0]
                     if previous["request_digest"] != request_digest:
                         raise DockflowError(
                             "Idempotency key was used for a different request",
@@ -654,7 +708,7 @@ class Core:
                         )
                     return previous, True
             if (
-                sum(item["state"] == "queued" for item in runs)
+                self.store.database.queries.count("runs", filters={"state": "queued"})
                 >= self.settings.service["queue_capacity"]
             ):
                 raise DockflowError("The service queue is full", "QUEUE_FULL", 429)
@@ -662,14 +716,12 @@ class Core:
             if experiment_id:
                 experiment = self.store.get("experiments", experiment_id)
             else:
-                experiment = next(
-                    (
-                        item
-                        for item in self.store.list("experiments")
-                        if item["display_name"] == "Default"
-                    ),
-                    None,
-                ) or self.create_experiment("Default")
+                defaults = self.store.database.queries.select(
+                    "experiments", filters={"sort_name": "Default"}, limit=1
+                )
+                experiment = (
+                    defaults[0] if defaults else self.create_experiment("Default")
+                )
             snapshot = (
                 self.store.get("definitions", request["definition_id"])
                 if "definition_id" in request
@@ -696,18 +748,29 @@ class Core:
                 "submitted_request_digest": submitted_request_digest,
                 "source_text": definition.raw_bytes.decode("utf-8"),
                 "effective_configuration": self.settings.effective(),
+                "execution_choices": ExecutionChoices.capture(
+                    self.settings, plan["task_policies"]
+                ).to_record(),
                 "selected_tasks": sorted(selected),
                 "resolved_plan": plan,
-                "acceptance_sequence": len(self.store.records()) + 1,
+                "acceptance_sequence": self.store.database.current_sequence() + 1,
             }
             run = self.store.put("runs", run)
+            if reserve:
+                from .run_ownership import reserve as reserve_run
+
+                reserve_run(
+                    self.store,
+                    run["run_id"],
+                    self.settings.execution["run_lease_seconds"],
+                )
             self.store.put("experiments", {**experiment, "last_run_created_at": now})
             return run, False
 
     def cancel(self, run_id: str, *, interruption: bool = False) -> dict:
-        from .metadata import utc_now
+        from .records import utc_now
 
-        with self.mutex:
+        with self.mutex, self.store.stop_request(run_id):
             run = self.store.get("runs", run_id)
             if run["state"] in TERMINAL:
                 return run
@@ -758,10 +821,10 @@ class Core:
             key: value for key, value in (filters or {}).items() if value is not None
         }
         query = {"collection": collection, "filters": filters, "sort_by": sort_by}
-        keyfile = self.settings.state / "pagination.json"
+        pagination = self.store.project_metadata("pagination")
         key = (
-            bytes.fromhex(loads(keyfile.read_bytes())["key"])
-            if keyfile.exists()
+            bytes.fromhex(pagination["key"])
+            if pagination is not None
             else hashlib.sha256(self.settings.project_id.encode()).digest()
         )
         boundary = None
@@ -781,20 +844,13 @@ class Core:
                 boundary = token["boundary"]
             except (ValueError, KeyError, TypeError) as exc:
                 raise DockflowError("Invalid or mismatched page token") from exc
-        items = self.store.list(collection)
-        for field, value in filters.items():
-            if field == "input_artifact_id":
-                items = [
-                    item for item in items if value in item.get("inputs", {}).values()
-                ]
-            elif field == "type":
-                items = [
-                    item
-                    for item in items
-                    if item.get("type", {}).get("schema_title") == value
-                ]
-            else:
-                items = [item for item in items if item.get(field) == value]
+        items = self.store.database.queries.select(
+            collection,
+            filters=filters,
+            sort_by=sort_by,
+            boundary=boundary,
+            limit=page_size + 1,
+        )
         id_key = {
             "definitions": "definition",
             "components": "component",
@@ -808,26 +864,12 @@ class Core:
         sort_field = sort_by.split()[0]
         if sort_field == "display_name" and collection in {"pipelines", "definitions"}:
             sort_field = "name"
-        descending = sort_by in {"created_at", "created_at desc", "display_name desc"}
 
         def sort_value(item):
             if collection == "definitions" and sort_field == "name":
                 return item.get("version_name") or item.get("name") or ""
             return item.get(sort_field) or ""
 
-        items.sort(key=lambda item: item[id_key])
-        items.sort(key=sort_value, reverse=descending)
-        if boundary:
-            items = [
-                item
-                for item in items
-                if (
-                    sort_value(item) < boundary[0]
-                    if descending
-                    else sort_value(item) > boundary[0]
-                )
-                or (sort_value(item) == boundary[0] and item[id_key] > boundary[1])
-            ]
         selected = items[:page_size]
         next_token = None
         if len(items) > page_size:
@@ -882,19 +924,17 @@ class Core:
                 raise ValueError("mismatched cursor")
         except (ValueError, UnicodeError, TypeError, AttributeError) as exc:
             raise DockflowError("Invalid log cursor") from exc
-        entries = self.store.log_entries(run_id)
-        matches = [
-            entry
-            for entry in entries
-            if (
-                entry["sequence"] > position["sequence"]
-                or (entry["sequence"] == position["sequence"] and position["offset"])
-            )
-            and (not task_id or entry.get("task_id") == task_id)
-            and (not attempt_id or entry.get("attempt_id") == attempt_id)
-        ]
+        entries = self.store.database.log_entries(
+            run_id,
+            sequence=position["sequence"],
+            offset=position["offset"],
+            task_id=task_id,
+            attempt_id=attempt_id,
+            limit=257,
+        )
+        matches = entries[:256]
         result, used = [], 0
-        drained = True
+        drained = len(entries) <= 256
         for entry in matches:
             offset = (
                 position["offset"] if entry["sequence"] == position["sequence"] else 0

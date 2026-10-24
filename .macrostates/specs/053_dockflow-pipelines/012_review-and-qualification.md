@@ -17,7 +17,7 @@ vary within the public contracts and shared dependency policy.
 | SDK/backend/IR versions, admitted graph features and adapter | [KFP profile](004_kfp-compatibility.md) |
 | Ownership, concurrency, queue, retry, cancellation and interruption | [Execution](005_execution-and-lifecycle.md) |
 | Registration, managed and external publication, integrity and retention | [Artifacts](006_artifacts.md) |
-| MLMD, durable records, reconstruction, backup and cleanup | [Metadata and recovery](007_metadata-and-recovery.md) |
+| SQL, durable records, reconstruction, backup and cleanup | [Metadata and recovery](007_metadata-and-recovery.md) |
 | Cache scopes, historical prerequisites and partial selection | [Reuse and selection](008_reuse-and-selection.md) |
 | Commands, Run inspection, output and maintenance | [CLI](009_cli.md) |
 | Native resource models, upload/version catalog and KFP API | [Service API](010_service-api.md) |
@@ -32,26 +32,17 @@ and acceptance status belong to the [implementation records](../../implementatio
 
 ## Dependency and platform qualification constraints
 
-Use the SDK/backend/IR and MLMD candidates selected in the
+Use the SDK/backend/IR and database candidates selected in the
 [KFP profile](004_kfp-compatibility.md#compiled-boundary-and-versions), together
 with the [shared Python/platform policy](../051_dockflow/002_compatibility.md).
 These are qualification targets, not evidence that any version combination has
 passed. The initial Linux reference uses Ubuntu 24.04 x86-64. Where wheels are
 unavailable, reproducible dependency/source-build evidence is required.
 
-MLMD 1.21.0's published CPython 3.12/3.13 wheels cover Linux x86-64
-(glibc >=2.39) and macOS ARM64. Its listed wheels do not cover Linux ARM64,
-macOS Intel or Windows. Keep native MLMD out of base/remote-client installation;
-those clients retain the shared platform qualification targets. Direct execution
-and the linux/arm64 service image need additional reproducible source-build/native
-evidence where required. Do not silently lower Python, drop architecture targets,
-or publish unsupported image manifests to conceal this gap.
-
-MLMD 1.21 removes ListOptions.filter_query/ZetaSQL. Use supported lookup/lineage
-operations and documented bounded application filtering; do not depend on that
-removed feature. External SQL needs query, ownership, migration, durability and
-restore tests with the selected version before advertisement. Availability of a
-database image alone does not qualify the backend.
+SQLite uses the Python standard library. Qualify the optional PostgreSQL driver,
+server, transaction/session ownership, durability, backup/restore and connection
+failure behavior on each advertised runtime. Provider availability and configured
+CI alone do not qualify execution on a different physical host or platform.
 
 Exact Docker/DinD/MinIO/registry/service-base images and runtime dependency
 bounds must be pinned to immutable identities during implementation and refreshed
@@ -88,6 +79,3 @@ reduce the portability promise.
 
 - [KFP 2.17 release](https://github.com/kubeflow/pipelines/releases/tag/2.17.0)
 - [KFP 2.17 SDK distribution](https://pypi.org/project/kfp/2.17.0/)
-- [MLMD 1.21 release](https://github.com/google/ml-metadata/releases/tag/v1.21.0)
-- [MLMD 1.21 release files](https://pypi.org/project/ml-metadata/1.21.0/#files)
-- [MLMD backend documentation](https://www.tensorflow.org/tfx/guide/mlmd)

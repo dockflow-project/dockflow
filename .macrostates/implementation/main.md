@@ -41,7 +41,7 @@ licenses and provenance retain their canonical content.
 installed modules or requesting help does not initialize runtime infrastructure.
 `packages/pipelines` owns compiled KFP validation, invocation planning, durable
 execution and management, artifacts, reuse and the CLI/HTTP/browser adapters.
-Base client imports remain independent of optional Docker/KFP/MLMD/server extras.
+Base client imports remain independent of optional Docker/KFP/PostgreSQL/server extras.
 
 `definitions.py` validates a bounded KFP 2.17 IR profile. Consumer code is compiled
 and component images built externally; Dockflow neither imports consumer Python
@@ -54,38 +54,108 @@ before start, bounds its reader queue and forwards decoded chunks on the executi
 thread. A retained-log pass verifies the streamed prefix and captures missing
 tails without replay. Cancellation remains on the coordinator thread.
 
-The service holds one state owner and a durable FIFO queue, with one active Run
-and attempt. Each Run receives a spawned worker process for KFP's process-global
+SQLite retains one project owner and a durable FIFO queue, with one active Run
+and attempt. PostgreSQL permits independent coordinators to claim different Runs;
+each coordinator dispatches one Run at a time. Each Run receives a spawned worker process for KFP's process-global
 state. Workers call owner-side state/artifact operations over constrained RPC;
 HTTP request threads do not reinitialize KFP. Shutdown records stop intent,
 confirms termination and retains queued work. Startup reconciles uncertain prior
-containers before dispatch. Direct CLI refuses unresolved/queued execution until
-explicit service recovery and draining. No automatic crash rerun is implied.
+containers before dispatch. SQLite direct CLI refuses unresolved/queued execution until explicit recovery;
+PostgreSQL direct submissions reserve their own Run during atomic admission. No automatic crash rerun is implied.
 
 ## Persistence and artifacts
 
-`metadata.py` coordinates authoritative accepted journal records, atomic
-projections, output-set commits, recovery and safe maintenance. `records.py`
-contains pure record identity/timestamp primitives. `ownership.py` owns stable
-local OS locking and bounded diagnostic owner UUID/hostname/PID/project/mode/time/
-endpoint fields; metadata is never a lease or takeover token. `mlmd_index.py`
-is the lazy MLMD/SQLite projection adapter. Existing `metadata` import names
-remain aliases, and persisted records/wire contracts retain their identity.
+`packages/database` now owns the common SQLite/PostgreSQL drivers, physical schema,
+maintenance gates and immutable artifact-record repository. Pipelines and standalone
+Artifacts use that package. Publication claims/manifests and recovery descriptors
+are SQL-only; artifact storage retains payloads and `.dockflow/storage.json`.
+The physical schema is version 4; no existing-data migration is supplied.
+Standalone filesystem publication defaults to a SQLite file beside its root;
+remote stores require explicit database configuration. Project backups preserve
+these records and the managed root, verify completed publications and refuse
+additional unrepresented roots. See the [artifact-record validation](validation/database-artifact-records.md)
+for qualification and limits.
 
-The accepted record stream and committed artifact outputs are authoritative;
-MLMD/SQLite is a reconstructible query/lineage index. Accepted-but-unindexed work
-holds admission for reconciliation rather than pretending it never happened.
+Domain repositories now use numeric journal sequences, one resource projection,
+explicit definition/attempt identities and named project metadata. File-shaped
+control keys, the optional SQLIndex wrapper and Pipelines database/error import
+facades are removed. Definition/log snapshots validate explicit IDs; rebuild
+repairs all domain projections and removes orphaned resource rows without losing
+numeric aliases, publication facts or cache history. The
+[cleanup validation](validation/domain-persistence-cleanup.md) records qualification.
+
+`metadata.py` coordinates a database-authoritative accepted journal, resource
+projections, complete output-set commits, source snapshots, logs and maintenance.
+`state_database.py` uses the shared database adapter for state transactions,
+query projections, persistent KFP numeric aliases and execution ownership. SQLite uses
+a stable local database inode; PostgreSQL uses shared maintenance sessions and
+fenced per-Run leases across isolated coordinators. Journal and projections commit atomically. Native MLMD and JSON
+history trees are no longer runtime stores/dependencies. Fresh state is required;
+old file history is intentionally not migrated. See the
+[database-state validation](validation/database-execution-state.md) for measured
+coverage and deployment limits. PostgreSQL environments retain
+full shared history without a local durable state directory. SQLite retains its
+single owner; PostgreSQL executes different Runs concurrently across coordinators.
+
 `canonical.py` owns typed canonical JSON hashing; `reuse.py` owns equivalent
 signature selection and integrity checks. `artifacts.py` provides filesystem and
 S3-compatible managed stores, external references/imports, inventory checking and
-explicit pins. Managed outputs use pipeline/run/task/attempt-UUID/output paths below the
-resolved managed_root or S3 bucket/prefix, with recovery descriptors under
-.dockflow/dockflow-pipelines. Administrative managed imports stay in that metadata area;
-legacy root retains its managed child. Reuse keeps the original producer URI.
-Admission, publication and backup/restore share the resolved directory and
-retain descriptor-driven access to earlier layouts. Reference payloads remain at their sources. Owner-side transfers keep storage credentials out of ordinary
+explicit pins. Ordinary managed outputs use pipeline/run/task/attempt-UUID/output paths below the
+resolved managed_root or S3 bucket/prefix; coordinated outputs use the reserved
+cache namespace described below. Recovery descriptors live in SQL. Administrative
+managed imports keep their payloads under `.dockflow/dockflow-pipelines`; the
+supported `artifacts.root` setting retains its `managed/` child. Reuse keeps the
+original producer URI. Admission, publication and backup/restore share the
+resolved root and explicit current layout. Unsupported earlier layouts are
+rejected. Reference payloads remain at their sources. Owner-side transfers keep storage credentials out of ordinary
 task containers. See [persistence](../../docs/persistence.md) and
 [artifacts](../../docs/artifacts.md) for recovery and URI/path limits.
+
+The [cleanup validation](validation/domain-persistence-cleanup.md) records the
+current implementation and qualification. Earlier dated receipts retain their
+historical scope; their split connections, import facades and file-shaped SQL
+records no longer describe the current implementation.
+
+## Coordinated artifact cache
+
+`dockflow_database.database` supplies common SQLite/PostgreSQL connections, dialect, durability,
+schema initialization, clock, row locks and driver failure classification.
+`dockflow_database.database_schema` defines the shared versioned physical schema.
+`cache_registry.py` implements coordination in the same configured database as
+execution history. Entry locking serializes reuse, idempotent
+claims, database-clock leases, monotonic fences, complete publication and durable
+retry episodes. SQLite uses local WAL/FULL synchronization; PostgreSQL uses a
+fresh locking statement after unique insertion and bounded primary transactions.
+Independent local staging roots connected to the same database/project share
+history and cache. SQLite retains a project owner; PostgreSQL uses per-Run owners.
+
+`cache.py` bounds waits and supervises heartbeats independently through execution,
+validation and transfer. `cache_storage.py` defines portable complete manifests.
+`artifacts.py` binds a persistent store identity, seals unique versioned outputs,
+uses conditional S3 writes and recovers identical finalization acknowledgments.
+The engine verifies an entire manifest before recording a hit. Cache production
+bypasses legacy historical discovery; omitted prerequisites can resolve without
+claiming computation. Publication passes through the journal owner to order it
+against stop intent. Registry success survives a later journal/projection failure;
+atomic cache-provenance import retains original producer/artifact IDs without
+creating a consumer attempt. Original local producer metadata is preserved during
+cache-backed recovery.
+
+CLI/API inspection exposes the selected artifact, lease/producer history,
+freshness and shared retry state. Invalidation/reset require expected identities
+and preserve bytes and fences. Signature and storage namespaces isolate legacy
+writers; unregistered historical results are misses, while explicit manual
+historical inputs retain full verification. Configured scope policy and actual
+store identity must agree before dispatch; registry failure has no unlocked fallback.
+
+Published cache eviction and automated orphan cleanup remain disabled. SQLite is
+local-host only; PostgreSQL requires common artifact access. Coordinated S3 files
+are limited to 5 GiB each. Project backup exports history and all project cache namespaces in one consistent
+SQL snapshot, plus cache-only managed bytes and store identity. Restoring older
+history requires stopped workers and a fresh cache namespace before dispatch. Physical multi-host and non-Linux native
+qualification remain outside the recorded local evidence. See the
+[cache qualification receipt](validation/distributed-artifact-cache.md) and
+[configuration guide](../../docs/configuration.md#coordinated-artifact-cache).
 
 ## HTTP and browser interfaces
 
@@ -135,6 +205,15 @@ artifact/experiment operations reuse public APIs. No additional service, fronten
 runtime, database or executor is introduced. The UI is independent of the
 upstream KFP frontend and does not imply full KFP backend parity.
 
+Unreleased graph presentation renders one native DAG level at a time. Subpipeline
+nodes expose their exact task details and open into child graphs; breadcrumbs,
+deep links and browser history preserve scope. An explicit All tasks view retains
+the full dependency/containment projection. Both views are bounded to 1,000 visible
+nodes. Execution, persisted task identity, attempts, reuse and lineage are
+unchanged. This specializes the existing nested-graph UI contract; it introduces
+no specification baseline or API change. See the
+[active amendment](workflows/history/2026-10-22__1X7CB4__collapsed-pipeline-graphs.md).
+
 Static shells contain no project data and can load before authentication. API
 bearer tokens remain in page memory; protected records still require auth.
 Same-origin mutation checks, text-only rendering and a restrictive script CSP
@@ -168,7 +247,7 @@ and remain usable without the source tree or Git. Structural specification check
 do not establish runtime conformance.
 
 Execution qualification remains narrower than the full release target:
-native macOS/Windows execution, ARM64/native MLMD builds, intended Docker Desktop variants,
+native macOS/Windows execution, ARM64 runtime builds, intended Docker Desktop variants,
 exhaustive crash injection and full KFP parity need separate evidence. Distributed
 network-filesystem locking, hostile multitenancy, GPUs, Kubernetes plugins,
 parallel loops, recurring jobs and artifact payload previews/downloads remain
@@ -245,11 +324,11 @@ path on native cache hits; changed inputs select another component directory.
 Publication remains immutable and never provides its own execution cache.
 Qualification fixtures derive component versions from script/wrapper/runtime build inputs.
 
-Both artifact-root namespaces are now inside `.dockflow`: `dockflow-artifacts`
-for publication claims/manifests/staging, and `dockflow-pipelines` for managed
-recovery descriptors/imports. They are separate from project-root control state.
-New managed descriptors use kfp-v2; earlier layouts remain readable/restorable.
-Legacy publisher control roots must be explicitly reset or replaced. Selected
+Publication claims/manifests and recovery descriptors reside in SQL. Artifact
+storage retains the store identity, payloads and disposable staging. Administrative
+imports and coordinated cache payloads retain their reserved `.dockflow` locations.
+Managed descriptors use the explicit `kfp-v2` or `cache-v1` layout; earlier layouts
+and database formats require fresh state. Selected
 specification versions are recorded in the [composition](../specs/composition.yaml);
 shared application VERSION remains a separate authority.
 
@@ -295,3 +374,46 @@ Application/implementation tags bind the exact candidate commit; an unchanged
 specification tag must be ancestral with an identical specification tree.
 See CONTRIBUTING for release operations and workflow records for verification
 and approval state.
+
+
+## Concurrent PostgreSQL execution
+
+`state.backend` selects SQLite single ownership or PostgreSQL per-Run coordination.
+`run_ownership.py` implements database-time leases, renewals and fenced authority;
+`state_database.py` checks authority at transaction entry and before commitment.
+A durable project counter allocates journal sequences. Admission, idempotency,
+queue limits, catalog changes and cancellation use short project transactions.
+Direct admission reserves its Run atomically so background services cannot claim
+it first. Each coordinator retains one active Run and tasks remain sequential.
+
+Scheduler recovery skips live remote Runs and handles only abandoned claims,
+verifying and retiring their original Docker handles. A failed recovery leaves
+that Run unresolved without globally blocking unrelated PostgreSQL execution.
+Maintenance gates exclude other coordinators and independent cache transactions.
+Portable backup retains project counters but excludes operational Run claims.
+Committed cache observations preserve immutable producer facts without changing
+another Run owner's live execution records.
+
+The [concurrent execution receipt](validation/concurrent-postgresql-runs.md)
+records current tests and deployment qualification. Earlier state/cache/unified
+receipts retain their dated measurements; their PostgreSQL single-owner model
+is superseded by this feature. No migration or application release is implied.
+
+
+## Conformance corrections
+
+The [conformance correction record](validation/conformance-corrections.md) maps
+all eight review findings and the design recommendations to current contracts,
+implementation and qualification. Scheduler supervision now revokes admission on
+failure. Named definitions follow the catalog pointer. Versioned immutable
+execution choices bind to current deployment access, and shared lifecycle
+transitions complete recovery Tasks while preserving committed output sets.
+
+Selective repositories push resource paging/filtering, queue eligibility,
+idempotency/catalog/signature lookups and log ranges into SQL on both backends.
+Physical schema 5 retains canonical JSON text, normalized input/log projections
+and query indexes. Portable backups identify `dockflow-sql-v4`. Checks compare
+all derived projections and the authoritative counter; rebuild preserves aliases,
+publication records and cache fences. Fresh state is required; no migration is
+provided. Compiled-source capture and filesystem publication now enforce their
+bounded/stable and ancestor-durability boundaries.

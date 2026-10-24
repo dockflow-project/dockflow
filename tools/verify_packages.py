@@ -130,6 +130,20 @@ def wheel_check(path: Path, version: str) -> dict:
             raise RuntimeError(
                 "Pipelines wheel does not require the exact shared CLI version"
             )
+        if (
+            metadata["Name"] in {"dockflow-pipelines", "dockflow-artifacts"}
+            and f"dockflow-database=={version}" not in dependencies
+        ):
+            raise RuntimeError(
+                "Wheel does not require the exact shared database version"
+            )
+        if (
+            metadata["Name"] == "dockflow-pipelines"
+            and f"dockflow-artifacts=={version}" not in dependencies
+        ):
+            raise RuntimeError(
+                "Pipelines wheel does not require the exact Artifacts version"
+            )
         if metadata["Name"] == "dockflow-cli" and not any(
             name.endswith(".dist-info/entry_points.txt") for name in names
         ):
@@ -205,7 +219,7 @@ def main() -> int:
         )
     wheels = [
         out / f"dockflow_{name}-{version}-py3-none-any.whl"
-        for name in ("cli", "pipelines", "artifacts")
+        for name in ("cli", "pipelines", "artifacts", "database")
     ]
     receipts = [wheel_check(path, version) for path in wheels]
     with tempfile.TemporaryDirectory(prefix="dockflow-package-check-") as directory:
@@ -217,6 +231,7 @@ def main() -> int:
             and key not in {"PYTHONPATH", "VIRTUAL_ENV"}
         }
         for label, packages in (
+            ("database", wheels[3:]),
             ("cli", wheels[:1]),
             ("artifacts", wheels[2:]),
             ("combined", wheels),
@@ -233,6 +248,17 @@ def main() -> int:
                 temporary,
                 env,
             )
+            if label == "database":
+                run(
+                    [
+                        python,
+                        "-c",
+                        "import importlib.util; import dockflow_database; assert all(importlib.util.find_spec(name) is None for name in ('dockflow_cli','dockflow_pipelines','dockflow_artifacts','psycopg'))",
+                    ],
+                    temporary,
+                    env,
+                )
+                continue
             if label == "artifacts":
                 run(
                     [
@@ -260,11 +286,11 @@ def main() -> int:
             if label == "combined":
                 run([str(console), "pipelines", "--help"], temporary, env)
                 run([str(console), "pipelines", "run", "--help"], temporary, env)
-                code = "import importlib.util; assert all(importlib.util.find_spec(name) is None for name in ('kfp','docker','ml_metadata','fastapi','boto3')); import importlib.metadata as m; assert any(p.name=='pipelines' for p in m.entry_points(group='dockflow_cli.modules'))"
+                code = "import importlib.util; assert all(importlib.util.find_spec(name) is None for name in ('kfp','docker','ml_metadata','fastapi','boto3','psycopg')); import importlib.metadata as m; assert any(p.name=='pipelines' for p in m.entry_points(group='dockflow_cli.modules'))"
             else:
                 code = "import importlib.metadata as m; assert not list(m.entry_points(group='dockflow_cli.modules'))"
             run([python, "-c", code], temporary, env)
-        for name in ("cli", "pipelines", "artifacts"):
+        for name in ("cli", "pipelines", "artifacts", "database"):
             source_archive = out / f"dockflow_{name}-{version}.tar.gz"
             extraction = temporary / f"source-{name}"
             extraction.mkdir()
@@ -311,7 +337,12 @@ def main() -> int:
             "libc": platform.libc_ver(),
         },
         "source": source_provenance(ROOT),
-        "clean_install": ["cli-only", "artifacts-only", "combined-base"],
+        "clean_install": [
+            "database-only",
+            "cli-only",
+            "artifacts-only",
+            "combined-base",
+        ],
         "runtime_extras_absent_from_base": True,
         "artifacts": receipts,
     }

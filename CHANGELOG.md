@@ -1,5 +1,60 @@
 # Changelog
 
+## Unreleased
+
+- Supervise scheduler failures and revoke readiness/admission; resolve named
+  definitions through the catalog's current pointer, including source rollback.
+- Preserve immutable execution choices across coordinators and share terminal
+  lifecycle transitions so crash recovery completes Task and Attempt records.
+- Reject malformed IR scalars and resource limits before admission; capture
+  compiled files with bounded stable reads and reject symlinks/nonregular files.
+- Use indexed selective SQL queries for resource pages, queue dispatch, lookup
+  and log ranges; validate every derived projection and journal counter.
+- Flush filesystem publication ancestors and identity entries, including retries.
+  The new database format and required Run choices need fresh state.
+
+- Replace file-shaped SQL state with domain repositories, numeric journal events
+  and one resource projection. Remove the optional index wrapper, database import
+  facades and historical artifact-layout inference.
+- Rebuild definition sources, output sets, cache observations and log snapshots
+  from accepted events, detect orphaned projections, and retain stable KFP aliases.
+  Integrity reports now use `projections_checked`. The new schema needs fresh state.
+
+- Store artifact publication claims, completion manifests and recovery descriptors
+  in the same SQLite/PostgreSQL database as state and cache. Artifact storage
+  retains payloads and `.dockflow/storage.json`; no bookkeeping sidecars remain.
+- Share database drivers and schema through the new `dockflow-database` library.
+  Standalone Artifacts accepts explicit database/project configuration; remote
+  roots require it. Publication JSON configuration uses schema 2, and receipt
+  manifest addresses now identify SQL records. Existing state needs a fresh start.
+- Include publication records and the full managed payload root in offline backup,
+  validate completed publication checksums, and reject omitted additional roots.
+
+- Preserve SQLite single ownership and add PostgreSQL synchronization across
+  isolated coordinators with fenced Run leases, atomic admission and queue claims,
+  remote cancellation and Run-scoped recovery. Add exclusive maintenance gates
+  and durable journal sequence counters; retain sequential tasks within each Run.
+
+- Use one configured database for execution history and cache coordination on
+  both SQLite and PostgreSQL, through a shared backend abstraction and schema.
+  Remove separate cache connection settings. Portable project backups include
+  all cache namespaces, fencing history, published bytes and store identity.
+
+- Store complete execution history, compiled definitions, logs and query data in
+  local SQLite or external PostgreSQL. Disposable environments can share durable
+  history through the same project/database. File-history migration is intentionally omitted.
+- Add portable SQL state backup/restore, transactional projection rebuild and
+  stable database-backed KFP references; remove the native MLMD dependency.
+
+- Coordinate cacheable task production across Dockflow connections
+  using local SQLite or shared PostgreSQL, renewable fenced claims, immutable
+  complete output sets and durable shared retry budgets.
+- Add cache inspection, conditional invalidation and retry reset to CLI/API.
+- Isolate new cache keys and storage from legacy writers. Legacy automatic
+  results without registry publication are misses; manual historical inputs
+  remain available. Coordinated S3 files are limited to 5 GiB. See
+  [cache configuration](docs/configuration.md#coordinated-artifact-cache).
+
 ## 0.1.1
 
 - Address the eMudhra/emSign CA incident in Python, uv, gRPC, S3 trust defaults,

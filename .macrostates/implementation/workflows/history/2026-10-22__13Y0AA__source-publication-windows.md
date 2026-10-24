@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Integration preparation`
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `bounded`
 - Branch: `feat/initial-implementation`
@@ -67,7 +67,7 @@ finalized implementation baseline exists against which to declare a patch. The
 manual review below records its scope without inventing a baseline or declaring
 a false no-impact implementation change.
 
-## Closure
+## Definer-confirmed closure
 
 The Definer explicitly approved closure and submission on 2026-10-22, followed by
 the already approved publication after hosted checks pass. All 36 workflows are

@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Specification update` (editorial correction)
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `small`
 - Branch: `feat/initial-implementation` (unborn)
@@ -35,7 +35,7 @@ this document-only correction. Macrostates composition/integrity checks and appl
 Local package metadata, composition and entrypoint agree on 0.3.1. The standing
 release requirements are unchanged.
 
-## Closure
+## Definer-confirmed closure
 
 On 2026-10-21, the Definer explicitly authorized closure of the complete existing
 open-workflow set. Review confirmed that this workflow's recorded scope was

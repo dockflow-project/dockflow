@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Implementation amendment` (publication hygiene)
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `medium`
 - Branch: `feat/initial-implementation` (unborn)
@@ -71,7 +71,7 @@ not a formal proof of anonymity or absence of all secrets.
 The cleanup did not change earlier workflow states, project baselines or release
 permissions. No integration or publication was performed.
 
-## Closure
+## Definer-confirmed closure
 
 On 2026-10-21, the Definer explicitly authorized closure of the complete existing
 open-workflow set. Review confirmed that this workflow's recorded scope was

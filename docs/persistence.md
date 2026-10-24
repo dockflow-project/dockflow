@@ -2,162 +2,185 @@
 
 [Documentation index](README.md) · [Routine operations](operations.md)
 
-This guide explains what must be preserved, how one owner protects a shared
-project, and how to recover without changing accepted history. For ordinary
-start/stop, log inspection and cancellation, use the operations guide.
-
 ## What is durable
 
-Dockflow keeps accepted immutable mutations in `STATE/records/`, exact compiled
-source snapshots in `STATE/definitions/`, and retained logs in each Run/attempt.
-Current resource JSON files and the MLMD SQLite database are projections of that
-history. Public UUIDs and original producing attempts survive index rebuilding.
-Copying SQLite alone does not back up a project.
+Dockflow stores accepted mutations, Runs/Tasks/Attempts, exact compiled sources,
+logs, catalog, queue, idempotency data, pagination key and artifact provenance in
+a SQL database. SQLite is the default at `.dockflow/state.sqlite`; PostgreSQL is
+the external backend. Current resources have one mandatory SQL query projection, committed with each
+accepted mutation and can be rebuilt from the database journal. There is no
+required JSON history tree or MLMD index. Publication claims, completion manifests
+and artifact recovery descriptors also live in that same database. Artifact contents live separately in
+filesystem or S3-compatible managed storage, alongside `.dockflow/storage.json`
+which identifies the store. No publication bookkeeping sidecars are required.
 
-An attempt's complete `output-set.json` marker commits its outputs. Staged
-descriptors or uploads without that marker cannot be consumed or reused. Startup
-replays a committed marker after a crash, without executing the computation again.
-The service also reconciles recorded Docker containers before dispatching work.
-An unreachable daemon leaves the operation unresolved until it can be inspected.
+Preserve the single database and managed artifacts to retain history and cache
+coordination across days, restarts and disposable execution environments. Workspaces are disposable; published data,
+definitions, logs and history have no automatic expiry. External reference
+contents remain their source owner's responsibility.
 
-## Shared state and its owner
+This is a fresh database format. Old file-authoritative state is rejected; no
+migration/import of that history is provided. Select fresh state locations.
 
-A direct local operation and an API service can use the same configured project
-state on a supported local filesystem. Each mutating local operation acquires an
-exclusive OS lock on `STATE/owner.lock`; the service holds that lock for its
-lifetime. A competing writer fails before initializing or changing project
-records or the MLMD index. Use the explicit service endpoint for mutations while
-that service is running, or stop it and reconcile any uncertain execution before
-using direct local operations.
+## Ownership and isolated environments
 
-The lock file records a versioned diagnostic owner object: a random `owner_id`
-for that ownership acquisition, `project_id`, `hostname`, `pid`, `mode` (`local`
-or `service`), `acquired_at` and the service `endpoint` when supplied. The hostname
-labels the owner's execution environment, which may be a container; it is not a
-globally unique physical-machine identity. The owner ID distinguishes instances
-even when hostnames or PIDs repeat. Contention errors include the state path and
-available owner details so a user can identify the owner and its explicit API
-endpoint. The CLI never automatically connects using lock-file contents.
+SQLite has one coordinator, active Run and task attempt per project database.
+A competing writer is refused; use the existing service endpoint or stop it first.
+PostgreSQL permits multiple coordinators sharing a project, with one fenced owner
+per Run. Each coordinator executes one Run at a time; different coordinators may
+execute different Runs concurrently. Readers inspect committed snapshots.
 
-The OS lock establishes exclusivity. File contents are diagnostic, not a lease:
-old metadata can remain after exit or a crash, and acquisition succeeds when
-the OS has released the lock. Never remove or replace `owner.lock` to clear a
-busy condition: that can create a second lock inode while the first remains
-owned. PID checks, hostname comparisons and timestamps cannot authorize takeover.
-Malformed or older diagnostic contents do not defeat a live lock. Locking or
-filesystem failures stop the operation rather than allowing an unlocked writer.
+SQLite requires a local filesystem with working locks and durability, including
+same-host bind-mounted volumes. Its stable database inode is also the POSIX
+ownership lock; Windows uses a small operational lock companion. Never replace
+an operational database to clear ownership. SQLite WAL/SHM files are normal
+operational companions. Sharing SQLite across hosts/network filesystems is
+unsupported.
 
-Releasing the coordinator's lock does not establish that its Docker tasks have
-stopped. Before admitting a new direct Run, Dockflow rejects retained queued or
-active Runs and unresolved execution records. Start the service to reconcile
-lost execution and drain or explicitly cancel accepted queued work before
-switching back to direct execution. A free lock never bypasses these recovery
-checks or reruns lost computation automatically.
-Successful service reconciliation clears execution uncertainty after confirming
-the recorded tasks have stopped, while preserving existing terminal Run outcomes.
-Failed confirmation leaves the recovery hold in place.
+PostgreSQL coordinators hold shared maintenance gates and use short project
+transactions for journal sequences, admission/idempotency, catalog updates and
+cancellation. Run leases use the database clock and renew independently of task
+execution. Every execution mutation checks the current owner, fence and deadline;
+an expired worker cannot write after another process takes over. State sessions
+never reconnect transparently after an uncertain commit.
 
-Same-host bind mounts of the same underlying state directory share the same
-lock. All cooperating writers must use that directory, compatible project IDs,
-paths and permissions. Copying the directory creates a different state store and
-lock. Arbitrary network-filesystem SQLite sharing and cross-machine distributed
-ownership remain outside the supported profile; owner identifiers alone do not
-provide distributed fencing or locking guarantees.
+A fresh environment sees the same history and cache through its stable project
+ID, PostgreSQL database and managed artifact store. Local staging directories may
+differ. Direct submissions reserve their Run atomically; services claim different
+queued Runs. Cancellation submitted to any coordinator reaches the owning worker
+through persisted stop intent.
+
+Recovery acts only on abandoned Runs, leaving live remote Runs alone. A free lock
+or expired lease does not prove Docker tasks stopped. Reconcile recorded handles
+against the original daemon and retire them before declaring the Run stopped;
+unknown or unreachable daemons leave that Run unresolved. Unrelated PostgreSQL
+Runs can continue. SQLite retains its project-wide recovery/admission guard.
+
+Offline restore, projection rebuild and destructive cleanup require exclusive
+maintenance access; stop other coordinators first. Cache transactions respect that
+same gate. Run claims are operational and excluded from portable backups; the
+journal sequence counter is retained. Older database schemas fail explicitly;
+no schema migration is included in this fresh-state implementation.
+
+## Accepted execution choices
+
+Every accepted Run carries a versioned `execution_choices` value. Timeouts,
+shutdown grace, CPU/memory caps, image pull policy, reuse defaults, task policies
+and cache policy remain fixed after acceptance. Editing a configuration or policy
+file affects future submissions. A different coordinator uses the accepted
+choices and its own database/provider access, credentials and local work paths.
+
+Task mounts record logical targets and access modes. Another coordinator must
+provide matching targets/modes from its own configured sources. Extra local
+mounts are not granted to an older Run. A stricter current resource cap or missing
+mount fails the Run explicitly rather than silently changing its accepted choices.
+
+Resource lists, queue eligibility, name/idempotency lookups and log ranges use
+selective SQL queries and indexes. Public pages fetch bounded rows. Input-artifact
+relationships and log entries are derived projections; full integrity checks and
+offline replay/export intentionally inspect complete accepted history.
 
 ## Check and rebuild
 
-Run these commands from an environment with the `runtime` extra installed.
-Select the consuming project's configuration explicitly:
-
 ```bash
-dockflow pipelines --config /path/to/.dockflow-pipelines.toml metadata check
-dockflow pipelines --config /path/to/.dockflow-pipelines.toml metadata check --verify-contents
-dockflow pipelines --config /path/to/.dockflow-pipelines.toml metadata rebuild
+dockflow pipelines --config PROJECT_CONFIG metadata check
+dockflow pipelines --config PROJECT_CONFIG metadata check --verify-contents
+dockflow pipelines --config PROJECT_CONFIG metadata rebuild
+# Stop the service and resolve uncertain execution before applying:
+dockflow pipelines --config PROJECT_CONFIG metadata rebuild --apply
 ```
 
-The default check distinguishes unverified bytes from verified contents. A
-historically successful attempt remains successful when its payload is later
-missing or corrupt; its unavailable outputs cannot be reused.
-
-For an index rebuild, stop the API first and resolve any uncertain task
-containers. Then run:
-
-```bash
-dockflow pipelines --config /path/to/.dockflow-pipelines.toml metadata rebuild --apply
-```
-
-This command acquires exclusive ownership, uses SQLite's backup API, validates
-accepted history, builds another MLMD index, and switches only after successful
-projection. A live HTTP service rejects applying its own index replacement.
-Rebuilding cannot recreate lost authoritative records, deleted payloads or missing
-logs from their filenames.
+Checks report journal/projection consistency and artifact availability through
+`projections_checked`. They compare all derived rows, including missing, changed
+and orphaned cache observations, sources, output sets, log snapshots, input
+relationships and log entries. A sequence counter ahead of accepted history is
+an authoritative inconsistency; rebuild refuses to hide that loss. Inspection needs no index attachment or state initialization. Content
+hashing is explicit. Rebuild validates the journal, then replaces projections in
+one SQL transaction while preserving public IDs and KFP numeric aliases. A live
+service refuses apply with OFFLINE_REQUIRED. Rebuild cannot recover a lost or
+physically corrupt authoritative database, deleted payloads or missing logs.
+Restore a verified backup for those losses.
 
 ## Backup and restore
 
-Stop the API and leave the configured artifact provider available. From the
-Dockflow checkout, activate an environment with the `runtime` extra (and `s3`
-for S3 storage), using the same project environment and provider credentials:
+Stop admission and make the project idle before backup. From the checkout:
 
 ```bash
-python tools/backup.py backup \
-  --config /path/to/.dockflow-pipelines.toml /path/outside/project/backup-name
-python tools/backup.py verify \
-  /path/outside/project/backup-name
+python tools/backup.py backup --config PROJECT_CONFIG backups/dockflow-snapshot
+python tools/backup.py verify backups/dockflow-snapshot
+python tools/backup.py restore --config PROJECT_CONFIG backups/dockflow-snapshot
+python tools/backup.py restore --config PROJECT_CONFIG --apply backups/dockflow-snapshot
 ```
 
-The backup captures a consistent accepted-sequence boundary, control records,
-compiled snapshots, logs, an SQLite online-backup snapshot while the owner is
-idle, and managed artifact bytes. S3-compatible managed contents are downloaded
-into the backup. It records a canonical inventory and content hashes. External
-reference payloads remain their owners' responsibility and are excluded.
+Use a new backup directory outside state, database and managed artifact roots.
+The tool exports one project's journal, source bytes, logs, projections,
+numeric aliases and publication records into portable `state.sqlite`, and copies all managed-root
+contents with a hashed inventory. Filesystem and S3 snapshots preserve the same
+storage-relative layout. Standalone completed publications are checked against
+their SQL manifests before a backup succeeds. It supports SQLite and PostgreSQL;
+no DSN/credential values or owner diagnostics are added to backup configuration.
+Keep provider settings and credential references separately. Keep publishers idle
+during backup. Projects with additional publication roots require a coordinated
+offline provider snapshot covering every root; this tool refuses to omit them.
 
-Keep the original configuration, provider endpoint settings and credential
-references separately. Restore supports the original project ID and configured
-state, metadata and artifact locations; changing durable URIs is a migration.
-The restore target state, metadata and managed artifact locations must be empty.
-For filesystem stores, backup and restore use the resolved `artifacts.managed_root`
-directory, including pipeline/run/task output directories and hidden `.dockflow/`
-recovery metadata. S3 backup bundles are restored to each descriptor's original
-object keys; both current and historical layouts retain their URIs.
-The backup's internal `managed/` section does not add a child to the
-live store. Older backups that recorded only `artifacts.root` remain supported.
-Preserve any existing data separately first. Preview and apply with:
+Restore requires an empty target project and empty managed artifact locations.
+Local state/work locations may differ; durable artifact locations must match.
+The database import is atomic and preserves original IDs and the pagination key.
+Inspect verification and external-reference availability before restarting work.
+An interrupted artifact copy can leave partial storage; preserve/clear that
+partial restore explicitly before retrying. The tool never overwrites an
+existing project or populated managed store.
 
-```bash
-python tools/backup.py restore \
-  --config /path/to/.dockflow-pipelines.toml /path/outside/project/backup-name
-python tools/backup.py restore \
-  --config /path/to/.dockflow-pipelines.toml --apply /path/outside/project/backup-name
-```
-
-Restore verifies the backup, takes ownership, restores records/index/managed
-contents, reconciles MLMD and hashes artifact contents. Inspect the reported
-availability of external references before restarting the API. If copying is
-interrupted, preserve the partial target for diagnosis, prepare empty targets
-again and repeat from the verified backup. No existing contents are overwritten
-by restore.
-
-For a Compose deployment, run the backup tool with the service's configuration,
-state and execution volume mounts and the same provider network/credentials.
-Alternatively snapshot the stopped `dockflow-state` volume and the stopped
-`artifacts` provider volume together, plus any configured external inputs and
-deployment configuration. Registry/engine volumes preserve prepared images and
-container-reconciliation evidence; retain them when unresolved execution exists.
-The `artifacts` volume includes managed imports and generated outputs (such as
-models and evaluation reports), as well as SeaweedFS/MinIO's provider metadata.
-`dockflow-execution` holds staged/workspace files; `docker-state` and
-`docker-containerd` hold the inner engine's persistent state. Registry image data
-remains in `registry-data`, and the shared Unix socket remains in `docker-socket`.
-Compose normally prefixes these labels with its project name. When migrating
-older volume labels, copy only while the owner/provider/engine are stopped,
-preserve permissions/content, and retain original volumes until verification.
-Do not copy a live SQLite main file without its WAL/journal state. After restoring
-volumes, run `metadata check --verify-contents` before admitting new work.
+Use the SQLite backup API or the database provider's snapshot tooling for native
+backups. Do not copy a live SQLite main file without accounting for its WAL.
+Persistent Compose state/provider volumes can also be snapshotted together while
+stopped. Do not delete those volumes when replacing disposable compute.
 
 ## Cleanup
 
-`dockflow pipelines ... clean` previews disposable work for terminal Runs;
-`clean --apply` rechecks idle ownership before removing it. Neither command
-expires committed artifacts, control history, definitions, logs or external
-references. Artifact pins survive restart and index rebuilding. Retention expiry
-and migrations to an external SQL backend are outside this development profile.
+`dockflow pipelines ... clean` previews terminal Run workspaces;
+`clean --apply` rechecks idle ownership and removes only disposable execution
+work. Neither operation expires the database journal, definitions, logs, pins or
+published artifacts. Database migration/schema upgrade is a separate operation;
+unknown schema versions fail closed.
+
+## Cache registry authority and backup
+
+Cache registry tables share the configured state database and one schema version.
+The execution journal and cache remain distinct commit boundaries, with different
+ownership and retry rules, but there is no second database to configure or back up.
+The `dockflow-database` library supplies the shared SQLite/PostgreSQL adapter
+for history, cache and publication records.
+
+The project backup includes every cache namespace, its entries, attempts, retry
+budgets, fences and published manifests in the same consistent SQL snapshot as
+history, logs and definitions. It also collects cache-only published bytes and
+the artifact store identity. Other projects and operational owner diagnostics
+are excluded. Native provider backups may instead preserve the whole database
+and matching artifact store.
+
+Stop all workers before restoring an older snapshot. Use a fresh cache namespace
+before resuming dispatch so pre-restore producer tokens cannot regain authority.
+A project owner does not prove old workers or containers have terminated. Restore
+requires an empty project and artifact target, validates cache contents and store
+identity, and can target either database backend. Journal replay alone cannot
+reconstruct lost fences, retry budgets or bytes.
+
+
+During concurrent reuse, a committed cache result may become visible before its
+producer finishes journal recording. Consumers retain a separate immutable cache
+observation and leave the live producer's lifecycle records to its owner. Those
+observations are included in project history, rebuild and backup.
+
+## Domain identities
+
+Journal events use numeric sequence keys. Resources use collection/public IDs;
+definition source bytes use definition IDs; output sets and cache observations
+use attempt IDs; retained log snapshots use attempt ID and stream. These are SQL
+domain records with no synthetic filenames or directory hierarchy. Project
+identity, pagination and reconciliation metadata use named SQL settings.
+
+This format replaces the earlier file-shaped SQL records. Use fresh state;
+no data migration is included. Backup snapshots use the current SQL format and
+retain all domain records. Supported bootstrap configuration and artifact payload
+locations keep their existing meaning.

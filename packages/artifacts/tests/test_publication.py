@@ -72,7 +72,10 @@ def publisher(request, tmp_path, monkeypatch):
 
     client = MemoryS3()
     monkeypatch.setattr(boto3, "client", lambda *args, **kwargs: client)
-    return Publisher("s3://artifacts/custom")
+    return Publisher(
+        "s3://artifacts/custom",
+        database={"backend": "sqlite", "database": str(tmp_path / "state.sqlite")},
+    )
 
 
 def test_file_receipt_and_identical_retry(publisher, tmp_path):
@@ -85,7 +88,7 @@ def test_file_receipt_and_identical_retry(publisher, tmp_path):
         metadata={"rows": 50},
     )
     assert first.uri.endswith("/models/version-1/model.json")
-    assert "/.dockflow/dockflow-artifacts/manifests/" in first.manifest_uri
+    assert first.manifest_uri.startswith("dockflow://default/publications/")
     assert first.kind == "file"
     assert first.artifact_type == "system.Model"
     assert first.metadata == {"rows": 50}
@@ -109,12 +112,24 @@ def test_s3_construction_defers_client_and_credential_discovery(
     monkeypatch.setattr(boto3, "client", client_factory)
     config = tmp_path / "publication.json"
     config.write_text(
-        json.dumps({"schema_version": 1, "root": "s3://artifacts/custom"})
+        json.dumps(
+            {
+                "schema_version": 2,
+                "root": "s3://artifacts/custom",
+                "database": {
+                    "backend": "sqlite",
+                    "database": str(tmp_path / "state.sqlite"),
+                },
+            }
+        )
     )
     publisher = (
         Publisher.from_config(config)
         if from_config
-        else Publisher("s3://artifacts/custom")
+        else Publisher(
+            "s3://artifacts/custom",
+            database={"backend": "sqlite", "database": str(tmp_path / "state.sqlite")},
+        )
     )
     client_factory.assert_not_called()
     source = tmp_path / "model.json"
@@ -124,9 +139,12 @@ def test_s3_construction_defers_client_and_credential_discovery(
     client_factory.assert_called_once()
 
 
-def test_missing_s3_extra_is_reported_at_first_storage_operation(monkeypatch):
+def test_missing_s3_extra_is_reported_at_first_storage_operation(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, "boto3", None)
-    publisher = Publisher("s3://artifacts/custom")
+    publisher = Publisher(
+        "s3://artifacts/custom",
+        database={"backend": "sqlite", "database": str(tmp_path / "state.sqlite")},
+    )
     with pytest.raises(ArtifactError, match=r"Install dockflow-artifacts\[s3\]"):
         publisher.verify("model.json")
 
@@ -183,7 +201,7 @@ def test_interrupted_upload_resumes_identical_contents(
         return put(key, body)
 
     monkeypatch.setattr(publisher._store, "put", interrupt)
-    with pytest.raises(OSError):
+    with pytest.raises(ArtifactError, match="durability"):
         publisher.publish(source, "model/v1")
     with pytest.raises(IntegrityError, match="completion"):
         publisher.verify("model/v1")
@@ -315,7 +333,7 @@ def test_overlap_empty_directory_and_nonfinite_metadata(tmp_path):
 def test_explicit_config_and_template(tmp_path):
     path = tmp_path / "config.json"
     path.write_text(
-        json.dumps({"schema_version": 1, "root": str(tmp_path / "published")})
+        json.dumps({"schema_version": 2, "root": str(tmp_path / "published")})
     )
     publisher = Publisher.from_config(path)
     assert not (tmp_path / "published").exists()
@@ -343,7 +361,8 @@ def test_import_has_no_optional_dependency_side_effects():
             """
 import sys
 import dockflow_artifacts
-dockflow_artifacts.Publisher('s3://example-artifacts/published')
+from pathlib import Path
+dockflow_artifacts.Publisher('s3://example-artifacts/published', database={'backend':'sqlite', 'database': str(Path.cwd() / 'state.sqlite')})
 assert 'boto3' not in sys.modules
 assert 'kfp' not in sys.modules
 assert 'dockflow_pipelines' not in sys.modules
@@ -465,3 +484,39 @@ def test_parameter_changes_publish_separately_without_overwrite(publisher, tmp_p
     source.write_text("nondeterministic")
     with pytest.raises(ConflictError):
         publisher.publish(source, paths[0])
+
+
+def test_explicit_database_configuration_resolves_from_config(tmp_path):
+    config = tmp_path / "publication.json"
+    root = tmp_path / "published"
+    config.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "root": str(root),
+                "project_id": "demo",
+                "database": {"backend": "sqlite", "database": "state.sqlite"},
+            }
+        )
+    )
+    publisher = Publisher.from_config(config)
+    assert publisher.database.options["database"] == str(tmp_path / "state.sqlite")
+    assert not (tmp_path / "state.sqlite").exists()
+    source = tmp_path / "source"
+    source.write_text("model")
+    assert publisher.publish(source, "model").manifest_uri.startswith(
+        "dockflow://demo/publications/"
+    )
+
+
+def test_remote_storage_requires_explicit_database():
+    with pytest.raises(ArtifactError, match="explicit database"):
+        Publisher("s3://artifacts/published")
+
+
+def test_sqlite_database_cannot_be_inside_artifact_root(tmp_path):
+    with pytest.raises(ArtifactError, match="outside the artifact root"):
+        Publisher(
+            tmp_path,
+            database={"backend": "sqlite", "database": str(tmp_path / "state.sqlite")},
+        )

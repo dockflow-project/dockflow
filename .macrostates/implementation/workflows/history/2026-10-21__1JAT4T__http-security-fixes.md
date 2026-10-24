@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Implementation amendment` (security corrections)
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `medium`
 - Branch: `feat/initial-implementation` (unborn)
@@ -99,7 +99,7 @@ plain pip runtime installs do not inherit uv's override. Full S3/Compose provide
 and OS-image vulnerability scans are outside this correction. No source was
 merged, published or tagged; unrelated readiness findings remain separate.
 
-## Closure
+## Definer-confirmed closure
 
 On 2026-10-21, the Definer explicitly authorized closure of the complete existing
 open-workflow set. Review confirmed that this workflow's recorded scope was

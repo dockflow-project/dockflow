@@ -58,6 +58,7 @@ implementation, not merely to fill this initial specification.
 | --- | --- |
 | Shared CLI | PyPI distribution `dockflow-cli`. |
 | Pipelines | PyPI distribution `dockflow-pipelines`. |
+| Database library | PyPI distribution `dockflow-database`. |
 | Artifacts | PyPI distribution `dockflow-artifacts`. |
 | Dockflow Pipelines service image | `ghcr.io/dockflow-project/dockflow-pipelines`, tagged with the same application version and bound to an immutable digest. |
 | Versioned application source and release notes | `dockflow-project/dockflow`, with one shared `v<version>` tag and release record. |
@@ -91,9 +92,9 @@ Before publishing versioned distributions or service images:
 4. Build candidate artifacts once, record their hashes/digests and build
    toolchain, and verify those exact artifacts. Obtain publication approval for
    that candidate; changed source or rebuilt artifacts require reassessment.
-5. Publish the already verified CLI wheel/sdist before Pipelines, publish the
+5. Publish the already verified Database and CLI wheels/sdists before Pipelines, publish the
    Pipelines and Artifacts wheels/sdists, then the matching service image and
-   shared release record. Account for all three distributions and the image when
+   shared release record. Account for all four distributions and the image when
    recording outcomes or recovering a partial publication. Verify the resulting
    identities; do not rebuild different artifacts after approval.
 

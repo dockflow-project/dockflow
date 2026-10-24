@@ -12,7 +12,7 @@ dockflow pipelines --endpoint http://127.0.0.1:8080 capabilities
 ```
 
 The initial profile is `dockflow-kfp-2.17-v1`: KFP SDK 2.17, compiled IR schema
-2.1.0, KFP DockerRunner, MLMD/SQLite and filesystem or S3-compatible artifacts.
+2.1.0, KFP DockerRunner, SQLite/PostgreSQL and filesystem or S3-compatible artifacts.
 SDK version, IR schema and HTTP backend API version are separate identities.
 The current [qualification record](../.macrostates/implementation/main.md)
 describes tested combinations and remaining platform gaps.
@@ -61,18 +61,22 @@ upstream UI's larger backend surface.
 
 ## Runtime and deployment boundaries
 
-One project has one coordinator, at most one active Run, and serial tasks.
+SQLite has one coordinator/Run per project and serial tasks. PostgreSQL supports
+multiple coordinators on isolated hosts, one active Run per coordinator, and
+serial tasks within each Run.
 The persistent service queues additional Runs. SQLite is part of control state;
 there is no external database or Kubernetes requirement. Same-host filesystem
 ownership is enforced by an OS lock; arbitrary network-filesystem SQLite sharing
-and distributed fencing are outside this profile.
+is unsupported. PostgreSQL state uses shared maintenance sessions and fenced per-Run ownership and
+preserves complete history without local history mounts.
 
 The intended CLI platform range and actual runtime qualification are distinct.
 The reference execution environment is Linux x86-64 with Python 3.12/3.13;
 the service image uses Python 3.13. Native ARM64 execution, macOS/Windows
 runtime combinations and Docker Desktop variants require their own evidence.
 Configured CI jobs and successful cross-builds do not provide that evidence.
-MLMD availability further limits execution environments; the remote client
-does not need MLMD. See the qualification record for tested combinations.
+SQLite state needs no native metadata SDK. PostgreSQL requires its optional
+driver. See the qualification record for tested combinations.
 Docker images execute trusted user code; this profile is not a multi-tenant
-sandbox. External SQL metadata backends are not part of the qualified release.
+sandbox. Database-backed execution-state qualification is recorded separately from
+application release acceptance.

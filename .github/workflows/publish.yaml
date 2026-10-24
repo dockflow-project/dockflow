@@ -77,17 +77,42 @@ jobs:
           packages-dir: candidate/packages/cli/
           skip-existing: true
 
-  publish-libraries:
-    needs: publish-cli
+  publish-database:
+    needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        package: [pipelines, artifacts]
     environment:
-      name: pypi-${{ matrix.package }}
-      url: https://pypi.org/project/dockflow-${{ matrix.package }}/
+      name: pypi-database
+      url: https://pypi.org/project/dockflow-database/
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dockflow-release-${{ inputs.candidate_run_id }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - run: python tools/release.py verify --directory candidate --sha256 "$MANIFEST_SHA256" --commit "$GITHUB_SHA"
+      - run: python tools/release.py pypi --directory candidate
+      - name: Publish Database with upstream Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: candidate/packages/database/
+          skip-existing: true
+
+  publish-artifacts:
+    needs: [publish-cli, publish-database]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: pypi-artifacts
+      url: https://pypi.org/project/dockflow-artifacts/
     permissions:
       contents: read
       actions: read
@@ -107,7 +132,36 @@ jobs:
       - name: Publish library with upstream Trusted Publishing
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
-          packages-dir: candidate/packages/${{ matrix.package }}/
+          packages-dir: candidate/packages/artifacts/
+          skip-existing: true
+
+  publish-libraries:
+    needs: publish-artifacts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: pypi-pipelines
+      url: https://pypi.org/project/dockflow-pipelines/
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dockflow-release-${{ inputs.candidate_run_id }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - run: python tools/release.py verify --directory candidate --sha256 "$MANIFEST_SHA256" --commit "$GITHUB_SHA"
+      - run: python tools/release.py pypi --directory candidate
+      - name: Publish library with upstream Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: candidate/packages/pipelines/
           skip-existing: true
 
   publish-image-and-record:

@@ -10,8 +10,8 @@ from urllib.request import HTTPSHandler
 from urllib.response import addinfourl
 
 import pytest
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.client import Client
-from dockflow_pipelines.errors import DockflowError
 
 
 @pytest.fixture(autouse=True)

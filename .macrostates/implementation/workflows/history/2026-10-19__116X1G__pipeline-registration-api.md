@@ -2,7 +2,7 @@
 
 - Project phase: `bootstrapping`
 - Workflow type: `Project bootstrapping` (bounded specification/API follow-up)
-- Status: `completed`
+- Status: completed
 - Delivery state: `accepted`
 - Change depth: `large`
 - Branch: `feat/initial-implementation` (unborn; no starting commit)
@@ -35,7 +35,7 @@ This is an anonymized historical summary. Integration fixture identities and
 locations are omitted. Obsolete scratch inputs and raw fixtures were discarded
 during publication cleanup. Historical hashes do not attest to this edited text.
 
-## Closure
+## Definer-confirmed closure
 
 On 2026-10-21, the Definer explicitly authorized closure of the complete existing
 open-workflow set. Review confirmed that this workflow's recorded scope was

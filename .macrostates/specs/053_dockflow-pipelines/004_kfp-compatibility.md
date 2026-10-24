@@ -9,7 +9,7 @@ reject duplicate keys, unsupported tags, non-finite numeric values and ambiguous
 types, and retain original bytes. Validate before stateful acceptance/dispatch.
 
 The initial qualification candidates are KFP SDK 2.17.0 (one 2.17 minor line)
-and MLMD 1.21.0. SDK, backend API and IR schema identities are distinct. Use the
+with SQLite/PostgreSQL execution state. SDK, backend API and IR schema identities are distinct. Use the
 KFP backend 2.17.0 v2beta1 protobuf/OpenAPI definitions for the HTTP subset.
 The expected compiler schema is 2.1.0; admit additional schema/SDK versions only
 through an explicit tested capability update. These selections are candidates,
@@ -56,7 +56,7 @@ limitation; it cannot claim the complete initial target.
 
 Explicitly defer loops/ParallelFor, Collected/artifact lists, ExitHandler,
 arbitrary expressions, Kubernetes platform plugins, PVC provisioning, accelerators,
-distributed workers, OCI modelcar sidecars and overrides of framework-managed
+distributed workers within one Run, OCI modelcar sidecars and overrides of framework-managed
 output artifact URIs/paths. Reject definitions requiring these features.
 External publication through a URI parameter and standard typed importer is
 admitted under the [external publication contract](006_artifacts.md#external-publication-through-parameters-and-importers). Upstream support for a feature does not qualify Dockflow automatically.
@@ -75,6 +75,10 @@ artifacts, manage cancellation and enforce the durable publication boundary
 before dependent tasks proceed. Do not fork KFP or replace its executor solely
 to avoid proving adapter behavior. Unsupported hooks are a qualification failure,
 requiring an implementation/design adjustment before release claims.
+
+Cache coordination between independent serial Dockflow instances follows
+[Cache coordination](014_cache-coordination.md); it does not extend this IR profile
+with distributed task executors.
 
 Default KFP's independent local cache off when Dockflow governs reuse; a native
 cache hit must never bypass lineage/publication checks. Reusing upstream cache
@@ -113,7 +117,7 @@ descriptive metadata may be retained. An unsupported requirement must not become
 an apparently successful relaxed run.
 
 Publish a machine-readable capabilities response containing candidate/qualified
-SDK, IR and backend API versions; Docker/MLMD versions; admitted feature flags;
+SDK, IR and backend API versions; Docker/database versions; admitted feature flags;
 storage/execution/platform support; and limitations. A field is supported only
 after the [acceptance checks](011_acceptance.md) pass for the named combination.
 
@@ -132,3 +136,19 @@ filesystem paths, timestamps and runtime infrastructure may differ.
 
 References document upstream mechanisms, not completed Dockflow tests. Versioned
 source and probes take precedence over assumptions from stale high-level guides.
+
+## Strict scalar validation and source capture
+
+Validate exact boolean/integer types for executable fields, including caching,
+optional inputs, importer reimport and retry count. Validate resource strings
+with field-specific units and finite positive values; invalid zero limits cannot
+erase configured quotas. CPU nanocores and memory bytes must fit a positive
+signed 64-bit Docker limit. Reject conflicting resource aliases and invalid retry
+backoff factors before registration or Run acceptance. Keep this validation pure
+and usable without execution extras.
+
+Capture compiled files through one bounded regular-file reader before parsing.
+Reject symlink ancestry and nonregular sources without blocking on them; check
+open-file identity and observed changes before/after capture. Read at most the
+allowed size plus one byte. Preserve lexical source paths until these checks;
+canonicalization must not hide a source symlink.
