@@ -1,0 +1,33 @@
+schema_version: 1
+id: conformance-corrections
+summary: Correct specification conformance failures and centralize admitted choices, lifecycle transitions and selective repositories.
+origin:
+  commit: "032444d3686f5951cb0b2457e64a023ded502387"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.1"
+impact:
+  specification: major
+  implementation: major
+deliverables:
+  - dockflow-database
+  - dockflow-pipelines
+  - dockflow-artifacts
+requirements:
+  - requirement: Scheduler supervision and current catalog resolution (Pipelines 005/009/A38).
+    implementation: Fail-stop supervision revokes readiness/admission and preserves queued work; named resolution uses the catalog pointer.
+    verification: Inject queue, recovery and process-start failures and verify restart plus A/B/A resolution.
+  - requirement: Immutable accepted choices and shared lifecycle transitions (Pipelines 005/010/A38).
+    implementation: Versioned execution values bind accepted computation settings to current host access; common completion terminalizes abandoned Tasks and preserves committed successes.
+    verification: Changed coordinator policies, explicit deployment refusal, cancellation and crash/output recovery.
+  - requirement: Precise admission and durable source/publication boundaries (Pipelines 004/A38; Artifacts 002/005).
+    implementation: Validate exact scalar types and representable limits; capture stable bounded regular sources; flush file and ancestor identity entries before publication acknowledgement.
+    verification: Malformed IR/configuration, symlink/FIFO/size/mutation cases and injected directory synchronization failures with retries.
+  - requirement: Selective SQL queries and complete projections (Pipelines 007/A38).
+    implementation: Common JSON query expressions and indexes, normalized input/log relations, keyset pages, SQL queue and complete expected-row comparison.
+    verification: Both backends cover bounded public pages, Unicode, signed zero, filters/cursors, counter mismatch, changed/orphan projections, rebuild and backup.
+evidence:
+  - validation/conformance-corrections.md
+gaps: []
+delivery_limits:
+  - Fresh state is required; no migration from prior database/backup or Run formats is provided.
+  - Physical multi-host, power-loss hardware behavior and a specific serverless provider remain unqualified.

@@ -10,16 +10,24 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlsplit
 
-from .errors import DockflowError
+from dockflow_database.database import reject_network_sqlite
+from dockflow_database.errors import DockflowError
+
+from .cache_registry import (
+    CACHE_FIELDS,
+    DEFAULT_CACHE,
+    validate_cache,
+)
 
 DEFAULTS = {
     "project": {"root": "."},
     "definitions": {"pipelines": {}, "components": {}},
-    "state": {"directory": ".dockflow"},
-    "metadata": {"backend": "sqlite"},
+    "state": {"directory": ".dockflow", "backend": "sqlite"},
     "execution": {
         "task_mounts": [],
         "task_parallelism": 1,
+        "run_lease_seconds": 120.0,
+        "run_heartbeat_seconds": 30.0,
         "timeout_seconds": 0,
         "shutdown_grace_seconds": 30,
     },
@@ -33,6 +41,7 @@ DEFAULTS = {
         "allow_insecure_http": False,
     },
     "reuse": {"scope": "global"},
+    "cache": dict(DEFAULT_CACHE),
     "policies": {},
     "client": {"poll_interval_seconds": 1.0, "tls_verify": True},
     "service": {
@@ -45,11 +54,12 @@ DEFAULTS = {
 FIELDS = {
     "project": {"id", "root"},
     "definitions": {"pipelines", "components"},
-    "state": {"directory"},
-    "metadata": {"backend", "directory"},
+    "state": {"directory", "backend", "database", "dsn_env"},
     "execution": {
         "work_directory",
         "task_parallelism",
+        "run_lease_seconds",
+        "run_heartbeat_seconds",
         "timeout_seconds",
         "shutdown_grace_seconds",
         "cpu_limit",
@@ -70,6 +80,7 @@ FIELDS = {
         "allow_insecure_http",
     },
     "reuse": {"scope", "scope_key"},
+    "cache": CACHE_FIELDS,
     "policies": {"file"},
     "client": {
         "endpoint",
@@ -84,8 +95,9 @@ ENV = {
     "ENDPOINT": "client.endpoint",
     "PROJECT_ROOT": "project.root",
     "STATE_DIRECTORY": "state.directory",
-    "METADATA_BACKEND": "metadata.backend",
-    "METADATA_DIRECTORY": "metadata.directory",
+    "STATE_BACKEND": "state.backend",
+    "STATE_DATABASE": "state.database",
+    "STATE_DSN_ENV": "state.dsn_env",
     "WORK_DIRECTORY": "execution.work_directory",
     "TIMEOUT_SECONDS": "execution.timeout_seconds",
     "SHUTDOWN_GRACE_SECONDS": "execution.shutdown_grace_seconds",
@@ -112,8 +124,17 @@ ENV = {
     "CLIENT_TLS_VERIFY": "client.tls_verify",
     "SERVICE_TOKEN_FILE": "service.token_file",
 }
-BOOLS = {"tls_verify", "allow_insecure_http"}
+ENV.update(
+    {
+        "RUN_LEASE_SECONDS": "execution.run_lease_seconds",
+        "RUN_HEARTBEAT_SECONDS": "execution.run_heartbeat_seconds",
+    }
+)
+ENV.update({"CACHE_" + key.upper(): "cache." + key for key in CACHE_FIELDS})
+BOOLS = {"tls_verify", "allow_insecure_http", "shared_filesystem"}
 INTS = {
+    "max_attempts",
+    "infrastructure_attempts",
     "timeout_seconds",
     "shutdown_grace_seconds",
     "memory_limit_bytes",
@@ -121,7 +142,13 @@ INTS = {
     "queue_capacity",
     "request_max_bytes",
 }
-FLOATS = {"cpu_limit", "poll_interval_seconds"}
+FLOATS = {
+    "run_lease_seconds",
+    "run_heartbeat_seconds",
+    "cpu_limit",
+    "poll_interval_seconds",
+    *(key for key in DEFAULT_CACHE if key.endswith("_seconds")),
+}
 
 
 def validate_endpoint(value: str) -> str:
@@ -150,7 +177,6 @@ class Settings:
     project_id: str
     root: Path
     state: Path
-    metadata_directory: Path
     work_directory: Path
     definitions: dict
     execution: dict
@@ -161,6 +187,8 @@ class Settings:
     client: dict
     service: dict
     sources: dict
+    cache: dict
+    state_storage: dict
 
     def effective(self) -> dict:
         def convert(value) -> Any:
@@ -242,6 +270,13 @@ def load_settings(
             raise DockflowError(f"Unknown or invalid fields in [{section}]")
         data[section].update(table)
         sources.update({f"{section}.{key}": "file" for key in table})
+    if any(
+        "DOCKFLOW_PIPELINES_CACHE_" + field in os.environ
+        for field in ("BACKEND", "REGISTRY", "DSN_ENV")
+    ):
+        raise DockflowError(
+            "Cache connection overrides are unsupported; configure the single database in state"
+        )
     for suffix, key in ENV.items():
         variable = f"DOCKFLOW_PIPELINES_{suffix}"
         if variable not in os.environ:
@@ -280,12 +315,28 @@ def load_settings(
         )
     root = _path(data["project"]["root"], path.parent)
     state = _path(data["state"]["directory"], root)
-    metadata = _path(data["metadata"].get("directory", state / "db"), root)
+    storage = data["state"]
+    if not isinstance(storage["backend"], str) or storage["backend"] not in {
+        "sqlite",
+        "postgresql",
+    }:
+        raise DockflowError("Unsupported state.backend")
+    if storage["backend"] == "sqlite":
+        if "dsn_env" in storage:
+            raise DockflowError("SQLite state forbids dsn_env")
+        storage["database"] = str(
+            _path(storage.get("database", state / "state.sqlite"), root)
+        )
+        reject_network_sqlite(Path(storage["database"]))
+        sources.setdefault("state.database", "derived")
+    elif (
+        "database" in storage
+        or not isinstance(storage.get("dsn_env"), str)
+        or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", storage["dsn_env"])
+    ):
+        raise DockflowError("PostgreSQL state requires dsn_env and forbids database")
     work = _path(data["execution"].get("work_directory", state / "work"), root)
-    sources.setdefault("metadata.directory", "derived")
     sources.setdefault("execution.work_directory", "derived")
-    if data["metadata"]["backend"] != "sqlite":
-        raise DockflowError("Only the sqlite MLMD backend is supported")
     execution = data["execution"]
     mounts = execution.get("task_mounts", [])
     if not isinstance(mounts, list) or len(mounts) > 32:
@@ -334,6 +385,14 @@ def load_settings(
         or execution["task_parallelism"] != 1
     ):
         raise DockflowError("execution.task_parallelism must be 1")
+    for field in ("run_lease_seconds", "run_heartbeat_seconds"):
+        number = execution[field]
+        if type(number) not in {int, float} or not math.isfinite(number) or number <= 0:
+            raise DockflowError(f"execution.{field} must be finite and positive")
+    if execution["run_heartbeat_seconds"] + 10 >= execution["run_lease_seconds"]:
+        raise DockflowError(
+            "Run lease must exceed heartbeat plus database timeout margin"
+        )
     for field in ("timeout_seconds", "shutdown_grace_seconds"):
         value = execution[field]
         if type(value) is not int or value < 0:
@@ -350,6 +409,12 @@ def load_settings(
             raise DockflowError(f"{table_name}.{field} must be finite and positive")
         if field == "memory_limit_bytes" and type(value) is not int:
             raise DockflowError("execution.memory_limit_bytes must be an integer")
+        if table_name == "execution":
+            quantity = value * 1_000_000_000 if field == "cpu_limit" else value
+            if not math.isfinite(quantity) or not 1 <= quantity < 2**63:
+                raise DockflowError(
+                    f"execution.{field} is outside Docker's representable limits"
+                )
     for field in ("port", "queue_capacity", "request_max_bytes"):
         value = data["service"][field]
         if type(value) is not int or value <= 0 or (field == "port" and value > 65535):
@@ -424,24 +489,20 @@ def load_settings(
             raise DockflowError(
                 "Allowed remote URI prefixes must be credential-free s3:// locations"
             )
-    protected = [state, metadata]
+    protected = [state]
     if artifacts["backend"] == "filesystem":
-        # Retain the legacy base directory's protection when root was selected.
+        # Protect the configured parent directory when artifacts.root is selected.
         managed = artifacts.get("root", artifacts["managed_root"])
         if (
             managed == state
             or managed.is_relative_to(state)
             or state.is_relative_to(managed)
-            or managed.is_relative_to(metadata)
-            or metadata.is_relative_to(managed)
         ):
             raise DockflowError(
                 "Managed artifact storage must be outside control state and metadata"
             )
         protected.append(managed)
-    if any(
-        item == work or item.is_relative_to(work) for item in protected
-    ) or work.is_relative_to(metadata):
+    if any(item == work or item.is_relative_to(work) for item in protected):
         raise DockflowError(
             "Execution work must not contain control state, metadata or managed artifacts"
         )
@@ -463,6 +524,10 @@ def load_settings(
         for name, filename in registrations.items():
             if not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", name):
                 raise DockflowError(f"Invalid definition name: {name}")
+            if not isinstance(filename, str | Path) or not str(filename):
+                raise DockflowError(
+                    "Compiled definition sources must be nonempty paths"
+                )
             # Check the original source path before normalization erases link
             # provenance. Compiled snapshots must come from regular files.
             if isinstance(filename, str | Path):
@@ -472,7 +537,11 @@ def load_settings(
                     raise DockflowError(
                         "Compiled definition source paths cannot contain symlinks"
                     )
-            registrations[name] = _path(filename, root)
+            # Keep the lexical path for capture to recheck changes after loading.
+            source = Path(filename)
+            registrations[name] = Path(
+                os.path.abspath(source if source.is_absolute() else root / source)
+            )
     for table_name in ("client", "service"):
         for field in ("token_file", "ca_file"):
             if field in data[table_name]:
@@ -481,12 +550,26 @@ def load_settings(
         data["client"]["endpoint"] = validate_endpoint(data["client"]["endpoint"])
     if "file" in data["policies"]:
         data["policies"]["file"] = _path(data["policies"]["file"], root)
+    storage_options = {
+        key: value for key, value in storage.items() if key != "directory"
+    }
+    cache = validate_cache(data["cache"], artifacts, storage_options)
+    if storage["backend"] == "sqlite":
+        database = Path(storage["database"])
+        if database.is_relative_to(work) or (
+            artifacts["backend"] == "filesystem"
+            and database.is_relative_to(artifacts["managed_root"])
+        ):
+            raise DockflowError(
+                "State database must be outside work and managed artifacts"
+            )
+    sources.setdefault("cache.database", "derived")
+    sources.setdefault("cache.storage_identity", "derived")
     return Settings(
         path,
         identity,
         root,
         state,
-        metadata,
         work,
         data["definitions"],
         execution,
@@ -497,4 +580,6 @@ def load_settings(
         data["client"],
         data["service"],
         sources,
+        cache,
+        {key: value for key, value in storage.items() if key != "directory"},
     )

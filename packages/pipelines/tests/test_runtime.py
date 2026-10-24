@@ -2,13 +2,14 @@
 
 import os
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 from dockflow_pipelines.artifacts import ArtifactStore
 from dockflow_pipelines.definitions import load_definition
 from dockflow_pipelines.engine import execute_run
-from dockflow_pipelines.metadata import ControlStore, new_id
+from dockflow_pipelines.execution_choices import ExecutionChoices
+from dockflow_pipelines.metadata import ControlStore
+from dockflow_pipelines.records import new_id
 
 pytestmark = [
     pytest.mark.docker,
@@ -136,18 +137,16 @@ def pipeline():
 
 @pytest.fixture
 def runtime(tmp_path):
-    settings = SimpleNamespace(
-        project_id="runtime-fixture",
-        state=tmp_path / "state",
-        work_directory=tmp_path / "work",
-        execution={"timeout_seconds": 0, "shutdown_grace_seconds": 1},
-        images={"pull_policy": "never"},
-        reuse={"scope": "global"},
-        policies={},
+    from dockflow_pipelines.config import load_settings
+
+    config = tmp_path / "dockflow.toml"
+    config.write_text(
+        'schema_version=1\n[project]\nid="runtime-fixture"\n[state]\ndirectory="state"\n[execution]\nwork_directory="work"\nshutdown_grace_seconds=1\n[images]\npull_policy="never"\n[reuse]\nscope="global"\n'
     )
+    settings = load_settings(config)
     store = ControlStore(settings.state, settings.project_id)
     with store.owner():
-        store.initialize(require_mlmd=True)
+        store.initialize()
         artifacts = ArtifactStore(
             store,
             {
@@ -180,6 +179,15 @@ def submit(runtime, document=None, *, on_log=None, **overrides):
         "task_ids": [],
         **overrides,
     }
+    from dockflow_pipelines.canonical import loads
+
+    policies = (
+        loads(settings.policies["file"].read_text()).get("tasks", {})
+        if settings.policies.get("file")
+        else {}
+    )
+    policies = run.get("resolved_plan", {}).get("task_policies", policies)
+    run["execution_choices"] = ExecutionChoices.capture(settings, policies).to_record()
     store.put("runs", run)
     return execute_run(store, artifacts, settings, run, on_log=on_log)
 
@@ -295,6 +303,7 @@ def test_durable_publication_reuse_and_downstream_parameter_locality(runtime):
     original = artifacts.get(artifact_id)
     expected = (
         artifacts.managed_root
+        / ".dockflow/dockflow-pipelines/cache-v1"
         / "native-runtime-fixture"
         / first["run_id"]
         / "prepare"
@@ -303,11 +312,7 @@ def test_durable_publication_reuse_and_downstream_parameter_locality(runtime):
     )
     assert original["content_uri"] == expected.as_uri()
     assert expected.read_text() == "training data"
-    assert (
-        store.attempt_path(first["run_id"], first_tasks["prepare"]["task_id"], producer)
-        .joinpath("output-set.json")
-        .is_file()
-    )
+    assert store.has_output_set(producer)
     second = submit(runtime)
     assert second["state"] == "succeeded", second.get("error")
     second_tasks = [store.get("tasks", task_id) for task_id in second["task_ids"]]

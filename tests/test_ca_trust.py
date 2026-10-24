@@ -84,7 +84,10 @@ def test_checks_embedded_ensurepip_wheels(tmp_path, monkeypatch):
 
 def test_current_runtime_bundles_are_checked():
     result = trust.check_environment(runtime=True)
-    assert {b["bundle"] for b in result["bundles"]} >= {"certifi", "grpc"}
+    required = {"certifi"}
+    if importlib.util.find_spec("grpc"):
+        required.add("grpc")
+    assert {b["bundle"] for b in result["bundles"]} >= required
     assert result["passed"]
 
 
@@ -164,3 +167,32 @@ def test_artifact_s3_retains_profile_ca_bundle(tmp_path, monkeypatch):
     )
     assert S3Store("s3://bucket/prefix", {}).client is not None
     assert captured["verify"] == "profile-ca.pem"
+
+
+def test_runtime_trust_check_accepts_absent_optional_grpc(monkeypatch):
+    find_spec = trust.importlib.util.find_spec
+    monkeypatch.setattr(
+        trust.importlib.util,
+        "find_spec",
+        lambda name: None if name == "grpc" else find_spec(name),
+    )
+    assert "certifi" in {label for label, _ in trust.installed_bundles(True, False)}
+
+
+def test_installed_optional_grpc_bundle_is_still_audited(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    grpc = tmp_path / "grpc"
+    roots = grpc / "_cython/_credentials/roots.pem"
+    roots.parent.mkdir(parents=True)
+    roots.write_bytes(certificate("emSign ECC Root CA - G3"))
+    find_spec = trust.importlib.util.find_spec
+    monkeypatch.setattr(
+        trust.importlib.util,
+        "find_spec",
+        lambda name: SimpleNamespace(origin=str(grpc / "__init__.py"))
+        if name == "grpc"
+        else find_spec(name),
+    )
+    with pytest.raises(ValueError, match="grpc: distrusted"):
+        trust.check_environment(runtime=True)

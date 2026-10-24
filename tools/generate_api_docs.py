@@ -24,7 +24,6 @@ def contract() -> dict:
         project_id="api-documentation",
         root=ROOT,
         state=state,
-        metadata_directory=state / "db",
         work_directory=state / "work",
         definitions=data["definitions"],
         execution=data["execution"],
@@ -38,6 +37,8 @@ def contract() -> dict:
         client=data["client"],
         service=data["service"],
         sources={},
+        state_storage={"backend": "sqlite", "database": ".dockflow/state.sqlite"},
+        cache=data["cache"],
     )
     return create_app(settings, execute=False).openapi()
 

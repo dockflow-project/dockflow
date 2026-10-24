@@ -1,12 +1,13 @@
 """Exercise adapter transfer/inventory semantics against a controlled S3 boundary."""
 
 import hashlib
+import io
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.artifacts import ArtifactStore
-from dockflow_pipelines.errors import DockflowError
 from dockflow_pipelines.metadata import ControlStore
 
 DATASET = {"schema_title": "system.Dataset", "schema_version": "0.0.1"}
@@ -39,8 +40,17 @@ class MemoryS3:
     def upload_file(self, filename, bucket, key):
         self.objects[(bucket, key)] = Path(filename).read_bytes()
 
-    def put_object(self, Bucket, Key, Body, ContentType=None):
-        self.objects[(Bucket, Key)] = Body
+    def put_object(self, Bucket, Key, Body, ContentType=None, IfNoneMatch=None):
+        if IfNoneMatch == "*" and (Bucket, Key) in self.objects:
+            error = MissingObject()
+            error.response = {"Error": {"Code": "PreconditionFailed"}}
+            raise error
+        self.objects[(Bucket, Key)] = Body.read() if hasattr(Body, "read") else Body
+
+    def get_object(self, Bucket, Key):
+        if (Bucket, Key) not in self.objects:
+            raise MissingObject()
+        return {"Body": io.BytesIO(self.objects[(Bucket, Key)])}
 
     def list_objects_v2(self, Bucket, Prefix, MaxKeys=None):
         values = [
@@ -80,7 +90,7 @@ def test_s3_import_fingerprints_and_detects_lost_or_corrupt_objects(tmp_path):
     control, store = setup_store(tmp_path)
     store._client.objects[("external", "datasets/data.csv")] = b"data,labels\n1,0\n"
     with control.owner():
-        control.initialize(require_mlmd=False)
+        control.initialize()
         descriptor = store.register(
             "s3://external/datasets/data.csv", DATASET, managed=True
         )
@@ -104,7 +114,7 @@ def test_s3_prefix_snapshots_and_segment_allowlist(tmp_path):
     store._client.objects[("external", "datasets/partition/a.csv")] = b"a"
     store._client.objects[("external", "datasets/partition/sub/b.csv")] = b"b"
     with control.owner():
-        control.initialize(require_mlmd=False)
+        control.initialize()
         descriptor = store.register("s3://external/datasets/partition/", DATASET)
         store._client.objects[("external", "datasets/partition/later.csv")] = b"later"
         target = tmp_path / "selected"
@@ -124,7 +134,7 @@ def test_s3_managed_directory_retains_empty_subdirectories(tmp_path):
     (source / "empty").mkdir(parents=True)
     (source / "file").write_text("payload")
     with control.owner():
-        control.initialize(require_mlmd=False)
+        control.initialize()
         descriptor = store.register(source.as_uri(), DATASET, managed=True)
         target = tmp_path / "materialized"
         store.materialize(descriptor["artifact_id"], target)
@@ -137,7 +147,7 @@ def test_recognized_s3_empty_root_is_a_directory_snapshot(tmp_path):
     source = tmp_path / "inputs" / "empty"
     source.mkdir(parents=True)
     with control.owner():
-        control.initialize(require_mlmd=False)
+        control.initialize()
         original = store.register(source.as_uri(), DATASET, managed=True)
         second = store.register(original["content_uri"], DATASET)
         assert second["payload_kind"] == "directory"

@@ -3,7 +3,7 @@
 import subprocess
 import sys
 
-from dockflow_pipelines.errors import DockflowError
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.metadata import ControlStore
 
 
@@ -14,7 +14,7 @@ def test_core_construction_and_validation_work_without_runtime_dependencies(tmp_
 import importlib.abc
 import sys
 
-blocked = {"ml_metadata", "kfp", "docker", "boto3", "fastapi", "uvicorn"}
+blocked = {"ml_metadata", "kfp", "docker", "boto3", "fastapi", "uvicorn", "psycopg"}
 
 class NoRuntime(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
@@ -24,8 +24,7 @@ class NoRuntime(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, NoRuntime())
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.core import Core
-from dockflow_pipelines.metadata import MLMDIndex, new_id, utc_now
-from dockflow_pipelines.ownership import StateOwnership
+from dockflow_pipelines.records import new_id, utc_now
 
 core = Core(load_settings(sys.argv[1]))
 result = core.validate({"pipeline_spec": {
@@ -53,28 +52,22 @@ assert not core.settings.artifacts["root"].exists()
     assert list(tmp_path.iterdir()) == [config]
 
 
-def test_missing_mlmd_reports_installation_error_before_creating_index(tmp_path):
+def test_sqlite_state_works_without_native_metadata_dependencies(tmp_path):
     script = r"""
-import importlib.abc
-import sys
+import importlib.abc, sys
 from pathlib import Path
-
-class NoMLMD(importlib.abc.MetaPathFinder):
+class NoNative(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split(".")[0] == "ml_metadata":
-            raise ModuleNotFoundError("MLMD intentionally unavailable")
-
-sys.meta_path.insert(0, NoMLMD())
-from dockflow_pipelines.errors import DockflowError
-from dockflow_pipelines.metadata import MLMDIndex
-
-try:
-    MLMDIndex(Path(sys.argv[1]) / "absent" / "mlmd.sqlite", "lazy-boundaries")
-except DockflowError as error:
-    assert (error.code, error.status) == ("UNAVAILABLE", 503)
-    assert "dockflow-pipelines[runtime]" in error.message
-else:
-    raise AssertionError("A missing native runtime was silently bypassed")
+        if fullname.split('.')[0] in {'ml_metadata', 'psycopg'}:
+            raise AssertionError('Unexpected optional metadata import')
+sys.meta_path.insert(0, NoNative())
+from dockflow_pipelines.metadata import ControlStore
+from dockflow_pipelines.records import new_id
+store = ControlStore(Path(sys.argv[1]) / 'state', 'native-free')
+with store.owner():
+    store.initialize()
+    store.put('runs', {'run_id': new_id('run'), 'state': 'succeeded'})
+    assert store.check()['valid']
 """
     result = subprocess.run(
         [sys.executable, "-c", script, str(tmp_path)],
@@ -83,7 +76,6 @@ else:
         timeout=15,
     )
     assert result.returncode == 0, result.stderr
-    assert not list(tmp_path.iterdir())
 
 
 def test_failed_journal_inspection_releases_ownership_for_a_clean_retry(
@@ -102,10 +94,10 @@ def test_failed_journal_inspection_releases_ownership_for_a_clean_retry(
         except DockflowError as error:
             assert error.message == "Corrupt accepted record"
     assert not (store.state / "project.json").exists()
-    inode = (store.state / "owner.lock").stat().st_ino
+    inode = (store.state / "state.sqlite").stat().st_ino
     contender = ControlStore(store.state, "lazy-boundaries")
     with contender.owner():
-        contender.initialize(require_mlmd=False)
-    assert (store.state / "owner.lock").stat().st_ino == inode
+        contender.initialize()
+    assert (store.state / "state.sqlite").stat().st_ino == inode
     with store.owner():
         store.require_owner()

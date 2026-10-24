@@ -81,5 +81,5 @@ qualification evidence. Neither is needed to follow the user tutorial.
 
 Dockflow uses the [MIT License](LICENSE). Imported specification packages retain
 their own license files and attribution. The source quickstart remains usable
-without published packages or service images. All three distributions share
+without published packages or service images. All four distributions share
 one release version; the artifact library is independently installable.

@@ -7,7 +7,7 @@ from typing import Any
 from .canonical import canonical_bytes, digest
 from .definitions import DefinitionError
 
-SIGNATURE_FORMAT = "dockflow-task-signature-v1"
+SIGNATURE_FORMAT = "dockflow-task-signature-v2"
 ADAPTER = "dockflow-kfp-2.17-v1-posix-owner-home-v1"
 
 
@@ -77,6 +77,9 @@ def task_signature(
         # Components see materialized local URIs; provider namespace still affects
         # the identity of imported snapshots through origin and source revision.
         artifact_view[name]["source_uri"] = artifact.get("source_uri")
+        artifact_view[name]["upstream_manifest_digest"] = artifact.get(
+            "cache_origin", {}
+        ).get("manifest_digest")
     envelope = {
         "format": SIGNATURE_FORMAT,
         "algorithm": "sha256",
@@ -90,6 +93,7 @@ def task_signature(
         "image": image,
         "resources": resources or {},
         "adapter": ADAPTER,
+        "validation_version": "dockflow-output-set-v1",
     }
     return {
         "format": SIGNATURE_FORMAT,

@@ -95,8 +95,9 @@ one run can consume artifacts stored under earlier runs. Do not delete an older
 run's artifact directory just because computation has moved to a newer run.
 
 S3 uses the same relative layout directly under `s3://BUCKET/PREFIX/`, with no
-implicit `managed/` child. Dockflow's recovery copies are separate:
-`.dockflow/dockflow-pipelines/ARTIFACT_ID/artifact.json` under the managed root. Directory
+implicit `managed/` child. Dockflow's publication reservations and recovery descriptors are in the same
+SQLite/PostgreSQL database as history and cache. `.dockflow/storage.json` identifies
+the artifact store; it stays beside the payloads. Directory
 artifacts may freely contain their own file named `artifact.json`. Metadata-only
 artifacts have no payload and a null content URI. Parameters are recorded as
 execution values, not stored as artifacts.
@@ -189,8 +190,18 @@ ordinary managed outputs continue using the default layout described above.
 Custom publications are reference artifacts from the orchestrator's perspective.
 Give the publishing container explicit storage access, and allow the same URI
 root for the Dockflow owner. The custom store owns retention and backup; its
-payloads are not automatically included in managed-only backups. Use trusted
+payloads are not automatically included in managed-only backups. Pass the same
+database and project ID to Publisher for shared bookkeeping; additional roots
+require a coordinated offline database/provider backup. Use trusted
 [task mounts](configuration.md) for local storage/configuration and Kubernetes
 Secrets in native deployments. Business scripts can remain independent of both
 orchestrators. See [KFP integration](artifact-library/kfp.md) for the typed graph
 adapter and its lineage behavior.
+
+## Descriptor identities
+
+Artifact descriptors and provenance are retained in the configured SQLite or
+PostgreSQL state database. Their stable `dockflow://PROJECT_ID/artifacts/ARTIFACT_ID`
+URI identifies the metadata record through Dockflow; it is not a payload download
+URL. `content_uri` continues to locate the filesystem/S3 contents. A fresh
+environment connected to the same project/database can resolve those records.

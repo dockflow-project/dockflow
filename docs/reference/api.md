@@ -35,6 +35,9 @@ OpenAPI **3.1.0**; application **0.1.1**.
 | `POST` | `/dockflow/v1/artifacts/{id}/unpin` | Unpin Artifact | application/json: Empty |
 | `GET` | `/dockflow/v1/attempts` | List Attempts | — |
 | `GET` | `/dockflow/v1/attempts/{id}` | Get Attempts | — |
+| `GET` | `/dockflow/v1/cache/{key}` | Cache Show | — |
+| `POST` | `/dockflow/v1/cache/{key}/invalidate` | Cache.Invalidate | application/json: CacheInvalidate |
+| `POST` | `/dockflow/v1/cache/{key}/reset` | Cache.Reset | application/json: CacheReset |
 | `GET` | `/dockflow/v1/capabilities` | Get Capabilities | — |
 | `POST` | `/dockflow/v1/clean` | Clean | application/json: MaintenanceRequest |
 | `GET` | `/dockflow/v1/components` | List Components | — |
@@ -110,6 +113,24 @@ Unknown fields are not admitted.
 | `task_id` | string | yes |
 | `run_id` | string | yes |
 | `state` | string | yes |
+
+### CacheInvalidate
+
+| Field | Type / admitted values | Required |
+| --- | --- | --- |
+| `artifact_id` | string | yes |
+| `reason` | string | yes |
+
+Unknown fields are not admitted.
+
+### CacheReset
+
+| Field | Type / admitted values | Required |
+| --- | --- | --- |
+| `revision` | integer | yes |
+| `reason` | string | yes |
+
+Unknown fields are not admitted.
 
 ### Component
 
@@ -239,8 +260,9 @@ Unknown fields are not admitted.
 | `reuse` | object | yes |
 | `task_ids` | array of string | yes |
 | `outputs` | object | yes |
+| `execution_choices` | object | yes |
+| `effective_configuration` | object | yes |
 | `error` | object or null | yes |
-| `effective_configuration` | object | no |
 
 ### RunCreate
 

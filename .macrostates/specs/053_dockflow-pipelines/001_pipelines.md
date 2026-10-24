@@ -8,8 +8,7 @@ milestones may implement a smaller advertised profile;
 [Acceptance](011_acceptance.md) defines the gates for claiming the full target.
 
 Dockflow executes compiled Kubeflow Pipelines (KFP) definitions locally through
-KFP DockerRunner. It adds durable Runs, artifact storage integration, ML Metadata
-(MLMD), lineage, task reuse, historical selection, recovery, a CLI and a service.
+KFP DockerRunner. It adds durable Runs, artifact storage integration, SQL execution history, lineage, task reuse, historical selection, recovery, a CLI and a service.
 One configured repository/project and its state are managed per instance.
 Different projects use separate instances; no machine-wide discovery or cache.
 
@@ -68,18 +67,20 @@ accepted work independently of request connections. Selecting a service requires
 an explicit endpoint through a CLI option, environment or client configuration.
 Installation never deploys infrastructure or starts Docker.
 
-Initially allow one active Run and one task attempt at a time per project/state
-root. A persistent service owns a bounded durable queue. Separate configured
-projects may run independently. Future parallelism requires new qualification
-of workspace isolation, shared outputs, metadata, resource limits and recovery;
-a one-time conflict check alone does not provide those guarantees.
+SQLite local deployment has one execution owner, active Run and task attempt per
+project database. PostgreSQL deployment permits concurrent Runs across isolated
+coordinators with fenced per-Run ownership and shared metadata transactions. Each
+coordinator executes one Run at a time and tasks remain sequential within a Run.
+The [execution contract](005_execution-and-lifecycle.md) owns claims, admission,
+recovery and maintenance. A persistent service retains a bounded durable queue;
+multiple PostgreSQL services may claim different queued Runs.
 
 ## Identifiers and records
 
 Public IDs are lowercase prefixes followed by a canonical UUIDv4:
 project IDs are explicit stable configuration values; other prefixes are
 pipeline_, component_, definition_, run_, task_, attempt_, artifact_, experiment_.
-Public IDs never encode MLMD numeric keys, host paths or mutable display names.
+Public IDs never encode internal database keys, host paths or mutable display names.
 SHA-256 digests identify bytes/normalized content separately from public IDs.
 
 A registered pipeline/component retains its catalog ID across configured refreshes.
@@ -132,7 +133,7 @@ the shared CLI's public registration contract. All feature commands and options
 belong under dockflow pipelines. Follow its offline help, stdout/stderr and
 0/1/2 exit conventions. [CLI](009_cli.md) defines the feature grammar.
 
-Keep base installation and remote-client operations independent of MLMD, Docker,
+Keep base installation and remote-client operations independent of PostgreSQL drivers, Docker,
 KFP execution and service-server imports. The runtime extra installs qualified
 execution/metadata dependencies; service adds the HTTP server; s3 adds the storage
 adapter. The service image includes runtime, service and s3 functionality.

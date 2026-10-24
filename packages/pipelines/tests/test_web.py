@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 
 import pytest
 from dockflow_pipelines.config import load_settings
-from dockflow_pipelines.metadata import new_id, utc_now
+from dockflow_pipelines.records import new_id, utc_now
 from dockflow_pipelines.service import create_app
 from dockflow_pipelines.web import ASSETS
 from fastapi.testclient import TestClient
@@ -42,11 +42,14 @@ def served(settings):
 
 def accepted_snapshot(core):
     """Compare authoritative state, avoiding SQLite's read-side connection files."""
-    return {
-        str(path.relative_to(core.settings.state)): path.read_bytes()
-        for path in core.settings.state.rglob("*")
-        if path.is_file() and not path.is_relative_to(core.settings.metadata_directory)
-    }
+    adapter = core.store.database.adapter
+    with adapter.snapshot() as connection:
+        return {
+            table: sorted((tuple(row) for row in rows), key=repr)
+            for table, _, rows in adapter.project_rows(
+                connection, core.store.project_id
+            )
+        }
 
 
 def seed_execution_records(core):

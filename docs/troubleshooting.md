@@ -10,13 +10,13 @@ logs. Preserve Run/Task/Attempt IDs and API `request_id` values when investigati
 | --- | --- |
 | `uv: command not found` | Install uv using the link in [installation](installation.md), then reopen the shell if needed. |
 | `dockflow: command not found` | Activate the environment, or use `uv run --all-packages --all-extras dockflow` from the checkout. |
-| Missing KFP, Docker, MLMD or service dependency | Install the relevant [extras](installation.md#select-only-the-needed-capabilities); remote-only commands do not need execution extras. |
+| Missing KFP, Docker, PostgreSQL or service dependency | Install the relevant [extras](installation.md#select-only-the-needed-capabilities); remote-only commands do not need execution extras. |
 | Selected configuration does not exist | Fix `--config`/`DOCKFLOW_PIPELINES_CONFIG`; an invalid explicit selection never falls back. `serve` requires explicit selection. |
 | Unknown configuration fields | Use schema version 1 and the exact [configuration fields](configuration.md); arbitrary nested environment variables are not supported. |
 | Cannot reach selected service | Verify host/port, readiness and token/TLS settings. A failed remote connection never switches to local execution. |
 | Owner conflict | Use the running service's explicit endpoint, or wait/stop that owner normally. Inspect reported UUID/hostname/PID/mode. Never remove its lock file. |
 | Prior execution requires reconciliation | Start the service with the same config/daemon and resolve retained work before another direct Run. See [recovery](persistence.md). |
-| MLMD import fails despite installed package | Check Python, OS/architecture and libc compatibility. Use the qualified Linux reference environment; installation metadata is not full runtime qualification. |
+| PostgreSQL driver unavailable | Install `dockflow-pipelines[postgresql]` in the coordinator environment. State and cache use the same configured database. |
 | Docker connection fails while `docker ps` works | Dockflow uses SDK environment settings, not implicit CLI context selection. Check `DOCKER_HOST` and Docker TLS variables for the Python process. |
 | Component image missing | Build/load into the owner's engine or provide a reachable registry. Host and inner Compose caches are separate. Check `images.pull_policy`. |
 | Container cannot see a staged input | Make the execution directory visible at the same absolute path to the owner and daemon; check permissions and the selected engine. |

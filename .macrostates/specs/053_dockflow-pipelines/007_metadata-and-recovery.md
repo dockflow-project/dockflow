@@ -2,62 +2,48 @@
 
 ## Persistence authority
 
-Use ML Metadata (MLMD), initially backed by persistent SQLite, as the searchable
-execution/artifact/lineage index. Artifact bytes live in artifact storage.
-Versioned control manifests are the authoritative durable record of accepted
-definitions, submissions, bindings, lifecycle transitions and committed outputs.
-MLMD must be reconstructible from that record set; it must not contain the only
-copy of a user-visible identity or provenance fact.
+The authoritative execution journal, query projections, exact compiled source
+snapshots, logs, catalog, queue, idempotency records and pagination key live in
+one configured SQL state database. Artifact contents live in managed storage.
+SQLite is the local default; PostgreSQL is the supported external backend.
+Durable SQL repositories are the only runtime history store.
+Accepted records are immutable, ordered by project sequence, and sufficient to
+rebuild query projections without inventing identities or producer facts.
+Both CLI and service use the same persistence adapter. Database state is scoped
+by stable project ID; projects in one server/database cannot see each other.
+The [cache registry](014_cache-coordination.md) retains its coordination authority
+in tables of the same physical database and versioned schema.
 
-This is an intentional rebuildable-index design. It does not mean that arbitrary
-files found in a directory are recognized artifacts, or that the database is
-replaced by a second relational execution database. Control manifests are
-durability/reconciliation records. Querying and indexing use MLMD; both CLI and
-service call the same persistence adapter.
-
-All mutations are serialized by the project execution owner, including catalog
-registration, artifact publication, pins and cleanup. The owner/lock contract
-belongs to [execution](005_execution-and-lifecycle.md). Separate processes must
-not write SQLite or control state independently. Read-only inspection may use
-a consistent snapshot; while a service owns state, mutations go through its API
-or fail with an ownership conflict. No automatic service discovery is implied.
-
-`owner.lock` is an operational coordination file, not an accepted mutation or
-historical execution record. Its schema-1 diagnostic owner identity follows
-[execution](005_execution-and-lifecycle.md). Recovery/rebuild must preserve the
-stable lock inode and acquire its OS lock; replaying or restoring its recorded
-PID, hostname, endpoint or owner UUID cannot create or transfer ownership.
-Do not require a history migration for an empty/legacy diagnostic file. On a
-free lock the next owner writes a fresh instance identity in place. Backed-up
-owner metadata remains informational after restore.
-
-## Public identities and indexed model
+## Public identities and query model
 
 Generate public IDs as a resource prefix followed by a lowercase UUIDv4. The
 prefixes are `pipeline_`, `component_`, `definition_`, `experiment_`, `run_`,
 `task_`, `attempt_` and `artifact_`; use canonical hyphenated UUID text
 consistently. These IDs are
 opaque, project-scoped public handles. User names and mutable registration aliases
-are separate from IDs. Moving a checkout, rebuilding MLMD, or migrating its
+are separate from IDs. Moving a checkout, rebuilding projections, or migrating its
 backend preserves public IDs. A digest identifies contents, not a database row.
 
-Use a versioned MLMD mapping with these required semantics:
+Preserve these versioned query and lineage semantics in SQL resources:
 
 | Dockflow entity/relationship | Indexed representation |
 | --- | --- |
-| Project, catalog Pipeline/Component, Experiment, definition, Run and Task | Typed Contexts, with public IDs and explicit contextual relationships. |
-| Actual container execution attempt | Execution, including outcome, signature, image identity and timestamps. |
+| Project, catalog Pipeline/Component, Experiment, definition, Run and Task | Typed resources with public IDs and explicit contextual relationships. |
+| Actual container execution attempt | Attempt resource including outcome, signature, image identity and timestamps. |
 | Typed external/produced artifact | Artifact with public ID, KFP contract, origin and durable-location reference. |
-| Named attempt input/output | Events identifying the artifact and exact declared binding. |
-| Membership of executions/artifacts in contexts | Associations/Attributions as appropriate, preserving public context relationships. |
+| Named attempt input/output | Named artifact bindings on the attempt. |
+| Membership of executions/artifacts in contexts | Explicit public parent IDs and producer/consumer relationships. |
 | Reused or explicitly rebound Task | Task disposition and original producer/output references; no synthetic computation attempt. |
 | KFP importer Task | Import disposition/event with external provenance, without a fabricated container attempt. |
 
-Store public IDs in documented unique properties/names and maintain their
-mapping to internal numeric MLMD IDs. Numeric IDs may change during rebuilding
-and are never the CLI/API artifact, Run or execution handle. Preserve nested KFP
-metadata as canonical JSON where MLMD's scalar property model requires it.
-Do not approximate values by silently dropping keys or converting types.
+Use public IDs as project-scoped unique keys. Preserve canonical nested JSON
+without dropping keys or changing types; internal SQL row identities never
+become public handles.
+
+Allocate persistent project/collection-scoped numeric aliases for official KFP
+execution/artifact fields. Store their mapping in SQL, preserve it during replay,
+rebuild and portable backup/restore, and never substitute a UUID into an integer
+field. Native public IDs remain canonical.
 
 Record failed attempts, skipped Tasks, explicit historical selections, importer
 activity and reused Tasks as carefully as success. Lineage distinguishes data
@@ -66,53 +52,39 @@ original producing attempt remains the producer through later reuse.
 
 ## Storage backends and layout
 
-The initial `metadata.backend` is `sqlite`; the default database file is
-`<state>/db/mlmd.sqlite`. Its connection settings and database mapping/schema
-versions are explicit. Initialize only in an authorized mutating operation;
-help/version and ordinary configuration inspection do not create a database.
-Reject a database belonging to another project or incompatible schema.
+`state.backend` selects `sqlite` (default) or `postgresql`. SQLite defaults to
+`state.sqlite` beneath `state.directory` (default `.dockflow`). An explicit
+`state.database` resolves against project.root. PostgreSQL requires
+`state.dsn_env`, naming an environment variable containing the connection string;
+never persist or print its value. PostgreSQL forbids state.database. SQLite
+forbids dsn_env. Connection/TLS parameters belong in the provider connection
+string; use a primary with durable commits, not a delayed replica. Connection
+failure never falls back to another database. Optional PostgreSQL dependencies
+are imported only when opening that backend.
 
-Use a local persistent filesystem with qualified locking/durability behavior.
-Sharing SQLite over an arbitrary network filesystem is outside the initial
-profile. A separate database container is not required for either direct CLI
-mode or the default Compose stack. A persistent service volume stores SQLite.
+`state.directory` remains a local base for disposable work and the default SQLite
+database; it is not required persistent history in PostgreSQL deployments.
+An external deployment must use commonly accessible artifact storage; execution state and cache coordination MUST use the same configured database. Different local directories connected to the same project/database
+see one history and follow the selected backend's ownership rules. Local staging and Docker
+access must still be valid for the active coordinator.
 
-Keep an adapter boundary so an MLMD-supported external SQL server can replace
-SQLite without changing public entities or the core artifact contract. MySQL
-is the first planned external target, not an initially qualified backend.
-External SQL needs connection/TLS/credential settings, tested transaction and
-schema behavior, backup/restore, and a deliberate history migration. Do not
-claim all SQL servers work, or fall back to SQLite after connection failure.
-Unsupported backends fail configuration validation. MLMD dependency/platform
-qualification is mandatory; an unavailable compatible dependency cannot silently
-change this selected architecture or the shared Python support policy.
+Initialize schema only during an authorized mutating operation. Read/help/config
+operations never initialize missing databases or schemas. Reject unknown schema
+versions and pre-existing file-authoritative project history explicitly. This
+change starts fresh; no old file-history migration is required. Never silently
+initialize alongside legacy history or consume it as SQL authority.
 
-The default state layout is:
-
-~~~text
-.dockflow/
-  project.json                         project identity and format versions
-  catalog.json                         current registrations and stable catalog IDs
-  owner.lock                           stable OS lock plus owner-instance diagnostics
-  db/mlmd.sqlite                       rebuildable index
-  pipelines/<pipeline-id>.json          origin, name, version membership and default
-  definitions/<definition-id>/         immutable accepted source and descriptor
-  artifacts/<artifact-id>.json          authoritative artifact descriptor
-  experiments/<experiment-id>.json      experiment records
-  records/<sequence>.json               immutable accepted mutation records
-  runs/<run-id>/run.json                 submission and current projection
-  runs/<run-id>/tasks/<task-id>/task.json
-  runs/<run-id>/tasks/<task-id>/attempts/<attempt-id>/execution.json
-  runs/<run-id>/tasks/<task-id>/attempts/<attempt-id>/output-set.json
-  runs/<run-id>/tasks/<task-id>/attempts/<attempt-id>/logs/
-  work/                                disposable execution materializations
-~~~
-
-Configuration may relocate state, metadata and work roots. Service work normally
-resides at `/execution`; it is not a substitute for durable control records.
-Managed payloads default to `./artifacts/managed/`, outside the state tree, as
-specified in [artifacts](006_artifacts.md). Logs and complete run records persist
-independently of task-container deletion and execution-work cleanup.
+SQLite uses local filesystem locking, WAL, foreign keys and FULL synchronization;
+network filesystem sharing and cross-host SQLite ownership are unsupported.
+PostgreSQL uses shared session maintenance gates plus fenced per-Run leases. Schema creation
+is serialized separately. Use direct connections or session pooling; transaction
+and statement pooling are unsupported. SQLite has one project coordinator. PostgreSQL supports independent Run owners;
+short mutation locks and state writes use each coordinator's pinned session. No transparent reconnect may
+permit an old coordinator to write after losing its session. Reacquisition is a
+new ownership event and requires reconciliation before dispatch. SQLite locks
+the stable database inode on POSIX and uses an operational lock companion on
+Windows; never replace it while operational. Keep bounded,
+non-secret owner diagnostics in SQL; diagnostics never establish ownership.
 
 ## Manifest and mutation format
 
@@ -132,13 +104,16 @@ wall-clock timestamps do not resolve conflicts. Gaps are reported; duplicate
 sequences with different contents are corruption. No cryptographic hash chain
 or distributed log service is required.
 
-Durably write each accepted mutation before acknowledging it or treating its
-MLMD projection as authoritative. Use temporary files, flush and atomic rename
-within the same filesystem, with appropriate directory durability on qualified
-platforms. Never expose partly written JSON as committed state. Current
-`run.json`, `task.json` and `execution.json` files are reconstructible projections
-of immutable accepted records; update them atomically. Readers must detect
-incomplete projection updates and reconcile from the accepted sequence.
+Commit each accepted mutation and its control/query projections in one SQL
+transaction before acknowledgement. Rollback exposes neither partial history nor
+partial projections. Allocate journal sequences and KFP numeric aliases transactionally under the
+short project mutation lock;
+readers observe committed data only. A lost COMMIT response is uncertainty, not
+permission to repeat computation; inspect the persisted IDs/sequence before retry.
+No database transaction spans container execution or artifact transfer. SQL and
+artifact storage do not share a transaction: immutable complete output-set
+publication and the separate cache commitment retain their existing recovery
+boundaries.
 
 The durable record set must preserve at least:
 
@@ -172,7 +147,7 @@ symlink sources and observed changes
 during snapshot capture. Do not rebuild or push component images during refresh;
 image preparation precedes Dockflow invocation.
 
-API upload registration is serialized through that same owner. Validate the
+API upload registration is serialized through the short project transaction. Validate the
 entire request/document before committing a usable catalog mutation. Commit the
 pipeline identity (on initial upload), immutable version/source, embedded
 component contracts, version membership and default-version transition as one
@@ -183,11 +158,12 @@ records must replay all catalog IDs/associations/defaults before readiness.
 
 Retain API-owned entries independently of configured source-file availability.
 Never globally deduplicate version identity by bytes: different pipeline/version
-associations cannot move or overwrite an accepted snapshot. Rebuilding the index
+associations cannot move or overwrite an accepted snapshot. Rebuilding the projections
 preserves origin, version names, memberships, source bytes, embedded contracts
-and defaults alongside historical Runs. A projection failure after durable
-registration reports the accepted IDs and reconciliation-required state; it does
-not manufacture a successful response or permit duplicate partial registration.
+and defaults alongside historical Runs. Projection failure before COMMIT rolls
+back the entire registration. An uncertain COMMIT response requires inspecting
+retained registration identities before another upload; never assume rollback
+and duplicate an accepted version merely because a response was lost.
 
 Index only recognized, valid control records/artifact descriptors. No background
 directory watcher is required initially. Raw files, new bucket objects and image
@@ -214,8 +190,8 @@ If the daemon is unreachable or ownership is uncertain, keep activity visibly
 unresolved and block execution. Never steal a live owner merely because a PID
 does not exist in a different container namespace.
 
-An OS lock released by coordinator death does not confirm that its workers or
-Docker tasks stopped. A new direct CLI Run must not bypass retained nonterminal
+Database ownership released by coordinator death does not confirm that its workers or
+Docker tasks stopped. Under the SQLite local model, a new direct CLI Run must not bypass retained nonterminal
 or queued Runs, unresolved attempts or `reconciliation_required` observations
 merely because lock acquisition succeeded. Refuse that new direct admission and
 direct the operator to explicitly start the service for reconciliation and
@@ -227,37 +203,38 @@ surviving containers according to [execution](005_execution-and-lifecycle.md),
 preserve logs and explain the outcome. Containers gone without a committed
 output set produce an interrupted/incomplete attempt, not inferred success.
 Valid committed output sets are completed results even if the process died
-before indexing them. Replay their success and lineage idempotently. Individual
+before recording their final lifecycle states. Replay their success and lineage idempotently. Individual
 payloads/descriptors without the complete-set marker remain incomplete/orphaned.
 Use owner-allocated acceptance sequence to preserve stop-intent/commit ordering;
 never convert a pre-stop committed result into an interrupted computation or
 publish a new output set after recorded stop intent.
 
-An index failure after durable acceptance pauses further dispatch and reports
-the accepted IDs plus reconciliation-required state. It does not undo a committed
-artifact set, fabricate a failed computation, or invite an automatic duplicate
-submission. Persisted accepted records allow safe retry of indexing itself.
-Queue recovery preserves accepted order; unfinished work is not silently resumed
-until ownership and container reconciliation have completed.
+A SQL projection failure before COMMIT rolls back the accepted mutation too.
+An uncertain COMMIT response poisons the ownership session and pauses further
+mutation/dispatch. Inspect retained IDs and reacquire/reconcile before resuming;
+never fabricate a failed computation or automatically repeat it. A cache
+registry commitment may already exist independently of a failed execution-journal
+transaction. Queue recovery preserves accepted order; unfinished work is not
+silently resumed before ownership/container reconciliation.
 
 ## Check, rebuild, backup and migration
 
-`metadata check` reports control-record validity, index correspondence,
+`metadata check` reports control-record validity, SQL projection correspondence,
 publication completeness, dangling lineage and observed availability. Content
 verification must be an explicit supported option and report unverified content
 separately from verified success. A check is nondestructive and does not execute
 tasks, rewrite missing payloads or remove history.
 
 `metadata rebuild` is an offline owner-exclusive operation: stop the service,
-resolve uncertain containers, back up the current index, validate the record set,
-and build a new index before switching it into place. Rebuilding preserves
+resolve uncertain containers, validate the accepted journal,
+then rebuild all projections in one transaction. The journal remains unchanged. Rebuilding preserves
 public IDs, definitions, timestamps, states, bindings and original producers;
-internal MLMD IDs may change. Unknown record schemas, contradictory committed
+internal row IDs may change, but externally exposed KFP numeric aliases remain stable. Unknown record schemas, contradictory committed
 facts or missing indispensable records abort the switch and produce a report.
 Do not derive missing producer relationships from filenames or log guesses.
 The service may return a nondestructive rebuild plan. An apply request through
 the live service returns HTTP 409 `OFFLINE_REQUIRED`; it never swaps its own
-active index. The CLI's explicit offline apply acquires ownership before work.
+active projections. The CLI's explicit offline apply acquires ownership before work.
 
 Back up control records, definitions, logs and managed artifact bytes together
 with their descriptors, retaining a consistent accepted-sequence boundary.
@@ -266,17 +243,135 @@ copying the main file alone during writes is not a backup procedure. External
 reference contents remain the source owner's responsibility. Document restore
 verification, including missing external data, before advertising recoverability.
 
-Schema upgrades and SQLite-to-external-SQL migrations are explicit offline
-operations with preflight checks, backups, a resumable/idempotent plan, and
-post-migration identity/lineage checks. Never upgrade irreversibly on ordinary
-read/help startup. Rebuilding the index cannot recover deleted payloads, missing
+Unknown schema versions fail closed. Schema upgrades and backend migration
+require separately implemented offline operations; they are not implicit startup
+behavior and are not part of this fresh-state change. Never upgrade irreversibly on ordinary
+read/help startup. Rebuilding the projections cannot recover deleted payloads, missing
 logs or lost authoritative manifests. Release acceptance must exercise those
 limits as well as successful recovery; see [acceptance](011_acceptance.md).
 
-## Upstream reference
+## Portable database backups
 
-MLMD supplies typed Artifacts, Executions, Contexts and lineage relationships,
-with documented SQLite and external database connections in the
-[official MLMD guide](https://www.tensorflow.org/tfx/guide/mlmd).
-Dockflow owns this mapping, control-record authority and recovery contract; it
-does not reproduce or depend on KFP's private database layout.
+The offline backup tool exports the complete project database state to a portable
+SQLite snapshot, including journal, definitions, logs and projections, together
+with managed artifacts, including cache publications. Restore requires an empty target
+project, verifies inventory and project identity, and supports either backend.
+Different local staging/state roots are allowed; durable artifact locations must
+match. All project cache namespaces, entries, attempts, fences, retry state and published
+manifests MUST be included in that same consistent SQL snapshot, excluding
+operational owner diagnostics and other projects. Cache-only published bytes
+and the artifact store identity MUST be backed up too. Stop all workers before
+restore and use a fresh cache namespace before dispatch, as required by 014. Preserve the
+pagination key and original public IDs. Database export/import occurs under
+project ownership and restores SQL contents atomically; incomplete artifact
+restoration must not expose an admitted project. External references remain the
+source owner's responsibility. Backup records contain no DSN values.
+
+Unfinished Docker attempts retain daemon identity. A new owner must reconcile
+against that exact daemon; an absent container on another daemon does not prove
+termination. After confirming stop and capturing logs, retire the container
+handle before releasing the recovery hold. This prevents an old worker from
+starting a previously created container after recovery. Database ownership does
+not make component side effects exactly once.
+
+
+## Shared database abstraction
+
+Both SQLite and PostgreSQL MUST store execution history, projections, settings,
+logs, cache coordination, artifact publication claims/manifests and recovery
+descriptors in one physical database. Only artifact bytes, their storage identity
+marker and local disposable execution data remain outside it. Use one backend abstraction
+(provided by dockflow-database) for connections, dialect, durability settings, transactions, schema initialization,
+clock/row locks and driver failure classification. Repositories retain their
+respective execution and cache policies rather than duplicating database drivers.
+One versioned schema covers both domains and is initialized atomically in either
+repository order. Read-only access never creates or repairs a schema. Reject
+unknown, incomplete, legacy split and foreign SQLite schemas without migration.
+
+Each coordinator retains its pinned session. Cache operations use independent,
+short connections to that same database; they must progress while coordinators hold execution authority. Domain commits remain distinct: cache publication
+can survive a later journal failure. Retain the existing fenced retry protocol
+and fail-closed execution commit uncertainty. SQLite retains one coordinator/Run per project; PostgreSQL uses the per-Run
+ownership contract in 005.
+
+
+## PostgreSQL distributed execution
+
+The shared database abstraction selects local single ownership for SQLite and
+short serialized project mutations plus per-Run leases for PostgreSQL. Run leases
+use the database clock, immutable owner identity and monotonically increasing
+fences; execution checks authority at transaction entry and before commitment.
+Heartbeat connections are independent and never reconnect an uncertain state
+session. Cancellation can be submitted through another coordinator, records stop
+intent transactionally and preserves that intent against stale worker snapshots.
+Cache publication remains a separate commit but validates both cache and Run
+authority while serialized against stop intent.
+
+Use a dedicated transactional project counter for journal sequences. Include it
+in project exports; preserve IDs and counter continuity on restore. Run claims
+and session diagnostics are operational and excluded from portable backups.
+The fresh schema rejects older formats explicitly; no automatic migration is
+part of this feature. PostgreSQL initialization attaches committed projections
+without recovering other coordinators' live Runs. Explicit offline rebuild and
+Run-scoped reconciliation own repair.
+
+
+## Concurrent cache provenance
+
+A consumer may observe cache publication before the producing Run commits its
+journal output-set marker. It MUST NOT rewrite another Run owner's live Attempt
+or Task lifecycle. Persist an immutable, journaled cache observation with the
+verified manifest and producer snapshot; consumers bind that snapshot while the
+original owner completes its own execution records. Repeated observations are
+idempotent and contradictory manifests fail. Include observations in validation,
+replay and backup. Existing artifact projections remain unchanged; missing cache
+artifact facts may be projected from the verified manifest. Cache authority does
+not fabricate a successful original Run or grant its execution lease.
+
+Publication bookkeeping shares the physical schema and project export with state
+and cache. Standalone Artifacts uses that same adapter and immutable-record
+repository without importing Pipelines. Storage reserves a small identity marker;
+all publication/descriptor records are SQL-only. Pipelines publication mutations
+retain their Run fence checks. Independent publisher transactions honor exclusive
+project maintenance; no database transaction spans payload transfer.
+
+## Domain persistence identities
+
+Persist journal events by numeric project-scoped sequence. Persist resources once
+by collection and public ID; this is the mandatory SQL query projection. Exact
+definition sources use definition IDs; output-set commitments and immutable cache
+observations use attempt IDs; retained log snapshots use attempt ID and stream.
+Project identity, pagination and reconciliation settings use explicit metadata
+names. No virtual filesystem keys, synthetic `.json`/`.yaml` record names, path
+matching or optional external index layer may represent these domain records.
+
+Definition-source and attempt-log snapshot journal events carry explicit domain
+identities, bytes and integrity digests. They must not infer Run authority from
+path strings. Every event and its projections commit together, including the
+journal counter; a projection failure rolls back the entire mutation. Validate
+row identity and journal sequence, detect missing/changed/orphaned projections,
+and expose `projections_checked` in integrity reports. Rebuild all derived domain
+projections transactionally from the journal while retaining numeric aliases,
+publication records and cache fencing history. Read-only inspection requires no
+index-attachment or initialization operation.
+
+Both backends consume the shared database library directly. Do not retain
+compatibility imports or duplicate record copies for the earlier storage design.
+Current managed artifact layouts are explicit; unsupported historical layouts
+fail without location guessing or relocation. This fresh schema requires no data
+migration. Filesystem APIs remain appropriate for payloads, executor staging,
+bootstrap configuration, operational database files and portable backups.
+
+## Selective queries and complete projection checks
+
+Keep resource filtering, stable keyset pagination, queue eligibility, identity
+lookups and Run/sequence log ranges in SQL repositories on both backends. Add
+indexes for the supported query predicates and ordering. Bound rows fetched for
+public resource/log pages; do not deserialize whole history to produce a page.
+Full journal validation/rebuild and explicit offline export may scan all records.
+
+Integrity checks derive expected keys and values for every domain projection,
+including composite cache observations, source/log snapshots, resource input
+relationships and retained log entries. Detect missing, changed and unexpected
+rows and sequence-counter disagreement. Rebuild repairs derived projections
+transactionally while preserving aliases and independent publication/cache facts.

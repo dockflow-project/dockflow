@@ -161,7 +161,9 @@ compiler file's comments or formatting.
 `display_name`, `state`, creation/start/finish timestamps, the resolved request
 fields, `task_ids`, published `outputs` map, and nullable `error`. Expose
 `idempotency_key` when present. Accepted Runs retain an immutable compiled snapshot
-and `effective_configuration` as defined by
+and required versioned `execution_choices` as defined by
+[Execution](005_execution-and-lifecycle.md#supervision-and-accepted-execution-choices).
+Expose `effective_configuration` as defined by
 [configuration inspection](003_configuration-and-backends.md#effective-configuration-inspection),
 including setting origins for newly admitted Runs. Native Run states are `queued`, `running`,
 `cancelling`, `succeeded`, `failed`, `cancelled`, `interrupted`. Publication must
@@ -260,7 +262,7 @@ changing/unverified observations. External URI registration/import observes the 
 allowed roots/prefixes; no request can scan arbitrary server directories.
 Applying a metadata rebuild requires stopping the service and invoking the
 direct owner-exclusive operation; a running HTTP process cannot replace its
-active index through this route.
+active projections through this route.
 
 `LogPage` is `{entries, next_cursor, terminal}`. Each entry has increasing durable
 `sequence`, UTC `timestamp`, `run_id`, nullable task/attempt IDs, `stream`
@@ -417,8 +419,9 @@ Preserve public Run/Experiment IDs. Registered catalog `pipeline_id` is stable;
 the registered pipeline name; uploaded versions use their own accepted version
 name and expose their compiled spec, actual creation time and description.
 Return storage state only where the official resource model defines it. No fake
-Kubernetes pod/job identifiers are emitted. Internal MLMD integer IDs, when
-exposed in official task details, are actual index IDs rather than public UUIDs.
+Kubernetes pod/job identifiers are emitted. Official task execution/artifact integer references use persistent project-scoped
+SQL aliases. Preserve them across rebuild, backup and restore; native public UUIDs
+remain the canonical identities.
 
 Map queued/pending to KFP `PENDING`, running to `RUNNING`, succeeded to
 `SUCCEEDED`, failed/blocked/interrupted to `FAILED`, reused/skipped tasks to
@@ -466,3 +469,9 @@ terminal states. Preserve the correct wire state; document this client limitatio
 and verify cancellation with `get_run` or the native CLI. Qualify SDK waiting for
 successful/failed completion separately. Do not misreport cancelled execution as
 failed merely to accommodate a client's polling behavior.
+
+## Distributed cache extension
+
+Cache inspection, invalidation and reset routes and payloads are owned by
+[Cache coordination](014_cache-coordination.md#20-dockflow-configuration-and-existing-contracts),
+using the same authentication, error and generated OpenAPI boundaries.

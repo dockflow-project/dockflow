@@ -35,9 +35,12 @@ so a detail page can be bookmarked or shared with another authorized client.
 Open a pipeline to select its immutable version. The current default is marked;
 selecting an older version does not change the default. Its tabs are:
 
-- **Graph**: dependencies, nested graph groups and selectable component nodes.
-  Use zoom controls and scroll to pan. Selecting a node shows its input/output
-  contract and task configuration.
+- **Graph**: dependencies and selectable component/subpipeline nodes at the
+  current pipeline level. Selecting a node shows its input/output contract and
+  task configuration. Use **Open subpipeline** to inspect its children, and the
+  breadcrumbs to return to a parent. **All tasks** shows the complete hierarchy
+  with dotted containment edges; **Grouped view** restores the focused level.
+  Use zoom controls and scroll to pan.
 - **Summary**: version/pipeline IDs, content digest, profile, availability and
   root interface.
 - **Source**: retained compiled YAML/JSON with **Copy source** and
@@ -99,6 +102,14 @@ execution details; a reused task has no new container attempt and links to the
 original successful producer. Skipped, failed, interrupted and reused states are
 shown explicitly, rather than all appearing as successful execution.
 
+Subpipeline nodes show their own recorded state and a summary of nested tasks.
+Open them to inspect individual execution or registration tasks. Grouping changes
+only the view: attempts, cache reuse and artifact lineage retain their original
+task paths. Graph location and selection are included in the URL; a direct link
+to a nested task opens its parent level unless the URL explicitly selects another
+level. Browser Back/Forward and live updates retain that context. Existing flat
+definitions remain flat; author a native KFP subpipeline to group related tasks.
+
 Nonterminal Run views can refresh every three seconds. Turn off **Live updates**
 when inspecting a fixed view. Updates pause while the page is hidden or a form
 is being edited. Log tabs use explicit bounded loads rather than a live unbounded
@@ -144,9 +155,10 @@ artifact bytes or render artifact HTML.
 
 ## Bounded views and errors
 
-The graph displays at most 1,000 nodes. Version/input selectors load up to 2,000
-records and accept known IDs for additional history. Comparison is bounded to
-2,000 tasks and 200 output artifacts per Run. The page shows a notice when a
+The graph displays at most 1,000 nodes per focused level or **All tasks** view.
+Its toolbar shows visible and total task counts. Version/input selectors load up
+to 2,000 records and accept known IDs for additional history. Comparison is bounded
+to 2,000 tasks and 200 output artifacts per Run. The page shows a notice when a
 limit applies; inspect the exact definition/source or individual resources for
 the remaining data.
 

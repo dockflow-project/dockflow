@@ -1,0 +1,25 @@
+schema_version: 1
+id: collapsed-pipeline-graphs
+summary: Show native nested graphs one level at a time with inspectable task details and complete-hierarchy navigation.
+origin:
+  commit: "032444d3686f5951cb0b2457e64a023ded502387"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.1"
+impact:
+  specification: none
+  implementation: patch
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Display exact native task paths, dependencies and nested containment with keyboard-accessible inspection.
+    implementation: Project immediate children by default, expose subpipeline controls and breadcrumbs, and retain an explicit All tasks view.
+    verification: Projection tests and Chromium checks cover repeated nesting, safe labels, keyboard activation, deep links and complete containment.
+  - requirement: Preserve bounded display and graph context during browser navigation and active-Run updates.
+    implementation: Store scope in navigation queries and apply the 1,000-node bound to the selected level with accurate counts and truncation notices.
+    verification: Browser checks cover Back/Forward, reload, live polling, narrow layout and a synthetic 1,005-child graph.
+  - requirement: Keep execution, attempts, reuse and artifact lineage authoritative outside graph presentation.
+    implementation: Retain original qualified task identities and observed state; introduce no executor, API or storage changes.
+    verification: Web API regressions pass; consuming pipeline execution and repeat reuse qualification is recorded with the delivery receipt.
+evidence:
+  - validation/collapsed-pipeline-graphs.md
+gaps: []

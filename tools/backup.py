@@ -6,10 +6,10 @@ import json
 import shutil
 from pathlib import Path
 
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.artifacts import ArtifactStore
 from dockflow_pipelines.canonical import loads
 from dockflow_pipelines.config import load_settings
-from dockflow_pipelines.errors import DockflowError
 from dockflow_pipelines.metadata import ControlStore
 
 
@@ -19,9 +19,11 @@ def restore(source: Path, config: Path, apply: bool) -> dict:
     settings = load_settings(config)
     if manifest["project_id"] != settings.project_id:
         raise DockflowError("Backup project ID differs from configuration")
+    if manifest.get("state_format") != "dockflow-sql-v4":
+        raise DockflowError(
+            "Unsupported backup state format; SQL state backup required"
+        )
     matches = {
-        "state_directory": str(settings.state),
-        "metadata_directory": str(settings.metadata_directory),
         "artifacts_backend": settings.artifacts["backend"],
     }
     if settings.artifacts["backend"] == "filesystem":
@@ -36,32 +38,26 @@ def restore(source: Path, config: Path, apply: bool) -> dict:
         matches["artifact_prefix"] = settings.artifacts.get("prefix", "")
     if any(manifest.get(key) != value for key, value in matches.items()):
         raise DockflowError(
-            "Restore requires the original configured state, metadata and artifact locations; relocation needs a separate migration"
+            "Restore requires the original managed artifact locations; relocation needs a separate migration"
         )
     report = {
         "schema_version": 1,
         "project_id": settings.project_id,
         "apply": apply,
-        "state_directory": str(settings.state),
-        "metadata_directory": str(settings.metadata_directory),
         "backup": str(source),
         "external_references_restored": False,
     }
     if not apply:
         return report
     control = ControlStore(
-        settings.state, settings.project_id, settings.metadata_directory
+        settings.state,
+        settings.project_id,
+        storage=settings.state_storage,
     )
     artifacts = ArtifactStore(control, settings.artifacts)
-    with control.owner():
-        if any(path.name != "owner.lock" for path in settings.state.iterdir()):
-            raise DockflowError(
-                "Restore target state must be empty. Preserve existing state separately before restoring."
-            )
-        if settings.metadata_directory.exists() and any(
-            settings.metadata_directory.iterdir()
-        ):
-            raise DockflowError("Restore target metadata directory must be empty")
+    with control.owner(exclusive=True):
+        if not control.database.project_empty(include_cache=True):
+            raise DockflowError("Restore target project must be empty")
         managed = artifacts.managed_root
         if (
             artifacts.backend == "filesystem"
@@ -87,38 +83,34 @@ def restore(source: Path, config: Path, apply: bool) -> dict:
             # different dataset. A provider-volume restore is an alternative.
             if existing:
                 raise DockflowError("S3 managed restore prefix must be empty")
-        shutil.copytree(source / "control", settings.state, dirs_exist_ok=True)
-        index = source / "index" / "mlmd.sqlite"
-        if index.exists():
-            settings.metadata_directory.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(index, settings.metadata_directory / "mlmd.sqlite")
         if artifacts.backend == "filesystem":
             if (source / "managed").exists():
                 shutil.copytree(source / "managed", managed, dirs_exist_ok=True)
         else:
-            for folder in (source / "managed").glob("artifact_*"):
-                descriptor = loads((folder / "artifact.json").read_bytes())
-                content_path, recovery_path = artifacts.managed_paths(descriptor)
-                key = artifacts.object_key(content_path)
-                client = artifacts._s3()
-                bucket = settings.artifacts["bucket"]
-                if descriptor["payload_kind"] == "file":
-                    client.upload_file(str(folder / "payload"), bucket, key)
-                elif descriptor["payload_kind"] == "directory":
-                    for entry in descriptor["inventory"]:
-                        if entry["kind"] == "file":
-                            client.upload_file(
-                                str(folder / "payload" / entry["path"]),
-                                bucket,
-                                key + "/" + entry["path"],
-                            )
-                client.upload_file(
-                    str(folder / "artifact.json"),
-                    bucket,
-                    artifacts.object_key(recovery_path),
+            managed_source = source / "managed"
+            for payload in managed_source.rglob("*"):
+                if payload.is_file():
+                    relative = payload.relative_to(managed_source).as_posix()
+                    artifacts._s3().upload_file(
+                        str(payload),
+                        settings.artifacts["bucket"],
+                        artifacts.object_key(relative),
+                    )
+        with control.database.transaction():
+            control.import_database(source / "state.sqlite")
+            control.initialize()
+            check = control.check(verify_contents=True, artifacts=artifacts)
+            if not check["valid"]:
+                raise DockflowError("Restored database failed verification")
+            tokens = control.database.cache_store_tokens()
+            if tokens and tokens != {artifacts.storage_identity(create=False)}:
+                raise DockflowError(
+                    "Restored artifact store identity differs from cache history"
                 )
-        control.initialize()
-        check = control.check(verify_contents=True, artifacts=artifacts)
+            for cache_manifest in control.database.cache_manifests():
+                artifacts.verify_cache(
+                    cache_manifest, cache_manifest["storage_identity"]
+                )
         if not check["valid"]:
             raise DockflowError(
                 "Restored control records failed verification",
@@ -150,7 +142,9 @@ def main() -> int:
         else:
             settings = load_settings(arguments.config)
             control = ControlStore(
-                settings.state, settings.project_id, settings.metadata_directory
+                settings.state,
+                settings.project_id,
+                storage=settings.state_storage,
             )
             artifacts = ArtifactStore(control, settings.artifacts)
             with control.owner():

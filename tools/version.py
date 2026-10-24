@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MEMBERS = [
     ROOT / "packages" / name / "pyproject.toml"
-    for name in ("cli", "pipelines", "artifacts")
+    for name in ("cli", "pipelines", "artifacts", "database")
 ]
 
 
@@ -36,7 +36,9 @@ def main() -> int:
                 r'(?m)^version = "[^"]+"$', f'version = "{version}"', source, count=1
             )
             source = re.sub(
-                r'dockflow-cli==[^"\s]+', f"dockflow-cli=={version}", source
+                r'(dockflow-(?:cli|database|artifacts)(?:\[postgresql\])?)==[^"\s]+',
+                rf"\1=={version}",
+                source,
             )
             path.write_text(source)
         metadata = tomllib.loads(source)["project"]
@@ -49,6 +51,14 @@ def main() -> int:
             errors.append(
                 "dockflow-pipelines must require the exact shared dockflow-cli version"
             )
+        if (
+            metadata["name"] == "dockflow-pipelines"
+            and f"dockflow-artifacts=={version}" not in metadata["dependencies"]
+        ):
+            errors.append("Pipelines must require the exact shared Artifacts version")
+        if metadata["name"] in {"dockflow-pipelines", "dockflow-artifacts"}:
+            if f"dockflow-database=={version}" not in metadata["dependencies"]:
+                errors.append(f"{metadata['name']}: shared database version differs")
     # The nonpackaged workspace advertises its development version to uv too.
     workspace = ROOT / "pyproject.toml"
     source = workspace.read_text()

@@ -1,6 +1,6 @@
 """Authoritative control records, durable commits, replay and recovery.
 
-OS locking and MLMD projection are delegated to dedicated adapters. ControlStore
+SQL transactions and execution ownership are delegated to a database adapter. ControlStore
 retains their coordination boundary and the accepted-record transaction order.
 """
 
@@ -8,27 +8,23 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import functools
 import hashlib
 import os
 import re
 import shutil
-import sqlite3
 import threading
 import uuid
 from pathlib import Path
 from typing import Any
 
+from dockflow_database.errors import DockflowError
+
 from .canonical import digest, json_bytes, loads, validate_json
-from .errors import DockflowError
-from .mlmd_index import MLMDIndex as MLMDIndex
-from .ownership import OWNER_METADATA_MAX_BYTES as OWNER_METADATA_MAX_BYTES
-from .ownership import StateOwnership
-from .records import COLLECTIONS as COLLECTIONS
-from .records import MAPPING_VERSION as MAPPING_VERSION
-from .records import SCHEMA_VERSION as SCHEMA_VERSION
-from .records import TERMINAL as TERMINAL
-from .records import new_id as new_id
-from .records import utc_now as utc_now
+from .lifecycle import merge_run, terminal_task
+from .projections import DOMAINS, expected_rows, project_record
+from .records import COLLECTIONS, TERMINAL, utc_now
+from .state_database import StateDatabase
 
 
 def _fsync_directory(path: Path) -> None:
@@ -40,8 +36,8 @@ def _fsync_directory(path: Path) -> None:
             os.close(fd)
 
 
-def atomic_write(path: Path, data: bytes, *, exclusive: bool = False) -> None:
-    """Write and sync on the destination filesystem; never expose partial JSON."""
+def atomic_write(path: Path, data: bytes) -> None:
+    """Write and sync a backup manifest on the destination filesystem."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     try:
@@ -49,85 +45,142 @@ def atomic_write(path: Path, data: bytes, *, exclusive: bool = False) -> None:
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
-        if exclusive and path.exists():
-            if path.read_bytes() != data:
-                raise DockflowError(
-                    f"Conflicting immutable control record: {path.name}",
-                    code="CONFLICT",
-                    status=409,
-                )
-            return
         os.replace(temporary, path)
         _fsync_directory(path.parent)
     finally:
         temporary.unlink(missing_ok=True)
 
 
+def _project_mutation(method):
+    @functools.wraps(method)
+    def serialized(self, *args, **kwargs):
+        with self._mutex, self.database.transaction():
+            return method(self, *args, **kwargs)
+
+    return serialized
+
+
+def _maintenance_operation(method):
+    @functools.wraps(method)
+    def exclusive(self, *args, **kwargs):
+        with self.database.maintenance():
+            return method(self, *args, **kwargs)
+
+    return exclusive
+
+
 class ControlStore:
     def __init__(
-        self, state: Path, project_id: str, metadata_directory: Path | None = None
+        self,
+        state: Path,
+        project_id: str,
+        *,
+        storage: dict | None = None,
     ):
         self.state = Path(state).absolute()
         self.project_id = project_id
-        self.metadata_directory = Path(metadata_directory or self.state / "db")
-        self.index: MLMDIndex | None = None
-        self._ownership = StateOwnership(self.state, self.project_id)
+        self.database = StateDatabase(
+            storage
+            or {"backend": "sqlite", "database": str(self.state / "state.sqlite")},
+            project_id,
+        )
         self._owner_guard = threading.Lock()
         self._owner_depth = 0
-        self._mutex = threading.RLock()
-        self._sequence = 0
-
-    @property
-    def root(self) -> Path:
-        return self.state
+        self._mutex = self.database.mutex
 
     @property
     def reconciliation_required(self) -> bool:
-        path = self.state / "index-status.json"
-        return path.exists() and bool(
-            self.read("index-status.json").get("reconciliation_required")
-        )
+        status = self.project_metadata("reconciliation") or {}
+        return self.database.poisoned or bool(status.get("reconciliation_required"))
 
     def ensure_reconciled(self) -> None:
         if self.reconciliation_required:
             raise DockflowError(
-                "Accepted control state requires MLMD reconciliation before dispatch",
-                code="UNAVAILABLE",
-                status=503,
+                "Accepted control state requires SQL projection reconciliation before dispatch",
+                "UNAVAILABLE",
+                503,
             )
 
-    def open_readonly_index(self) -> bool:
-        """Attach an existing index for inspection without schema or project writes."""
-        path = self.metadata_directory / "mlmd.sqlite"
-        if not path.exists():
-            if self.records():
-                raise DockflowError(
-                    "MLMD index is missing; rebuild it offline from the accepted control records",
-                    code="NOT_FOUND",
-                    status=404,
-                )
-            return False
-        self.index = MLMDIndex(path, self.project_id, read_only=True)
-        return True
+    def project_metadata(self, name: str) -> dict | None:
+        if not re.fullmatch(r"[a-z][a-z0-9_-]*", name):
+            raise DockflowError("Invalid project metadata name")
+        return self.database.project_metadata(name)
+
+    def set_project_metadata(self, name: str, value: dict, *, immutable=False) -> None:
+        self.require_owner()
+        self.project_metadata(name)
+        self.database.set_project_metadata(name, value, immutable=immutable)
+
+    def has_resource(self, collection: str, public_id: str) -> bool:
+        self._validate_resource(
+            collection, {f"{COLLECTIONS.get(collection, '')}_id": public_id}
+        )
+        return self.database.resource(collection, public_id) is not None
+
+    def output_set(self, attempt_id: str) -> dict | None:
+        self._validate_resource("attempts", {"attempt_id": attempt_id})
+        return self.database.output_set(attempt_id)
+
+    def has_output_set(self, attempt_id: str) -> bool:
+        return self.output_set(attempt_id) is not None
+
+    def definition_source(self, definition_id: str) -> bytes:
+        self._validate_resource("definitions", {"definition_id": definition_id})
+        return self.database.definition_source(definition_id)
+
+    def attempt_log_snapshot(self, attempt_id: str, stream: str) -> bytes:
+        self._validate_resource("attempts", {"attempt_id": attempt_id})
+        if stream not in {"stdout", "stderr"}:
+            raise DockflowError("Invalid retained log stream")
+        return self.database.log_snapshot(attempt_id, stream)
+
+    def snapshot_attempt_log(
+        self, run_id: str, task_id: str, attempt_id: str, stream: str, source: bytes
+    ) -> None:
+        self.append(
+            "attempt_log_snapshot",
+            {
+                "run_id": run_id,
+                "task_id": task_id,
+                "attempt_id": attempt_id,
+                "stream": stream,
+                "base64": base64.b64encode(source).decode("ascii"),
+                "sha256": hashlib.sha256(source).hexdigest(),
+            },
+        )
 
     def require_owner(self) -> None:
-        self._ownership.require_owner()
+        self.database.require_owner()
 
     @contextlib.contextmanager
-    def owner(self, endpoint: str | None = None):
-        """OS-backed exclusion; metadata is diagnostic, never a takeover token.
+    def owner(self, endpoint: str | None = None, *, exclusive: bool = False):
+        """Database execution ownership; diagnostics never authorize takeover.
 
         Nested contexts on this shared coordinator retain the same acquisition,
         including across threads. The last context releases its stable lock inode.
         """
         with self._owner_guard:
-            if not self._ownership.held:
-                self._ownership.acquire(endpoint)
+            if not self.database.held:
+                if (self.state / "project.json").exists() or (
+                    self.state / "records"
+                ).exists():
+                    raise DockflowError(
+                        "Legacy file-backed history is unsupported; select a fresh state directory",
+                        "CONFLICT",
+                        409,
+                    )
+                self.database.acquire(endpoint, exclusive=exclusive)
                 try:
-                    self._sequence = len(self.records())
+                    self.records()
                 except BaseException:
-                    self._ownership.release()
+                    self.database.release()
                     raise
+            if exclusive and not self.database.exclusive:
+                raise DockflowError(
+                    "Exclusive ownership must be acquired before nesting",
+                    "CONFLICT",
+                    409,
+                )
             self._owner_depth += 1
         try:
             yield self
@@ -135,11 +188,92 @@ class ControlStore:
             with self._owner_guard:
                 self._owner_depth -= 1
                 if self._owner_depth == 0:
-                    self._ownership.release()
+                    self.database.release()
 
-    def initialize(self, require_mlmd: bool = True) -> None:
+    def run_owner(self, run_id, execution=None, *, recovering=False):
+        from .run_ownership import owned_run
+
+        execution = execution or {}
+        return owned_run(
+            self,
+            run_id,
+            execution.get("run_lease_seconds", 120.0),
+            execution.get("run_heartbeat_seconds", 30.0),
+            recovering=recovering,
+        )
+
+    def check_execution(self):
+        if not self.database.adapter.concurrent_runs:
+            return None
+        try:
+            with self.database.transaction():
+                if self.database.run_claim is None:
+                    raise DockflowError(
+                        "Run execution requires a Run claim", "OWNERSHIP_LOST", 409
+                    )
+            return None
+        except DockflowError:
+            return "ownership_lost"
+
+    @contextlib.contextmanager
+    def stop_request(self, run_id):
+        previous = getattr(self.database.local, "control_run", None)
+        self.database.local.control_run = run_id
+        try:
+            with self.database.transaction():
+                yield
+        finally:
+            self.database.local.control_run = previous
+
+    def _guard_execution(self, kind, payload):
+        if not self.database.adapter.concurrent_runs:
+            return
+        resource = payload.get("resource", {})
+        claim = self.database.run_claim
+        if (
+            claim is not None
+            and kind == "resource_put"
+            and payload.get("collection") in {"tasks", "attempts"}
+            and not resource.get("run_id")
+        ):
+            raise DockflowError(
+                "Execution resources require their owning Run", "CONFLICT", 409
+            )
+        run_id = (
+            payload.get("run_id")
+            or resource.get("run_id")
+            or payload.get("marker", {}).get("run_id")
+        )
+        if not run_id:
+            return
+        claim = self.database.run_claim
+        if claim is not None:
+            if run_id != claim.run_id:
+                raise DockflowError(
+                    "Run owner cannot mutate another Run", "CONFLICT", 409
+                )
+            return
+        control = getattr(self.database.local, "control_run", None)
+        if control == run_id and (
+            kind == "stop_intent"
+            or (kind == "resource_put" and payload.get("collection") == "runs")
+        ):
+            return
+        row = self.database.execute(
+            self.database.connection,
+            "SELECT 1 FROM dockflow_run_owners WHERE project_id=? AND run_id=?",
+            (self.project_id, run_id),
+        ).fetchone()
+        if row:
+            raise DockflowError(
+                "Execution mutation requires the current Run owner",
+                "OWNERSHIP_LOST",
+                409,
+            )
+
+    @_project_mutation
+    def initialize(self) -> None:
         self.require_owner()
-        project_path = self.state / "project.json"
         expected = {
             "schema_version": 1,
             "kind": "project",
@@ -147,8 +281,8 @@ class ControlStore:
             "mapping_version": 1,
             "digest_format": "dockflow-json-v1",
         }
-        if project_path.exists():
-            project = self.read("project.json")
+        project = self.project_metadata("project")
+        if project is not None:
             if any(project.get(key) != value for key, value in expected.items()):
                 raise DockflowError(
                     "Incompatible state schema or project identity",
@@ -156,21 +290,29 @@ class ControlStore:
                     status=409,
                 )
         else:
-            atomic_write(
-                project_path,
-                json_bytes({**expected, "created_at": utc_now()}),
-                exclusive=True,
+            if not self.database.project_empty():
+                raise DockflowError(
+                    "Project identity record is missing from nonempty database state",
+                    "CONFLICT",
+                    409,
+                )
+            self.set_project_metadata(
+                "project", {**expected, "created_at": utc_now()}, immutable=True
             )
-        records = self.records()
-        self._sequence = len(records)
-        for record in records:
-            self._project(record)
-        self._recover_committed_outputs(records)
-        if require_mlmd:
-            self.index = MLMDIndex(
-                self.metadata_directory / "mlmd.sqlite", self.project_id
-            )
-            self.reconcile_index()
+        if self.database.adapter.concurrent_runs:
+            if self.database.current_sequence() != len(self.records()):
+                raise DockflowError(
+                    "Journal sequence counter differs from accepted history",
+                    "CONFLICT",
+                    409,
+                )
+            return
+        with self._mutex, self.database.transaction():
+            records = self.records()
+            for record in records:
+                self._project(record)
+            self._recover_committed_outputs(records)
+            self.mark_reconciled()
 
     def _recover_committed_outputs(self, records: list[dict[str, Any]]) -> None:
         for record in records:
@@ -214,53 +356,6 @@ class ControlStore:
                     },
                 )
 
-    def _path(self, relative: str | Path) -> Path:
-        relative = Path(relative)
-        if relative.is_absolute() or ".." in relative.parts:
-            raise DockflowError("Invalid control-record path", code="INVALID_ARGUMENT")
-        path = self.state / relative
-        if not path.resolve().is_relative_to(self.state.resolve()):
-            raise DockflowError(
-                "Control path escapes state root", code="INVALID_ARGUMENT"
-            )
-        return path
-
-    def read(self, relative: str | Path) -> dict[str, Any]:
-        try:
-            value = loads(self._path(relative).read_bytes())
-        except FileNotFoundError as exc:
-            raise DockflowError(
-                f"Control record not found: {relative}", code="NOT_FOUND", status=404
-            ) from exc
-        except (ValueError, UnicodeError) as exc:
-            raise DockflowError(
-                f"Invalid control record: {relative}", code="CONFLICT", status=409
-            ) from exc
-        if not isinstance(value, dict):
-            raise DockflowError(
-                f"Control record is not an object: {relative}",
-                code="CONFLICT",
-                status=409,
-            )
-        return value
-
-    def write(self, relative: str | Path, resource: dict[str, Any]) -> None:
-        self.require_owner()
-        atomic_write(self._path(relative), json_bytes(resource))
-
-    def write_bytes(self, relative: str | Path, source: bytes) -> None:
-        """Persist an exact accepted auxiliary snapshot, including it in replay."""
-        self.require_owner()
-        self._path(relative)
-        self.append(
-            "file_snapshot",
-            {
-                "path": str(relative),
-                "base64": base64.b64encode(source).decode("ascii"),
-                "sha256": hashlib.sha256(source).hexdigest(),
-            },
-        )
-
     def save_definition(
         self, resource: dict[str, Any], source: bytes
     ) -> dict[str, Any]:
@@ -271,12 +366,19 @@ class ControlStore:
             raise DockflowError(
                 "Definition source digest mismatch", code="CONFLICT", status=409
             )
-        self.write_bytes(Path("definitions") / definition_id / "source.yaml", source)
+        self.save_definition_source(definition_id, source)
         return self.put("definitions", {**resource, "sha256": source_digest})
 
     def save_definition_source(self, definition_id: str, source: bytes) -> None:
-        self._resource_path("definitions", {"definition_id": definition_id})
-        self.write_bytes(Path("definitions") / definition_id / "source.yaml", source)
+        self._validate_resource("definitions", {"definition_id": definition_id})
+        self.append(
+            "definition_source",
+            {
+                "definition_id": definition_id,
+                "base64": base64.b64encode(source).decode("ascii"),
+                "sha256": hashlib.sha256(source).hexdigest(),
+            },
+        )
 
     def log(
         self,
@@ -320,39 +422,50 @@ class ControlStore:
 
     def log_entries(self, run_id: str) -> list[dict[str, Any]]:
         self.get("runs", run_id)
-        return [
-            {**record["payload"], "sequence": record["sequence"]}
-            for record in self.records()
-            if record.get("event_kind") == "log"
-            and record["payload"].get("run_id") == run_id
+        return self.database.log_entries(run_id)
+
+    def accepted_events(self, kind, *, run_id=None, attempt_id=None):
+        records = [
+            record
+            for _, record in self.database.events(
+                kind=kind, run_id=run_id, attempt_id=attempt_id
+            )
         ]
+        for record in records:
+            self._validate_record(record)
+        return records
+
+    def has_stop_intent(self, run_id):
+        return bool(self.database.events(kind="stop_intent", run_id=run_id))
 
     def records(self) -> list[dict[str, Any]]:
-        directory = self.state / "records"
+        with self.database.snapshot():
+            return self._records()
+
+    def _records(self) -> list[dict[str, Any]]:
         result = []
-        if not directory.exists():
-            return result
+        events = self.database.events()
         stopped_runs: set[str] = set()
         committed_attempts: set[str] = set()
         registered_versions: dict[str, dict] = {}
         registered_components: dict[str, dict] = {}
         catalogs: dict[str, dict] = {}
         observed_ids: set[tuple[str, str]] = set()
-        for expected, path in enumerate(sorted(directory.glob("*.json")), start=1):
-            if path.name != f"{expected:020d}.json":
+        for expected, (sequence, record) in enumerate(events, start=1):
+            if sequence != expected:
                 raise DockflowError(
                     f"Accepted mutation sequence gap at {expected}",
                     code="CONFLICT",
                     status=409,
                 )
-            record = self.read(path.relative_to(self.state))
             if (
-                record.get("schema_version") != 1
+                not isinstance(record, dict)
+                or record.get("schema_version") != 1
                 or record.get("project_id") != self.project_id
                 or record.get("sequence") != expected
             ):
                 raise DockflowError(
-                    f"Incompatible accepted mutation {path.name}",
+                    f"Incompatible accepted mutation {sequence}",
                     code="CONFLICT",
                     status=409,
                 )
@@ -362,7 +475,8 @@ class ControlStore:
                 "stop_intent",
                 "event",
                 "cleanup",
-                "file_snapshot",
+                "definition_source",
+                "attempt_log_snapshot",
             }:
                 raise DockflowError(
                     f"Unknown accepted mutation kind: {record.get('kind')}",
@@ -478,10 +592,10 @@ class ControlStore:
             if not isinstance(payload, dict):
                 raise ValueError("Mutation payload is not an object")
             if record["kind"] == "resource_put":
-                self._resource_path(payload["collection"], payload["resource"])
+                self._validate_resource(payload["collection"], payload["resource"])
             elif record["kind"] == "output_set":
                 marker = payload["marker"]
-                self.attempt_path(
+                self._validate_attempt_identity(
                     marker["run_id"], marker["task_id"], marker["attempt_id"]
                 )
                 if (
@@ -493,7 +607,7 @@ class ControlStore:
                 if set(marker["outputs"]) != set(payload["artifacts"]):
                     raise ValueError("Output-set named artifact bindings mismatch")
                 for name, descriptor in payload["artifacts"].items():
-                    self._resource_path("artifacts", descriptor)
+                    self._validate_resource("artifacts", descriptor)
                     binding = marker["outputs"][name]
                     if binding["artifact_id"] != descriptor["artifact_id"] or binding[
                         "descriptor_sha256"
@@ -510,12 +624,91 @@ class ControlStore:
                         raise ValueError("Committed artifact producer mismatch")
                 validate_json(marker["parameters"])
             elif record["kind"] == "stop_intent":
-                self._resource_path("runs", {"run_id": payload["run_id"]})
-            elif record["kind"] == "file_snapshot":
-                self._path(payload["path"])
+                self._validate_resource("runs", {"run_id": payload["run_id"]})
+            elif record["kind"] in {"definition_source", "attempt_log_snapshot"}:
+                if record["kind"] == "definition_source":
+                    self._validate_resource(
+                        "definitions", {"definition_id": payload["definition_id"]}
+                    )
+                else:
+                    self._validate_attempt_identity(
+                        payload["run_id"], payload["task_id"], payload["attempt_id"]
+                    )
+                    if payload["stream"] not in {"stdout", "stderr"}:
+                        raise ValueError("Invalid retained log stream")
                 source = base64.b64decode(payload["base64"], validate=True)
                 if hashlib.sha256(source).hexdigest() != payload["sha256"]:
-                    raise ValueError("File snapshot digest mismatch")
+                    raise ValueError("Snapshot digest mismatch")
+            elif record.get("event_kind") == "cache_observation":
+                self._validate_record({**record, "event_kind": "cache_import"})
+                projected = payload["projected_artifact_ids"]
+                if (
+                    not isinstance(projected, list)
+                    or len(set(projected)) != len(projected)
+                    or not set(projected)
+                    <= {
+                        item["artifact_id"]
+                        for item in payload["manifest"]["outputs"].values()
+                    }
+                ):
+                    raise ValueError("Invalid cache observation projection")
+            elif record.get("event_kind") == "cache_import":
+                from .cache_storage import validate_manifest
+
+                manifest = payload["manifest"]
+                validate_manifest(
+                    manifest,
+                    manifest["storage_identity"],
+                    manifest["producer"]["attempt_id"],
+                )
+                if payload["manifest_digest"] != digest(manifest):
+                    raise ValueError("Imported cache manifest digest differs")
+                for mutation in self._registration_records(record):
+                    self._validate_record(mutation)
+                if {
+                    item["resource"]["artifact_id"]
+                    for item in payload["resources"]
+                    if item["collection"] == "artifacts"
+                } != {item["artifact_id"] for item in manifest["outputs"].values()}:
+                    raise ValueError("Imported cache artifact bindings differ")
+                output_snapshots = {
+                    item["artifact_id"]: item for item in manifest["outputs"].values()
+                }
+                producers = []
+                for item in payload["resources"]:
+                    resource = item["resource"]
+                    if item["collection"] == "artifacts":
+                        portable = {
+                            key: value
+                            for key, value in resource.items()
+                            if key
+                            not in {
+                                "uri",
+                                "descriptor_uri",
+                                "content_uri",
+                                "cache_origin",
+                            }
+                        }
+                        if portable != output_snapshots[resource["artifact_id"]]:
+                            raise ValueError(
+                                "Imported descriptor differs from cache manifest"
+                            )
+                    elif item["collection"] == "attempts":
+                        producers.append(resource)
+                    else:
+                        raise ValueError("Unexpected imported cache resource")
+                if (
+                    len(producers) != 1
+                    or producers[0]["attempt_id"] != manifest["producer"]["attempt_id"]
+                    or producers[0]["outputs"]
+                    != {
+                        name: item["artifact_id"]
+                        for name, item in manifest["outputs"].items()
+                    }
+                    or producers[0]["output_parameters"] != manifest["parameters"]
+                    or producers[0]["cache_manifest_digest"] != digest(manifest)
+                ):
+                    raise ValueError("Imported producer differs from cache manifest")
             elif record.get("event_kind") == "pipeline_registration":
                 from .definitions import load_definition
 
@@ -538,8 +731,7 @@ class ControlStore:
                     ).hexdigest()
                     != definition["sha256"]
                     or payload["source"]["sha256"] != definition["sha256"]
-                    or payload["source"]["path"]
-                    != f"definitions/{definition['definition_id']}/source.yaml"
+                    or payload["source"]["definition_id"] != definition["definition_id"]
                 ):
                     raise ValueError("Registration association mismatch")
                 if {
@@ -583,7 +775,9 @@ class ControlStore:
     def append(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         self.require_owner()
         validate_json(payload)
-        with self._mutex:
+        with self._mutex, self.database.transaction():
+            self._guard_execution(kind, payload)
+            sequence = self.database.allocate_sequence()
             record = {
                 "schema_version": 1,
                 "kind": kind
@@ -593,26 +787,31 @@ class ControlStore:
                     "output_set",
                     "stop_intent",
                     "cleanup",
-                    "file_snapshot",
+                    "definition_source",
+                    "attempt_log_snapshot",
                 }
                 else "event",
                 "event_kind": kind,
                 "project_id": self.project_id,
-                "sequence": self._sequence + 1,
+                "sequence": sequence,
                 "timestamp": utc_now(),
                 "payload": payload,
             }
             self._validate_record(record)
-            atomic_write(
-                self.state / "records" / f"{record['sequence']:020d}.json",
-                json_bytes(record),
-                exclusive=True,
-            )
-            self._sequence = record["sequence"]
-            self._project(record)
+            self.database.append_event(record)
+            try:
+                self._project(record)
+            except DockflowError:
+                raise
+            except Exception:
+                raise DockflowError(
+                    "Mutation rolled back before acceptance; SQL projection failed",
+                    "UNAVAILABLE",
+                    503,
+                ) from None
             return record
 
-    def _resource_path(self, collection: str, resource: dict[str, Any]) -> Path:
+    def _validate_resource(self, collection: str, resource: dict[str, Any]) -> str:
         kind = COLLECTIONS.get(collection)
         if kind is None:
             raise DockflowError(f"Unknown resource collection: {collection}")
@@ -635,16 +834,18 @@ class ControlStore:
             raise DockflowError(
                 "Resource project or schema mismatch", code="CONFLICT", status=409
             )
-        # Canonical top-level query projections coexist with the specified nested
-        # Run/Task/Attempt layout. Both are rebuilt from the same accepted journal.
-        if collection == "runs":
-            return Path("runs") / public_id / "run.json"
-        if collection == "definitions":
-            return Path("definitions") / public_id / "definition.json"
-        return Path(collection) / f"{public_id}.json"
+        if collection == "runs" and "execution_choices" in resource:
+            from .execution_choices import ExecutionChoices
 
+            ExecutionChoices.from_record(resource["execution_choices"])
+        return public_id
+
+    @_project_mutation
     def put(self, collection: str, resource: dict[str, Any]) -> dict[str, Any]:
         self.require_owner()
+        public_id = self._validate_resource(collection, resource)
+        if collection == "runs" and self.has_resource(collection, public_id):
+            resource = merge_run(self.get("runs", public_id), resource)
         value = {
             "schema_version": 1,
             "kind": COLLECTIONS[collection],
@@ -655,10 +856,11 @@ class ControlStore:
             raise DockflowError(
                 "Resource project or schema mismatch", code="CONFLICT", status=409
             )
-        self._resource_path(collection, value)
-        path = self._path(self._resource_path(collection, value))
-        if collection in {"definitions", "components"} and path.exists():
-            previous = self.read(path.relative_to(self.state))
+        self._validate_resource(collection, value)
+        if collection in {"definitions", "components"} and self.has_resource(
+            collection, public_id
+        ):
+            previous = self.get(collection, public_id)
             parent = (
                 previous
                 if collection == "definitions"
@@ -673,42 +875,55 @@ class ControlStore:
                     409,
                 )
         with self._mutex:
-            pending_reconciliation = self.reconciliation_required
-            record = self.append(
-                "resource_put", {"collection": collection, "resource": value}
-            )
-            try:
-                if self.index:
-                    self.index.put(collection, value)
-                    self.write(
-                        "index-status.json",
-                        {
-                            "schema_version": 1,
-                            "project_id": self.project_id,
-                            "sequence": record["sequence"],
-                            "reconciliation_required": pending_reconciliation,
-                        },
-                    )
-            except Exception as exc:
-                self.write(
-                    "index-status.json",
-                    {
-                        "schema_version": 1,
-                        "project_id": self.project_id,
-                        "sequence": record["sequence"],
-                        "reconciliation_required": True,
-                    },
-                )
-                raise DockflowError(
-                    f"Mutation accepted at sequence {record['sequence']}; MLMD reconciliation required. Do not repeat the computation.",
-                    code="UNAVAILABLE",
-                    status=503,
-                ) from exc
+            self.append("resource_put", {"collection": collection, "resource": value})
         return value
+
+    @_project_mutation
+    def finish_run(self, run: dict, *, recovering=False):
+        current = self.get("runs", run["run_id"])
+        result = merge_run(current, run)
+        if result.get("state") not in TERMINAL:
+            raise DockflowError(
+                "Run completion requires a terminal outcome", "CONFLICT", 409
+            )
+        tasks = self.database.queries.select("tasks", filters={"run_id": run["run_id"]})
+        for task in tasks:
+            attempts = self.database.queries.select(
+                "attempts", filters={"task_id": task["task_id"]}
+            )
+            changed = terminal_task(
+                task, attempts, result["state"], recovering=recovering
+            )
+            if changed is not None:
+                self.put("tasks", changed)
+        return self.put("runs", result)
 
     @staticmethod
     def _registration_records(record: dict[str, Any]) -> list[dict[str, Any]]:
         """Expand one accepted registration for projection and integrity checks."""
+        if record.get("event_kind") == "cache_observation":
+            return [
+                {
+                    **record,
+                    "kind": "resource_put",
+                    "event_kind": "resource_put",
+                    "payload": item,
+                }
+                for item in record["payload"]["resources"]
+                if item["collection"] == "artifacts"
+                and item["resource"]["artifact_id"]
+                in record["payload"]["projected_artifact_ids"]
+            ]
+        if record.get("event_kind") == "cache_import":
+            return [
+                {
+                    **record,
+                    "kind": "resource_put",
+                    "event_kind": "resource_put",
+                    "payload": mutation,
+                }
+                for mutation in record["payload"]["resources"]
+            ]
         if record.get("event_kind") != "pipeline_registration":
             return [record]
         return [
@@ -722,12 +937,13 @@ class ControlStore:
         ] + [
             {
                 **record,
-                "kind": "file_snapshot",
-                "event_kind": "file_snapshot",
+                "kind": "definition_source",
+                "event_kind": "definition_source",
                 "payload": record["payload"]["source"],
             }
         ]
 
+    @_project_mutation
     def commit_registration(
         self, catalog: dict, definition: dict, components: list[dict], source: bytes
     ) -> dict:
@@ -738,7 +954,9 @@ class ControlStore:
             ("definitions", definition),
             *(("components", item) for item in components),
         ]:
-            if self._path(self._resource_path(collection, resource)).exists():
+            if self.has_resource(
+                collection, self._validate_resource(collection, resource)
+            ):
                 raise DockflowError(
                     "Registration requires fresh version/component IDs", "CONFLICT", 409
                 )
@@ -761,151 +979,68 @@ class ControlStore:
         payload = {
             "resources": resources,
             "source": {
-                "path": f"definitions/{definition['definition_id']}/source.yaml",
+                "definition_id": definition["definition_id"],
                 "base64": base64.b64encode(source).decode("ascii"),
                 "sha256": hashlib.sha256(source).hexdigest(),
             },
         }
-        with self._mutex:
-            # The durable event is the acceptance boundary. Both projection and
-            # MLMD may be reconstructed from it after a process interruption.
-            sequence = self._sequence
-            try:
-                self.append("pipeline_registration", payload)
-                if self.index:
-                    for mutation in resources:
-                        self.index.put(mutation["collection"], mutation["resource"])
-            except Exception as exc:
-                if self._sequence == sequence:
-                    raise
-                self.write(
-                    "index-status.json",
-                    {
-                        "schema_version": 1,
-                        "project_id": self.project_id,
-                        "sequence": self._sequence,
-                        "reconciliation_required": True,
-                    },
-                )
-                raise DockflowError(
-                    f"Registration accepted: pipeline_id={catalog['pipeline_id']}, "
-                    f"pipeline_version_id={definition['definition_id']}; "
-                    "Control/index reconciliation required. Do not upload again.",
-                    code="UNAVAILABLE",
-                    status=503,
-                ) from exc
+        self.append("pipeline_registration", payload)
         return resources[1]["resource"]
 
     def _project(self, record: dict[str, Any]) -> None:
-        payload = record["payload"]
-        if record.get("event_kind") == "pipeline_registration":
-            for mutation in self._registration_records(record):
-                self._project(mutation)
-        elif record["kind"] == "resource_put":
-            collection, resource = payload["collection"], payload["resource"]
-            path = self._resource_path(collection, resource)
-            atomic_write(self._path(path), json_bytes(resource))
-            if collection == "tasks" and resource.get("run_id"):
-                atomic_write(
-                    self.state
-                    / "runs"
-                    / resource["run_id"]
-                    / "tasks"
-                    / resource["task_id"]
-                    / "task.json",
-                    json_bytes(resource),
-                )
-            elif (
-                collection == "attempts"
-                and resource.get("run_id")
-                and resource.get("task_id")
-            ):
-                atomic_write(
-                    self.attempt_path(
-                        resource["run_id"], resource["task_id"], resource["attempt_id"]
-                    )
-                    / "execution.json",
-                    json_bytes(resource),
-                )
-        elif record["kind"] == "output_set":
-            marker = payload["marker"]
-            atomic_write(
-                self.attempt_path(
-                    marker["run_id"], marker["task_id"], marker["attempt_id"]
-                )
-                / "output-set.json",
-                json_bytes(marker),
-                exclusive=True,
-            )
-            for descriptor in payload["artifacts"].values():
-                atomic_write(
-                    self._path(self._resource_path("artifacts", descriptor)),
-                    json_bytes(descriptor),
-                )
-        elif record["kind"] == "file_snapshot":
-            try:
-                source = base64.b64decode(payload["base64"], validate=True)
-            except (ValueError, KeyError) as exc:
-                raise DockflowError(
-                    "Invalid accepted file snapshot", code="CONFLICT", status=409
-                ) from exc
-            if hashlib.sha256(source).hexdigest() != payload["sha256"]:
-                raise DockflowError(
-                    "Accepted file snapshot digest mismatch",
-                    code="CONFLICT",
-                    status=409,
-                )
-            atomic_write(self._path(payload["path"]), source, exclusive=True)
-        elif record.get("event_kind") == "log":
-            if payload.get("attempt_id"):
-                directory = (
-                    self.attempt_path(
-                        payload["run_id"], payload["task_id"], payload["attempt_id"]
-                    )
-                    / "logs"
-                )
-            else:
-                directory = self.state / "runs" / payload["run_id"] / "logs"
-            atomic_write(
-                directory / f"{record['sequence']:020d}.json",
-                json_bytes({**payload, "sequence": record["sequence"]}),
-                exclusive=True,
-            )
+        for projection in project_record(record, self._registration_records):
+            value = projection.data
+            identity = projection.identity
+            if projection.table == "dockflow_state_resources":
+                self.database.put_resource(identity[0], loads(value))
+            elif projection.table == "dockflow_log_entries":
+                self.database.put_log_entry(identity[0], loads(value))
+            elif projection.table == "dockflow_definition_sources":
+                self.database.put_definition_source(identity[0], value)
+            elif projection.table == "dockflow_output_sets":
+                self.database.put_output_set(loads(value))
+            elif projection.table == "dockflow_cache_observations":
+                self.database.put_cache_observation(identity[0], loads(value))
+            elif projection.table == "dockflow_log_snapshots":
+                self.database.put_log_snapshot(identity[0], identity[1], value)
 
     def get(self, collection: str, public_id: str) -> dict[str, Any]:
         kind = COLLECTIONS.get(collection)
         if kind is None:
             raise DockflowError(f"Unknown resource collection: {collection}")
-        return self.read(self._resource_path(collection, {f"{kind}_id": public_id}))
+        self._validate_resource(collection, {f"{kind}_id": public_id})
+        resource = self.database.resource(collection, public_id)
+        if resource is None:
+            raise DockflowError(
+                f"{kind.capitalize()} not found: {public_id}", "NOT_FOUND", 404
+            )
+        if self._validate_resource(collection, resource) != public_id:
+            raise DockflowError(
+                "Resource identity differs from its SQL key", "CONFLICT", 409
+            )
+        return resource
+
+    def query(self, collection: str, **options) -> list[dict[str, Any]]:
+        return self.database.queries.select(collection, **options)
 
     def list(self, collection: str) -> list[dict[str, Any]]:
         if collection not in COLLECTIONS:
             raise DockflowError(f"Unknown resource collection: {collection}")
-        if self.index:
-            return self.index.list(collection)
-        pattern = (
-            "*/run.json"
-            if collection == "runs"
-            else "*/definition.json"
-            if collection == "definitions"
-            else "*.json"
-        )
-        return [
-            self.read(path.relative_to(self.state))
-            for path in sorted((self.state / collection).glob(pattern))
-        ]
+        return self.database.resources(collection)
 
-    def attempt_path(self, run_id: str, task_id: str, attempt_id: str) -> Path:
+    def _validate_attempt_identity(
+        self, run_id: str, task_id: str, attempt_id: str
+    ) -> None:
         for collection, value in (
             ("runs", run_id),
             ("tasks", task_id),
             ("attempts", attempt_id),
         ):
-            self._resource_path(collection, {f"{COLLECTIONS[collection]}_id": value})
-        return (
-            self.state / "runs" / run_id / "tasks" / task_id / "attempts" / attempt_id
-        )
+            self._validate_resource(
+                collection, {f"{COLLECTIONS[collection]}_id": value}
+            )
 
+    @_project_mutation
     def commit_output_set(
         self,
         run_id: str,
@@ -916,14 +1051,14 @@ class ControlStore:
     ) -> dict[str, Any]:
         self.require_owner()
         with self._mutex:
-            marker_path = (
-                self.attempt_path(run_id, task_id, attempt_id) / "output-set.json"
-            )
-            if marker_path.exists():
-                marker = self.read(marker_path.relative_to(self.state))
+            self._validate_attempt_identity(run_id, task_id, attempt_id)
+            marker = self.output_set(attempt_id)
+            if marker is not None:
                 accepted = [
                     record["payload"]["marker"]
-                    for record in self.records()
+                    for record in self.accepted_events(
+                        "output_set", attempt_id=attempt_id
+                    )
                     if record["kind"] == "output_set"
                     and record["payload"]["marker"]["attempt_id"] == attempt_id
                 ]
@@ -934,11 +1069,7 @@ class ControlStore:
                         status=409,
                     )
                 return marker
-            stopped = any(
-                record["kind"] == "stop_intent"
-                and record["payload"].get("run_id") == run_id
-                for record in self.records()
-            )
+            stopped = self.has_stop_intent(run_id)
             run = self.get("runs", run_id)
             if (
                 stopped
@@ -993,41 +1124,249 @@ class ControlStore:
                     for name, descriptor in committed.items()
                 },
                 "parameters": parameters,
-                "acceptance_sequence": self._sequence + 1,
+                "acceptance_sequence": self.database.current_sequence() + 1,
                 "published_at": published_at,
             }
             self.append("output_set", {"marker": marker, "artifacts": committed})
-            if self.index:
-                try:
-                    for descriptor in committed.values():
-                        self.index.put("artifacts", descriptor)
-                except Exception as exc:
-                    self.write(
-                        "index-status.json",
-                        {
-                            "schema_version": 1,
-                            "project_id": self.project_id,
-                            "reconciliation_required": True,
-                            "sequence": marker["acceptance_sequence"],
-                        },
-                    )
-                    raise DockflowError(
-                        f"Output set committed for {attempt_id}; MLMD reconciliation required",
-                        code="UNAVAILABLE",
-                        status=503,
-                    ) from exc
             return marker
+
+    def publish_cache_result(self, options: dict, ownership, manifest: dict) -> dict:
+        """Serialize the cache commit with this Run's durable stop intent."""
+        from .cache_registry import Registry
+
+        self.require_owner()
+        boundary = (
+            self.database.transaction()
+            if self.database.adapter.concurrent_runs
+            else contextlib.nullcontext()
+        )
+        with self._mutex, boundary:
+            run_id = manifest["producer"]["run_id"]
+            run = self.get("runs", run_id)
+            if (
+                run.get("cancellation_requested")
+                or run.get("interruption_requested")
+                or run.get("state") in {"cancelling", "cancelled", "interrupted"}
+                or self.has_stop_intent(run_id)
+            ):
+                raise DockflowError(
+                    "Stop intent prevents new cache publication", "CONFLICT", 409
+                )
+            claim = self.database.run_claim
+            if self.database.adapter.concurrent_runs:
+                if claim is None or claim.run_id != run_id:
+                    raise DockflowError(
+                        "Cache publication requires Run ownership",
+                        "OWNERSHIP_LOST",
+                        409,
+                    )
+                options = {
+                    **options,
+                    "execution_claim": {
+                        "run_id": run_id,
+                        "owner_id": claim.owner_id,
+                        "fence": claim.fence,
+                    },
+                }
+            return Registry(
+                options,
+                self.project_id,
+                before_commit=claim.check_local if claim else None,
+            ).publish(ownership, manifest)
+
+    @_project_mutation
+    def import_cache_result(self, manifest: dict, descriptors: dict) -> dict:
+        """Atomically retain verified remote producer facts, never a local attempt."""
+        from .cache_storage import validate_manifest
+
+        self.require_owner()
+        self.ensure_reconciled()
+        producer = manifest["producer"]
+        attempt_id = producer["attempt_id"]
+        validate_manifest(manifest, manifest["storage_identity"], attempt_id)
+        existing = None
+        try:
+            existing = self.get("attempts", attempt_id)
+        except DockflowError as exc:
+            if exc.code != "NOT_FOUND":
+                raise
+        else:
+            if existing.get("signature", {}).get("value") != manifest["signature"]:
+                raise DockflowError(
+                    "Cached producer conflicts with retained history", "CONFLICT", 409
+                )
+            if (
+                self.verify_output_set(attempt_id)["valid"]
+                and existing.get("outputs")
+                == {name: value["artifact_id"] for name, value in descriptors.items()}
+                and existing.get("output_parameters") == manifest["parameters"]
+            ):
+                return existing
+            if existing.get("imported_cache_producer"):
+                raise DockflowError(
+                    "Retained cache provenance needs reconciliation", "CONFLICT", 409
+                )
+        source = {
+            **(existing or {}),
+            "schema_version": 1,
+            "kind": "attempt",
+            "project_id": self.project_id,
+            **producer,
+            "state": "succeeded",
+            "publication_state": "committed",
+            "signature": (existing or {}).get(
+                "signature",
+                {
+                    "value": manifest["signature"],
+                    "format": "dockflow-task-signature-v2",
+                },
+            ),
+            "outputs": {
+                name: item["artifact_id"] for name, item in descriptors.items()
+            },
+            "output_parameters": manifest["parameters"],
+            "inputs": (existing or {}).get("inputs", {}),
+            "error": None,
+            "reconciliation_required": False,
+            "imported_cache_producer": True,
+            "cache_manifest_digest": digest(manifest),
+            "finished_at": producer.get("finished_at"),
+        }
+        resources = [
+            {"collection": "artifacts", "resource": value}
+            for value in descriptors.values()
+        ] + [{"collection": "attempts", "resource": source}]
+        claim = self.database.run_claim
+        if (
+            existing is not None
+            and self.database.adapter.concurrent_runs
+            and (claim is None or claim.run_id != producer["run_id"])
+        ):
+            # Cache publication is already committed, but only the original Run
+            # owner may advance its execution lifecycle. Retain a separate
+            # immutable producer snapshot for consumers instead of overwriting it.
+            observation = self.database.cache_observation(attempt_id)
+            if observation is not None:
+                if observation["manifest_digest"] != digest(manifest):
+                    raise DockflowError(
+                        "Cache observation conflicts with retained provenance",
+                        "CONFLICT",
+                        409,
+                    )
+                return next(
+                    item["resource"]
+                    for item in observation["resources"]
+                    if item["collection"] == "attempts"
+                )
+            self.append(
+                "cache_observation",
+                {
+                    "manifest": manifest,
+                    "manifest_digest": digest(manifest),
+                    "resources": resources,
+                    "projected_artifact_ids": [
+                        value["artifact_id"]
+                        for value in descriptors.values()
+                        if not self.has_resource("artifacts", value["artifact_id"])
+                    ],
+                },
+            )
+            return source
+        self.append(
+            "cache_import",
+            {
+                "manifest": manifest,
+                "manifest_digest": digest(manifest),
+                "resources": resources,
+            },
+        )
+        return source
 
     def verify_output_set(self, attempt_id: str) -> dict[str, Any]:
         """Verify the original committed snapshot independently of mutable pins."""
         try:
             attempt = self.get("attempts", attempt_id)
+            if attempt.get("imported_cache_producer"):
+                imported = [
+                    record["payload"]
+                    for record in self.accepted_events(
+                        "cache_import", attempt_id=attempt_id
+                    )
+                    if record.get("event_kind") == "cache_import"
+                    and record["payload"]["manifest"]["producer"]["attempt_id"]
+                    == attempt_id
+                ]
+                if (
+                    len(imported) != 1
+                    or imported[0]["manifest_digest"]
+                    != attempt["cache_manifest_digest"]
+                ):
+                    return {
+                        "valid": False,
+                        "reason": "Imported cache provenance differs",
+                    }
+                manifest = imported[0]["manifest"]
+                if (
+                    attempt["outputs"]
+                    != {
+                        name: item["artifact_id"]
+                        for name, item in manifest["outputs"].items()
+                    }
+                    or attempt["output_parameters"] != manifest["parameters"]
+                ):
+                    return {
+                        "valid": False,
+                        "reason": "Imported cache output bindings differ",
+                    }
+                for item in imported[0]["resources"]:
+                    if item["collection"] != "artifacts":
+                        continue
+                    snapshot = item["resource"]
+                    descriptor = self.get("artifacts", snapshot["artifact_id"])
+                    ignored = {"pinned", "availability", "availability_observed_at"}
+                    if {
+                        key: value
+                        for key, value in descriptor.items()
+                        if key not in ignored
+                    } != {
+                        key: value
+                        for key, value in snapshot.items()
+                        if key not in ignored
+                    }:
+                        return {
+                            "valid": False,
+                            "reason": "Imported descriptor differs from committed cache binding",
+                        }
+                return {
+                    "valid": True,
+                    "reason": None,
+                    "marker": {"parameters": manifest["parameters"]},
+                }
             accepted = [
                 record["payload"]
-                for record in self.records()
+                for record in self.accepted_events("output_set", attempt_id=attempt_id)
                 if record["kind"] == "output_set"
                 and record["payload"]["marker"]["attempt_id"] == attempt_id
             ]
+            observation = self.database.cache_observation(attempt_id)
+            if not accepted and observation is not None:
+                snapshots = [
+                    record["payload"]
+                    for record in self.accepted_events(
+                        "cache_observation", attempt_id=attempt_id
+                    )
+                    if record.get("event_kind") == "cache_observation"
+                    and record["payload"]["manifest"]["producer"]["attempt_id"]
+                    == attempt_id
+                ]
+                valid = snapshots == [observation]
+                return {
+                    "valid": valid,
+                    "reason": None
+                    if valid
+                    else "Cache observation differs from accepted provenance",
+                    "marker": {"parameters": observation["manifest"]["parameters"]},
+                }
             if len(accepted) != 1:
                 return {
                     "valid": False,
@@ -1035,12 +1374,7 @@ class ControlStore:
                 }
             payload = accepted[0]
             marker = payload["marker"]
-            actual = self.read(
-                (
-                    self.attempt_path(marker["run_id"], marker["task_id"], attempt_id)
-                    / "output-set.json"
-                ).relative_to(self.state)
-            )
+            actual = self.output_set(attempt_id)
             if actual != marker:
                 return {
                     "valid": False,
@@ -1076,32 +1410,9 @@ class ControlStore:
         except DockflowError as exc:
             return {"valid": False, "reason": str(exc)}
 
-    def reconcile_index(self) -> None:
-        self.require_owner()
-        if self.index is None:
-            return
-        # Replay current resources, preserving original producer references.
-        for collection in (
-            "pipelines",
-            "components",
-            "definitions",
-            "experiments",
-            "runs",
-            "tasks",
-            "artifacts",
-            "attempts",
-        ):
-            pattern = (
-                "*/run.json"
-                if collection == "runs"
-                else "*/definition.json"
-                if collection == "definitions"
-                else "*.json"
-            )
-            for path in sorted((self.state / collection).glob(pattern)):
-                self.index.put(collection, self.read(path.relative_to(self.state)))
-        self.write(
-            "index-status.json",
+    def mark_reconciled(self) -> None:
+        self.set_project_metadata(
+            "reconciliation",
             {
                 "schema_version": 1,
                 "project_id": self.project_id,
@@ -1113,126 +1424,109 @@ class ControlStore:
     def check(
         self, verify_contents: bool = False, artifacts: Any = None
     ) -> dict[str, Any]:
-        errors: list[dict[str, Any]] = []
+        with self.database.snapshot():
+            return self._check(verify_contents, artifacts)
+
+    def _check(self, verify_contents: bool, artifacts: Any) -> dict[str, Any]:
+        errors = []
         try:
-            accepted_sequence = len(self.records())
-            records = [
-                mutation
-                for record in self.records()
-                for mutation in self._registration_records(record)
-            ]
-        except DockflowError as exc:
+            records = self.records()
+            accepted_sequence = len(records)
+            expected = expected_rows(records, self._registration_records)
+            if self.database.current_sequence() != accepted_sequence:
+                errors.append(
+                    {"reason": "Journal sequence counter differs from accepted history"}
+                )
+            for table, (keys, columns) in DOMAINS.items():
+                with self.database.reader() as connection:
+                    rows = (
+                        self.database.execute(
+                            connection,
+                            "SELECT "
+                            + ",".join((*keys, *columns))
+                            + f" FROM {table} WHERE project_id=?",
+                            (self.project_id,),
+                        ).fetchall()
+                        if connection is not None
+                        else []
+                    )
+                actual = {}
+                for row in rows:
+                    key = tuple(row[: len(keys)])
+                    value = tuple(
+                        value.encode()
+                        if name == "value" and isinstance(value, str)
+                        else bytes(value)
+                        if name == "value" and isinstance(value, memoryview)
+                        else value
+                        for name, value in zip(columns, row[len(keys) :], strict=True)
+                    )
+                    actual[key] = value
+                for identity in expected[table].keys() | actual.keys():
+                    if expected[table].get(identity) != actual.get(identity):
+                        missing = identity not in actual
+                        reason = (
+                            "Accepted source snapshot is missing or inaccessible"
+                            if missing
+                            and table
+                            in {"dockflow_definition_sources", "dockflow_log_snapshots"}
+                            else "Domain projection is missing, changed or orphaned"
+                        )
+                        errors.append({"table": table, "reason": reason})
+            resources = {
+                identity: loads(value[0])
+                for identity, value in expected["dockflow_state_resources"].items()
+            }
+            for identity in resources:
+                if self.database.internal_id(*identity) is None:
+                    errors.append({"reason": "Resource numeric alias is missing"})
+            for record in records:
+                if record["kind"] == "output_set":
+                    marker = record["payload"]["marker"]
+                    if any(
+                        (collection, marker[field]) not in resources
+                        for collection, field in (
+                            ("runs", "run_id"),
+                            ("tasks", "task_id"),
+                            ("attempts", "attempt_id"),
+                        )
+                    ):
+                        errors.append(
+                            {
+                                "reason": "Committed output set is missing an indispensable execution record"
+                            }
+                        )
+        except (DockflowError, ValueError, TypeError, KeyError) as exc:
             return {
                 "valid": False,
-                "errors": [{"reason": str(exc)}],
+                "errors": [
+                    {
+                        "reason": str(exc)
+                        if isinstance(exc, DockflowError)
+                        else "Invalid domain projection or accepted history"
+                    }
+                ],
                 "content_verified": False,
+                "projections_checked": True,
             }
-        accepted: dict[tuple[str, str], dict[str, Any]] = {}
-        for record in records:
-            if record["kind"] == "resource_put":
-                resource = record["payload"]["resource"]
-                collection = record["payload"]["collection"]
-                accepted[(collection, resource[f"{COLLECTIONS[collection]}_id"])] = (
-                    resource
-                )
-            elif record["kind"] == "output_set":
-                marker = record["payload"]["marker"]
-                try:
-                    actual = self.read(
-                        (
-                            self.attempt_path(
-                                marker["run_id"],
-                                marker["task_id"],
-                                marker["attempt_id"],
-                            )
-                            / "output-set.json"
-                        ).relative_to(self.state)
-                    )
-                    if actual != marker:
-                        errors.append(
-                            {
-                                "attempt_id": marker["attempt_id"],
-                                "reason": "Output-set projection differs from accepted record",
-                            }
-                        )
-                except DockflowError as exc:
-                    errors.append(
-                        {"attempt_id": marker["attempt_id"], "reason": str(exc)}
-                    )
-                for resource in record["payload"]["artifacts"].values():
-                    accepted[("artifacts", resource["artifact_id"])] = resource
-            elif record["kind"] == "file_snapshot":
-                try:
-                    actual_digest = hashlib.sha256(
-                        self._path(record["payload"]["path"]).read_bytes()
-                    ).hexdigest()
-                    if actual_digest != record["payload"]["sha256"]:
-                        errors.append(
-                            {
-                                "path": record["payload"]["path"],
-                                "reason": "Accepted source snapshot digest mismatch",
-                            }
-                        )
-                except OSError:
-                    errors.append(
-                        {
-                            "path": record["payload"]["path"],
-                            "reason": "Accepted source snapshot is missing or inaccessible",
-                        }
-                    )
-        for record in records:
-            if record["kind"] == "output_set":
-                marker = record["payload"]["marker"]
-                for collection, field in (
-                    ("runs", "run_id"),
-                    ("tasks", "task_id"),
-                    ("attempts", "attempt_id"),
-                ):
-                    if (collection, marker[field]) not in accepted:
-                        errors.append(
-                            {
-                                "resource_id": marker[field],
-                                "reason": "Committed output set is missing an indispensable execution record",
-                            }
-                        )
-        for (collection, public_id), resource in accepted.items():
-            try:
-                if self.get(collection, public_id) != resource:
-                    errors.append(
-                        {
-                            "resource_id": public_id,
-                            "reason": "Projection differs from accepted history",
-                        }
-                    )
-            except DockflowError as exc:
-                errors.append({"resource_id": public_id, "reason": str(exc)})
-        if self.index:
-            for collection in COLLECTIONS:
-                indexed = {
-                    item[f"{COLLECTIONS[collection]}_id"]: item
-                    for item in self.index.list(collection)
-                }
-                for (kind, public_id), resource in accepted.items():
-                    if kind == collection and indexed.get(public_id) != resource:
-                        errors.append(
-                            {
-                                "resource_id": public_id,
-                                "reason": "MLMD index differs from accepted history",
-                            }
-                        )
         availability = []
         if artifacts:
-            availability = [
-                artifacts.verify(public_id, verify_contents=verify_contents)
-                for collection, public_id in accepted
-                if collection == "artifacts"
-            ]
+            for collection, public_id in resources:
+                if collection == "artifacts":
+                    try:
+                        availability.append(
+                            artifacts.verify(public_id, verify_contents=verify_contents)
+                        )
+                    except DockflowError:
+                        errors.append(
+                            {"reason": "Artifact projection is invalid or inaccessible"}
+                        )
         return {
             "valid": not errors,
             "project_id": self.project_id,
             "accepted_sequence": accepted_sequence,
             "errors": errors,
-            "index_checked": self.index is not None,
+            "projections_checked": True,
             "content_verified": verify_contents and artifacts is not None,
             "availability": availability,
         }
@@ -1241,7 +1535,7 @@ class ControlStore:
         records = self.records()
         report = {
             "project_id": self.project_id,
-            "state_directory": str(self.state),
+            "state_backend": self.database.backend,
             "records": len(records),
             "apply": apply,
             "offline_required": True,
@@ -1249,6 +1543,19 @@ class ControlStore:
         if not apply:
             return report
         self.require_owner()
+        with self.database.maintenance():
+            records = self.records()
+            report["records"] = len(records)
+            return self._apply_rebuild(records, report)
+
+    def _apply_rebuild(self, records, report):
+        if self.database.current_sequence() != len(records):
+            raise DockflowError(
+                "Journal sequence counter differs; restore authoritative state before rebuilding",
+                "CONFLICT",
+                409,
+            )
+
         active = [
             run
             for run in self.list("runs")
@@ -1291,77 +1598,16 @@ class ControlStore:
                 code="CONFLICT",
                 status=409,
             )
-        # Refuse contradictory/missing authoritative marker records before replacing
-        # an existing index; projections themselves are deliberately reconstructible.
-        path = self.metadata_directory / "mlmd.sqlite"
-        backup = path.with_name(f"mlmd.backup-{uuid.uuid4().hex}.sqlite")
-        self.index = None
-        backup_format = "sqlite"
-        if path.exists():
-            try:
-                with (
-                    sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as source,
-                    sqlite3.connect(backup) as target,
-                ):
-                    source.backup(target)
-            except sqlite3.DatabaseError:
-                backup.unlink(missing_ok=True)
-                backup = path.with_name(f"mlmd.corrupt-backup-{uuid.uuid4().hex}")
-                backup.mkdir()
-                for candidate in (
-                    path,
-                    *(
-                        path.with_name(path.name + suffix)
-                        for suffix in ("-wal", "-shm", "-journal")
-                    ),
-                ):
-                    if candidate.exists():
-                        shutil.copy2(candidate, backup / candidate.name)
-                backup_format = "raw-corrupt-index"
-        temporary = path.with_name(f"mlmd.rebuild-{uuid.uuid4().hex}.sqlite")
-        retired = path.with_name(f"mlmd.retired-{uuid.uuid4().hex}")
-        try:
-            self.index = MLMDIndex(temporary, self.project_id)
+        with self._mutex, self.database.transaction():
+            self.database.clear_projections()
             for record in records:
                 self._project(record)
-            self.reconcile_index()
-            self.index = None
-            retired.mkdir()
-            for candidate in (
-                path,
-                *(
-                    path.with_name(path.name + suffix)
-                    for suffix in ("-wal", "-shm", "-journal")
-                ),
-            ):
-                if candidate.exists():
-                    os.replace(candidate, retired / candidate.name)
-            try:
-                os.replace(temporary, path)
-                _fsync_directory(path.parent)
-                self.index = MLMDIndex(path, self.project_id)
-            except Exception:
-                self.index = None
-                for candidate in retired.iterdir():
-                    os.replace(candidate, path.parent / candidate.name)
-                raise
-        except Exception:
-            self.write(
-                "index-status.json",
-                {
-                    "schema_version": 1,
-                    "project_id": self.project_id,
-                    "sequence": self._sequence,
-                    "reconciliation_required": True,
-                },
-            )
-            raise
+            self.mark_reconciled()
         return {
             **report,
-            "backup": str(backup) if backup.exists() else None,
-            "backup_format": backup_format,
-            "retired_index": str(retired),
             "rebuilt": True,
+            "backup": None,
+            "backup_format": "transactional-journal",
         }
 
     def clean(self, work_directory: Path, apply: bool = False) -> dict[str, Any]:
@@ -1382,6 +1628,21 @@ class ControlStore:
                 else:
                     candidates.append(str(candidate))
         if apply:
+            with self.database.maintenance():
+                return self._apply_clean(root, candidates, protected)
+        return {
+            "project_id": self.project_id,
+            "state_backend": self.database.backend,
+            "work_directory": str(root),
+            "apply": False,
+            "candidates": candidates,
+            "protected": protected,
+            "deleted_count": 0,
+        }
+
+    def _apply_clean(self, root, candidates, protected):
+        apply = True
+        if apply:
             self.require_owner()
             if any(run.get("state") not in TERMINAL for run in self.list("runs")):
                 raise DockflowError(
@@ -1392,7 +1653,7 @@ class ControlStore:
             self.append("cleanup", {"deleted": candidates, "work_directory": str(root)})
         return {
             "project_id": self.project_id,
-            "state_directory": str(self.state),
+            "state_backend": self.database.backend,
             "work_directory": str(root),
             "apply": apply,
             "candidates": candidates,
@@ -1400,6 +1661,7 @@ class ControlStore:
             "deleted_count": len(candidates) if apply else 0,
         }
 
+    @_maintenance_operation
     def backup(self, destination: Path, artifacts: Any) -> dict[str, Any]:
         """Make an offline, owner-exclusive snapshot with all managed contents.
 
@@ -1437,10 +1699,9 @@ class ControlStore:
                         status=409,
                     )
             destination = Path(destination).absolute()
-            roots = [
-                self.state.resolve(),
-                self.metadata_directory.resolve(),
-            ]
+            roots = [self.state.resolve()]
+            if self.database.backend == "sqlite":
+                roots.append(Path(self.database.options["database"]).resolve())
             if artifacts.backend == "filesystem":
                 roots.append(
                     Path(
@@ -1459,25 +1720,35 @@ class ControlStore:
             )
             temporary.mkdir()
             try:
-                shutil.copytree(
-                    self.state,
-                    temporary / "control",
-                    ignore=shutil.ignore_patterns(
-                        "owner.lock",
-                        "mlmd.sqlite",
-                        "mlmd.sqlite-wal",
-                        "mlmd.sqlite-shm",
-                    ),
-                    symlinks=False,
+                self.export_database(temporary / "state.sqlite")
+                snapshot_database = StateDatabase(
+                    {"backend": "sqlite", "database": str(temporary / "state.sqlite")},
+                    self.project_id,
                 )
-                database = self.metadata_directory / "mlmd.sqlite"
-                if database.exists():
-                    (temporary / "index").mkdir()
-                    with (
-                        sqlite3.connect(database) as source,
-                        sqlite3.connect(temporary / "index" / "mlmd.sqlite") as target,
-                    ):
-                        source.backup(target)
+                cache_manifests = snapshot_database.cache_manifests()
+                for cache_manifest in cache_manifests:
+                    artifacts.verify_cache(
+                        cache_manifest, cache_manifest["storage_identity"]
+                    )
+                tokens = snapshot_database.cache_store_tokens()
+                store_ids = snapshot_database.artifact_store_ids()
+                identity = (
+                    artifacts.storage_identity(create=False)
+                    if tokens or store_ids
+                    else None
+                )
+                if store_ids - {identity}:
+                    raise DockflowError(
+                        "Project publication records include additional artifact roots; back up all roots with the database together",
+                        "CONFLICT",
+                        409,
+                    )
+                if tokens and tokens != {identity}:
+                    raise DockflowError(
+                        "Backup artifact store identity differs from cache history",
+                        "CONFLICT",
+                        409,
+                    )
                 if artifacts.backend == "filesystem":
                     managed = artifacts.managed_root
                     if managed.exists():
@@ -1487,18 +1758,23 @@ class ControlStore:
                         inventory(managed)
                         shutil.copytree(managed, temporary / "managed", symlinks=False)
                 else:
-                    for descriptor in artifacts.list():
-                        if descriptor["ownership"] != "managed":
-                            continue
-                        folder = temporary / "managed" / descriptor["artifact_id"]
-                        folder.mkdir(parents=True)
-                        if descriptor["payload_kind"] != "metadata":
-                            artifacts._download_descriptor(
-                                descriptor, folder / "payload"
-                            )
-                        atomic_write(folder / "artifact.json", json_bytes(descriptor))
+                    from .artifacts import _relative_path
+
+                    prefix = artifacts.options.get("prefix", "").strip("/")
+                    prefix = prefix + "/" if prefix else ""
+                    client = artifacts._s3()
+                    bucket = artifacts.options["bucket"]
+                    for page in client.get_paginator("list_objects_v2").paginate(
+                        Bucket=bucket, Prefix=prefix
+                    ):
+                        for item in page.get("Contents", []):
+                            relative = str(_relative_path(item["Key"][len(prefix) :]))
+                            target = temporary / "managed" / relative
+                            target.parent.mkdir(parents=True, exist_ok=True)
+                            client.download_file(bucket, item["Key"], str(target))
                 from .artifacts import inventory
 
+                _verify_publications(snapshot_database, temporary / "managed")
                 snapshot = inventory(temporary)
                 manifest = {
                     "schema_version": 1,
@@ -1506,8 +1782,8 @@ class ControlStore:
                     "project_id": self.project_id,
                     "accepted_sequence": len(records),
                     "created_at": utc_now(),
-                    "state_directory": str(self.state),
-                    "metadata_directory": str(self.metadata_directory),
+                    "state_backend": self.database.backend,
+                    "state_format": "dockflow-sql-v4",
                     "artifacts_backend": artifacts.backend,
                     "artifacts_root": str(artifacts.options["root"])
                     if artifacts.backend == "filesystem" and "root" in artifacts.options
@@ -1532,6 +1808,39 @@ class ControlStore:
             finally:
                 if temporary.exists():
                     shutil.rmtree(temporary)
+
+    @_maintenance_operation
+    def export_database(self, destination: Path) -> None:
+        self.require_owner()
+        target = StateDatabase(
+            {"backend": "sqlite", "database": str(destination)}, self.project_id
+        )
+        target.acquire()
+        try:
+            target.copy_project(self.database)
+            with target.transaction() as connection:
+                connection.execute("DELETE FROM dockflow_state_owners")
+            target.connection.execute("VACUUM")
+        finally:
+            target.release()
+
+    @_maintenance_operation
+    def import_database(self, source: Path) -> None:
+        self.require_owner()
+        if not self.database.project_empty(include_cache=True):
+            raise DockflowError("Restore target project must be empty", "CONFLICT", 409)
+        snapshot = StateDatabase(
+            {"backend": "sqlite", "database": str(source)}, self.project_id
+        )
+        project = snapshot.project_metadata("project")
+        if project is None:
+            raise DockflowError("Backup project identity is missing", "CONFLICT", 409)
+        if project.get("project_id") != self.project_id:
+            raise DockflowError("Backup project identity mismatch", "CONFLICT", 409)
+        with self.database.transaction():
+            self.database.copy_project(snapshot)
+            for record in self.records():
+                self._project(record)
 
     @staticmethod
     def verify_backup(source: Path) -> dict[str, Any]:
@@ -1558,6 +1867,13 @@ class ControlStore:
                 code="CONFLICT",
                 status=409,
             )
+        if manifest.get("state_format") != "dockflow-sql-v4":
+            raise DockflowError("Unsupported backup state format", "CONFLICT", 409)
+        snapshot = StateDatabase(
+            {"backend": "sqlite", "database": str(source.absolute() / "state.sqlite")},
+            manifest["project_id"],
+        )
+        _verify_publications(snapshot, source.absolute() / "managed")
         return {
             "valid": True,
             "project_id": manifest["project_id"],
@@ -1565,5 +1881,21 @@ class ControlStore:
             "external_references_included": False,
         }
 
-    new_id = staticmethod(new_id)
-    record = put
+
+def _verify_publications(snapshot: StateDatabase, managed: Path) -> None:
+    """Validate standalone publication bytes against their SQL completion records."""
+    from dockflow_artifacts import ArtifactError, Publisher
+
+    destinations = snapshot.publication_destinations()
+    if not destinations:
+        return
+    publisher = Publisher(
+        managed.absolute(), database=snapshot.adapter, project_id=snapshot.project_id
+    )
+    try:
+        for destination in destinations:
+            publisher.verify(destination)
+    except ArtifactError:
+        raise DockflowError(
+            "Backup publication contents differ from SQL manifests", "CONFLICT", 409
+        ) from None

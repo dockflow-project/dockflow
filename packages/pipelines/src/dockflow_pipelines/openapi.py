@@ -99,11 +99,9 @@ def enhance_openapi(app):
             {
                 "field": string,
                 "reason": string,
-                "state_directory": string,
                 "owner_metadata_status": {
                     "enum": [
                         "valid",
-                        "legacy",
                         "malformed",
                         "oversized",
                         "unavailable",
@@ -111,8 +109,6 @@ def enhance_openapi(app):
                     ]
                 },
                 "owner": owner,
-                "operation": {"enum": ["open", "acquire", "metadata_write", "release"]},
-                "errno": {"type": ["integer", "null"]},
             },
             ["field", "reason"],
         )
@@ -139,6 +135,20 @@ def enhance_openapi(app):
                     "description": {"type": "string", "maxLength": 4096},
                 },
                 ["display_name"],
+            ),
+            "CacheInvalidate": obj(
+                {
+                    "artifact_id": string,
+                    "reason": {"type": "string", "minLength": 1, "maxLength": 256},
+                },
+                ["artifact_id", "reason"],
+            ),
+            "CacheReset": obj(
+                {
+                    "revision": {"type": "integer", "minimum": 0},
+                    "reason": {"type": "string", "minLength": 1, "maxLength": 256},
+                },
+                ["revision", "reason"],
             ),
             "MaintenanceRequest": obj({"apply": {"type": "boolean", "default": False}}),
             "MetadataCheck": obj(
@@ -175,7 +185,7 @@ def enhance_openapi(app):
                 },
             ),
             "Run": (
-                "run_id project_id definition_id experiment_id display_name state created_at started_at finished_at parameters inputs selection bindings use_executions reuse task_ids outputs error",
+                "run_id project_id definition_id experiment_id display_name state created_at started_at finished_at parameters inputs selection bindings use_executions reuse task_ids outputs execution_choices effective_configuration error",
                 {
                     "state": {
                         "enum": [
@@ -196,9 +206,13 @@ def enhance_openapi(app):
                     "reuse": reuse,
                     "task_ids": {"type": "array", "items": string},
                     "outputs": identifier_map,
+                    "execution_choices": {
+                        "type": "object",
+                        "description": "Versioned immutable execution settings admitted with this Run; coordinator access and local paths remain deployment settings.",
+                    },
                     "effective_configuration": {
                         "type": "object",
-                        "description": "Non-secret settings captured at admission. Older records may omit sources; absence means unavailable provenance.",
+                        "description": "Non-secret settings and winning setting origins captured at admission.",
                         "properties": {
                             "sources": {
                                 "type": "object",
@@ -298,6 +312,8 @@ def enhance_openapi(app):
             "/metadata/check": "MetadataCheck",
             "/metadata/rebuild": "MaintenanceRequest",
             "/clean": "MaintenanceRequest",
+            "/cache/{key}/invalidate": "CacheInvalidate",
+            "/cache/{key}/reset": "CacheReset",
         }
         resource_names = {
             "pipelines": "Pipeline",

@@ -4,8 +4,11 @@
 
 This Linux x86-64 development profile runs the generic non-root Dockflow image,
 a dedicated privileged Docker-in-Docker engine, MinIO and a local registry.
-The service includes the browser UI and API explorer. SQLite/MLMD are stored
-with control state; no separate database container is required.
+The service includes the browser UI and API explorer. One SQLite database stores
+execution history and cache coordination; no database container is required.
+For external persistence, configure PostgreSQL through `[state]` and retain
+commonly accessible artifacts. PostgreSQL uses per-Run ownership so isolated
+coordinators can execute different Runs concurrently; SQLite keeps one owner. See [database configuration](../docs/configuration.md#database-backed-execution-history).
 
 Run all commands below from the repository root. You need Docker Compose,
 Buildx, access to the pinned build dependencies, and the prepared Python
@@ -116,7 +119,7 @@ the configured `/inputs` allowed root.
 
 | Volume label | Contents / container path |
 | --- | --- |
-| `dockflow-state` | Catalogs, compiled snapshots, Run history, logs, MLMD SQLite at `/state`. |
+| `dockflow-state` | Catalogs, compiled snapshots, Run history, logs, state and cache SQLite at `/state`. |
 | `dockflow-execution` | Staged inputs/outputs and task work at `/execution`, visible to both owner and engine. |
 | `docker-socket` | Inner daemon's socket at `/docker-socket`. |
 | `docker-state` | Inner Docker state at `/var/lib/docker`. |

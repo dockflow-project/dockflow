@@ -111,8 +111,8 @@ Other conventional outputs, including metadata-only metrics, may coexist.
 Cache hits retain their original URI. Publication destination/context must be
 represented in task inputs when it should affect reuse. Publication identity does
 not replace the orchestrator's cache key. Provider-specific publishing and path
-helpers are independent libraries; Pipelines does not depend on one publisher
-implementation. Its normal cleanup never assumes ownership of these external
+helpers remain reusable libraries. Pipelines uses Dockflow Artifacts to verify
+publication backups; component wrappers may choose their own publisher. Its normal cleanup never assumes ownership of these external
 payloads.
 
 ## Descriptors and content identities
@@ -154,8 +154,8 @@ type={schema_title,schema_version} and metadata equal to the user metadata objec
 hash it with the same canonical format. These exact keys and enum strings are
 part of fingerprint format version 1.
 
-The authoritative descriptor lives under
-`<state>/artifacts/<artifact-id>.json`. New managed descriptors additionally record
+The authoritative descriptor is a SQL artifact resource keyed by its public
+artifact ID. Managed descriptors additionally record
 `storage_layout: "kfp-v2"` and `managed_path`, the root-relative publication path.
 Produced descriptors retain `pipeline_name` and `task_name` in the producer binding
 alongside the Run, Task, attempt, definition and output identities.
@@ -191,12 +191,13 @@ otherwise use `<artifacts.root>/managed` as before. For S3 the base is
 matches KFP's relative hierarchy, not its private metadata schema, URI scheme,
 exact generated identifiers or container-local staging paths.
 
-Store recovery copies separately at
-`<managed-root>/.dockflow/dockflow-pipelines/<artifact-id>/artifact.json`. Never inject
-Dockflow metadata into the user's output directory or reserve a filename inside
-it. These copies are recovery data; the authoritative journal/output-set commit
-still determines whether an output is consumable. Copying descriptors alone
-cannot reconstruct an entire Run; see [metadata recovery](007_metadata-and-recovery.md).
+Store recovery descriptors and publication reservations in the same SQL database
+as execution state and cache coordination. Scope them by project and storage
+identity; never write descriptor or reservation sidecars into the artifact root.
+The journal/output-set commitment still determines whether outputs are consumable;
+a recovery descriptor alone cannot reconstruct a Run. Keep only payloads,
+disposable staging and `.dockflow/storage.json` in storage. Validate this identity
+marker before accepting SQL records for that root.
 
 Administrative managed imports have no producing Run/Task: place their contents
 at `<managed-root>/.dockflow/dockflow-pipelines/<artifact-id>/payload`, preserving external
@@ -210,29 +211,19 @@ letters/digits/underscores/hyphens. Reject unsafe names before dispatch; storage
 also validates producer segments before publication. Absolute paths, separators,
 dot segments and URI escapes cannot select another destination. `.dockflow` is
 reserved for store metadata. Do not follow destination symlinks or overwrite an
-existing output. One owner governs a store root.
+existing output. One owner governs ordinary journal-backed publication. Coordinated cache outputs
+use isolated immutable paths under the [cache protocol](014_cache-coordination.md);
+its registry uses the same database and project as execution state.
 
 ### Existing data and backups
 
-The package namespace `.dockflow/dockflow-pipelines` is relative to the managed
-artifact root (or object prefix), not the project control-state directory. New
-writes use kfp-v2; earlier kfp-v1 descriptors retain their recorded content paths
-and `.dockflow/artifacts` recovery paths for reads, backup and restore. Do not
-move existing artifacts implicitly. The `.dockflow` namespace is reserved.
-
-New writes use this layout; existing descriptors without storage_layout remain
-readable at their recorded URIs, including historical artifact-ID/payload paths.
-No automatic migration or historical URI rewriting occurs. Restores retain the
-layout recorded by each descriptor. This is a change to default storage placement,
-not a claim that existing data have moved.
-
-Filesystem backups copy the entire resolved managed hierarchy, including hidden
-recovery metadata, into their `managed/` section. S3 backups may use artifact-ID
-bundles internally; restore resolves each descriptor's recorded layout and
-restores its original content/recovery object keys. Refuse nonempty destination
-roots and retain existing project/URI/integrity checks. Schema-1 backups containing
-only artifacts_root remain restorable through that root's managed child. The
-backup's internal organization does not impose a layout on the live store.
+Artifact bookkeeping uses the unified schema; no migration from older SQL or
+sidecar formats is required. Do not silently adopt or delete existing state.
+Filesystem and S3 backups copy the entire owned payload hierarchy and identity
+marker into `managed/`, alongside a consistent project SQL snapshot containing
+publication claims/manifests and recovery descriptors. Restore those original
+relative payload keys and SQL records under exclusive maintenance. Refuse nonempty
+targets and preserve project, store-identity and content integrity checks.
 
 ## Preparing a task
 
@@ -275,22 +266,22 @@ Process exit zero alone is insufficient. After execution:
 2. Allocate fresh public artifact identities for the actual attempt's outputs,
    compute inventories/digests, and prepare their descriptors. Inputs remain
    unchanged. A retry cannot overwrite an earlier attempt's published artifacts.
-3. Publish every required payload and descriptor to its unique immutable
-   destination. Filesystem publication uses temporary siblings and atomic rename
+3. Publish every required payload to its unique immutable destination and retain
+   its recovery descriptor in SQL. Filesystem publication uses temporary siblings and atomic rename
    on the destination filesystem. S3 uploads to unique prefixes and verifies the
    complete inventory; it does not assume an atomic multi-object rename.
-4. Durably commit the attempt's complete output set in `output-set.json` under
-   its attempt directory. Require `schema_version`, project/Run/Task/attempt IDs,
+4. Durably commit the attempt's complete output set as an SQL domain record
+   keyed by the attempt ID, atomically with its accepted journal event. Require `schema_version`, project/Run/Task/attempt IDs,
    exact declared output-name-to-artifact-ID/descriptor-digest mappings, output
    parameter values, owner-allocated acceptance sequence and publication time.
    Write this marker only after every required output is durable. An output-free
    task commits an explicit empty set.
-5. Record attempt success and reconcile MLMD lineage/index state. Downstream
+5. Record attempt success and reconcile SQL lineage/query state. Downstream
    dispatch and historical reuse require a consistent committed output set.
 
 The control-state output-set marker is the authoritative commit boundary. A
 per-artifact descriptor appearing early does not make a partial output set
-eligible for consumption. No transaction spans object storage, files and MLMD.
+eligible for consumption. No transaction spans object storage, artifact storage and SQL.
 The owner serializes interruption/cancellation intent with output-set commit.
 If stop intent is durable first, no new output-set commit is allowed; completed
 uploads remain unpublished diagnostic/orphaned data. If the commit is durable
@@ -342,3 +333,19 @@ DockerRunner already supplies it.
 The relative output layout follows KFP 2.17's
 [run prefix construction](https://github.com/kubeflow/pipelines/blob/2.17.0/backend/src/v2/metadata/client.go)
 and [output provisioning](https://github.com/kubeflow/pipelines/blob/2.17.0/backend/src/v2/driver/driver.go).
+
+## Coordinated output sets
+
+The [cache protocol](014_cache-coordination.md) specializes publication for
+cacheable executions: versioned immutable attempt locations, portable complete
+manifests and fenced registry commitment precede reusable discovery. Execution
+output-set journals retain their producing-Run role. Registry publication and
+imported cross-state producer facts must survive journal/index reconciliation.
+
+## Database descriptor identities
+
+Descriptors use `dockflow://PROJECT_ID/artifacts/ARTIFACT_ID` as their stable
+metadata URI. This is an identity resolved through Dockflow, not a payload
+download URL. Exact descriptors and provenance live in SQL; content_uri continues
+to identify filesystem/S3 payloads. No descriptor identity depends on a worker's
+local state directory.

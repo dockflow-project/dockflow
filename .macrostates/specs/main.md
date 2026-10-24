@@ -31,10 +31,10 @@ and consult conditional annexes when the task makes them relevant.
 | 4 | docker-1 | 3.0.0 | [011_docker-1/README.md](011_docker-1/README.md) | Container image and runtime conventions. |
 | 5 | python-1 | 2.1.1 | [020_python-1/README.md](020_python-1/README.md) | Python language conventions. |
 | 6 | python-project-1 | 3.0.0 | [030_python-project-1/README.md](030_python-project-1/README.md) | Application layout, tooling, testing, and packaging. |
-| 7 | dockflow | 0.5.0 | [051_dockflow/README.md](051_dockflow/README.md) | Shared identity, compatibility, dependencies, builds, and releases. |
+| 7 | dockflow | 1.0.0 | [051_dockflow/README.md](051_dockflow/README.md) | Shared identity, compatibility, dependencies, builds, and releases. |
 | 8 | dockflow-cli | 0.2.1 | [052_dockflow-cli/README.md](052_dockflow-cli/README.md) | Shared executable, discovery, and registration contract. |
-| 9 | dockflow-pipelines | 4.1.1 | [053_dockflow-pipelines/README.md](053_dockflow-pipelines/README.md) | Complete initial product, execution ownership, artifact, persistence, upload/version API, and deployment contracts. |
-| 10 | dockflow-artifacts | 2.1.1 | [054_dockflow-artifacts/README.md](054_dockflow-artifacts/README.md) | Reusable publication, integrity and KFP integration. |
+| 9 | dockflow-pipelines | 11.0.0 | [053_dockflow-pipelines/README.md](053_dockflow-pipelines/README.md) | Complete initial product, execution ownership, artifact, persistence, upload/version API, and deployment contracts. |
+| 10 | dockflow-artifacts | 3.1.0 | [054_dockflow-artifacts/README.md](054_dockflow-artifacts/README.md) | Reusable publication, integrity and KFP integration. |
 
 Python Project supplies the project conventions for applications, CLI, and
 service tooling; Python supplies the language conventions. Dockflow's local

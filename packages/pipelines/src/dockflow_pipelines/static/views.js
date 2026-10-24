@@ -31,6 +31,21 @@ import {
   confirmAction,
 } from './forms.js';
 
+function graphSettings(query, route, navigate) {
+  return {
+    path: query.has('graph') ? query.get('graph') : undefined,
+    all: query.get('graph-view') === 'all',
+    onNavigate: ({ path, all }) => {
+      const next = new URLSearchParams(query);
+      next.set('graph', path);
+      if (all) next.set('graph-view', 'all');
+      else next.delete('graph-view');
+      next.delete('node');
+      navigate(route, next);
+    },
+  };
+}
+
 const RUN_STATES = [
   'queued',
   'running',
@@ -549,8 +564,12 @@ export async function pipelineDetail(
   if (tab === 'Graph') {
     const model = graphModel(definition.pipeline_spec),
       node = model.nodes.find((n) => n.name === selected);
-    const graphNode = graph(definition.pipeline_spec, [], selected, (name) =>
-      setQuery('node', name),
+    const graphNode = graph(
+      definition.pipeline_spec,
+      [],
+      selected,
+      (name) => setQuery('node', name),
+      graphSettings(query, route, navigate),
     );
     clear(
       body,
@@ -1153,11 +1172,17 @@ export async function runDetail(container, id, query, navigate, state) {
       el(
         'div',
         { class: selected ? 'split' : '' },
-        graph(definition.pipeline_spec, tasks, selected, (name) => {
-          const next = new URLSearchParams(query);
-          next.set('node', name);
-          navigate(route, next);
-        }),
+        graph(
+          definition.pipeline_spec,
+          tasks,
+          selected,
+          (name) => {
+            const next = new URLSearchParams(query);
+            next.set('node', name);
+            navigate(route, next);
+          },
+          graphSettings(query, route, navigate),
+        ),
         selected
           ? taskPanel(task, spec, definition, query, navigate, route)
           : null,

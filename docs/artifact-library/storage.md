@@ -15,6 +15,8 @@ from dockflow_artifacts import Publisher
 
 publisher = Publisher(
     "s3://artifacts/custom",
+    database={"backend": "postgresql", "dsn_env": "DOCKFLOW_DATABASE_DSN"},
+    project_id="demo",
     s3={"endpoint_url": "http://object-store:8333", "region_name": "us-east-1"},
 )
 receipt = publisher.publish("model.json", "models/demo/v1/model.json",
@@ -26,8 +28,10 @@ For deployment, mount a JSON config read-only and call `Publisher.from_config`:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "root": "s3://artifacts/custom",
+  "database": {"backend": "postgresql", "dsn_env": "DOCKFLOW_DATABASE_DSN"},
+  "project_id": "demo",
   "s3": {"endpoint_url": "http://object-store:8333", "region_name": "us-east-1"}
 }
 ```
@@ -42,8 +46,9 @@ dots. Root containment, symlink and source-overlap checks apply. Files retain
 their chosen names; directory trees retain relative filenames. Zero-byte files
 are valid. Empty directories and nonregular files are not supported.
 
-Reservations and completion manifests live under `.dockflow/dockflow-artifacts/` in the
-root. Complete payloads are verified before their URI is returned. A directory
+Reservations and completion manifests live in the SQL database. The artifact
+root retains payloads, disposable staging and `.dockflow/storage.json`, a small
+identity marker that binds database records to this store. Complete payloads are verified before their URI is returned. A directory
 upload can have visible partial bytes before completion; consumers should only
 receive successfully published URIs. Identical retries resume incomplete writes.
 Conflicting bytes/types/metadata are never overwritten. Changed or missing
@@ -56,7 +61,7 @@ Use a dedicated prefix owned by this library, with credentials limited to it.
 Filesystem stores require POSIX hard-link support. Other writers must not mutate
 published contents or control records.
 
-Back up payloads and `.dockflow/dockflow-artifacts/` together. The library performs no
+Back up the database and payloads, including the identity marker, together. The library performs no
 automatic retention or garbage collection. A successful publication followed by
 task failure may remain unreferenced; retrying the same publication is safe.
 
@@ -108,15 +113,47 @@ metadata at the same deterministic destination still fail rather than overwrite.
 This catches undeclared dependencies and nondeterministic outputs. Use a new
 exploration to request a separate execution context.
 
-Both control directories are relative to the artifact root:
-`.dockflow/dockflow-artifacts/` contains publisher claims/manifests/staging;
-`.dockflow/dockflow-pipelines/` is reserved for the orchestrator's managed records.
-Neither is the repository-root Dockflow state/database. Back up the whole store.
-Roots containing the earlier `.dockflow-artifacts/` layout are rejected before
-writes; use a fresh root or reset disposable data. No automatic migration occurs.
+## Database configuration
+
+`Publisher(root)` with a filesystem root defaults to `.dockflow/state.sqlite`
+under the root's parent directory. For a project whose artifact root is
+`artifacts/`, that is the project's `.dockflow/state.sqlite`. The default project
+ID is `default`. Pass the same database and project ID as Pipelines when sharing
+its state; the library does not discover Pipelines configuration automatically.
+
+Use `database={"backend": "sqlite", "database": str(database_path.resolve())}`
+for an explicit local database, or the PostgreSQL configuration above across
+isolated hosts. PostgreSQL requires `dockflow-artifacts[postgresql]`; set the
+named DSN environment variable through deployment secrets. Remote artifact roots
+require explicit database configuration. Constructor database paths are absolute;
+relative paths in a JSON config resolve against that config's directory.
+
+All writers sharing a publication root must use the same database and project ID.
+For containerized SQLite publishers, mount the containing database directory so
+its WAL/SHM companions are shared as well. Use PostgreSQL across isolated hosts.
+The shared `dockflow-database` package supplies both backend implementations.
+Configuration and imports open no connections. Publishing initializes a fresh
+schema; verification opens an existing read-only snapshot. Completion records
+remain immutable. `manifest_uri` is now a logical `dockflow://` database address;
+use `publisher.verify(destination)` to retrieve and check the publication.
+
+Pipelines backup includes these records and bytes when publication uses its
+managed root and project. Its backup tool rejects projects containing records
+for additional roots: back up those roots and the database together using an
+offline provider snapshot. Keep publishers idle during filesystem backups.
+Older sidecar layouts and database schemas require fresh disposable state;
+there is no automatic migration or deletion.
 
 
 S3 uses maintained `certifi` trust by default. An explicit `verify` certificate
 path takes precedence; when omitted, the SDK's `AWS_CA_BUNDLE` or profile
 `ca_bundle` remains supported. `verify=true` selects certifi explicitly.
 Update custom bundles independently; see [certificate maintenance](../certificate-maintenance.md).
+
+
+Filesystem publication flushes each payload and every containing directory up
+through the existing filesystem ancestors before recording SQL completion. This
+covers newly created roots and identity-marker entries. An identical retry also
+flushes existing payload/identity entries, so a previous synchronization failure
+cannot be acknowledged without retrying the durable boundary. Synchronization
+errors fail publication; verified payloads can be retained for an identical retry.

@@ -1,10 +1,10 @@
 import json
 
 import pytest
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.cli import app
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.core import Core
-from dockflow_pipelines.errors import DockflowError
 from dockflow_pipelines.metadata import ControlStore
 from dockflow_pipelines.service import create_app
 from fastapi.testclient import TestClient
@@ -99,15 +99,10 @@ def test_invalid_settings_never_create_state(settings, extra):
 
 def test_direct_cli_reports_service_owner_without_mutating_state(settings):
     application = create_app(settings, execute=False)
-    lock = settings.state / "owner.lock"
     runner = CliRunner()
     with TestClient(application) as client:
-        owner_bytes = lock.read_bytes()
-        owner = json.loads(owner_bytes)
-        records = {
-            path.name: path.read_bytes()
-            for path in (settings.state / "records").glob("*.json")
-        }
+        owner = application.state.core.store.database.owner_metadata()
+        records = application.state.core.store.records()
         result = runner.invoke(
             app,
             [
@@ -128,11 +123,8 @@ def test_direct_cli_reports_service_owner_without_mutating_state(settings):
         assert detail["owner_metadata_status"] == "valid"
         assert owner["mode"] == "service"
         assert owner["endpoint"] in error["message"]
-        assert lock.read_bytes() == owner_bytes
-        assert records == {
-            path.name: path.read_bytes()
-            for path in (settings.state / "records").glob("*.json")
-        }
+        assert application.state.core.store.database.owner_metadata() == owner
+        assert application.state.core.store.records() == records
         assert not client.get("/dockflow/v1/experiments").json()["items"]
         schema = client.get("/dockflow/v1/openapi.json").json()
         detail_schema = schema["components"]["schemas"]["Error"]["properties"]["error"][
@@ -152,7 +144,7 @@ def test_direct_cli_reports_service_owner_without_mutating_state(settings):
         ],
     )
     assert result.exit_code == 0, result.output
-    local_owner = json.loads(lock.read_bytes())
+    local_owner = application.state.core.store.database.owner_metadata()
     assert local_owner["mode"] == "local"
     assert local_owner["owner_id"] != owner["owner_id"]
 
@@ -160,16 +152,15 @@ def test_direct_cli_reports_service_owner_without_mutating_state(settings):
 def test_service_refuses_direct_owner_before_initializing_project(settings):
     store = ControlStore(settings.state, settings.project_id)
     with store.owner():
-        lock = settings.state / "owner.lock"
-        owner_bytes = lock.read_bytes()
+        owner = store.database.owner_metadata()
         with pytest.raises(DockflowError) as caught:
             with TestClient(create_app(settings, execute=False)):
                 pytest.fail("Competing service became ready")
         assert caught.value.code == "CONFLICT"
         assert caught.value.details[0]["owner"]["mode"] == "local"
-        assert lock.read_bytes() == owner_bytes
+        assert store.database.owner_metadata() == owner
         assert not (settings.state / "project.json").exists()
-        assert not (settings.metadata_directory / "mlmd.sqlite").exists()
+        assert not store.project_metadata("project") is not None
 
 
 def test_native_api_queue_idempotency_validation_paging_and_restart(settings):
@@ -237,7 +228,7 @@ def test_native_api_queue_idempotency_validation_paging_and_restart(settings):
         assert replay.status_code == 200 and replay.json()["run_id"] == run["run_id"]
 
 
-def test_run_configuration_origins_survive_inspection_and_legacy_records(settings):
+def test_run_configuration_origins_survive_inspection_and_are_immutable(settings):
     application = create_app(settings, execute=False)
     with TestClient(application) as client:
         response = client.post(
@@ -249,7 +240,7 @@ def test_run_configuration_origins_survive_inspection_and_legacy_records(setting
         snapshot = run["effective_configuration"]
         assert snapshot["sources"]["service.queue_capacity"] == "file"
         assert snapshot["sources"]["execution.timeout_seconds"] == "default"
-        assert snapshot["sources"]["metadata.directory"] == "derived"
+        assert snapshot["sources"]["state.database"] == "derived"
         settings.sources["execution.timeout_seconds"] = "option"
         settings.execution["timeout_seconds"] = 999
         assert client.get(url).json()["effective_configuration"] == snapshot
@@ -269,16 +260,15 @@ def test_run_configuration_origins_survive_inspection_and_legacy_records(setting
     result = runner.invoke(app, args)
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["result"]["effective_configuration"] == snapshot
-    store = ControlStore(
-        settings.state, settings.project_id, settings.metadata_directory
-    )
+    store = ControlStore(settings.state, settings.project_id)
     with store.owner():
         store.initialize()
         legacy = store.get("runs", run["run_id"])
         legacy["effective_configuration"].pop("sources")
-        store.put("runs", legacy)
+        with pytest.raises(DockflowError, match="immutable"):
+            store.put("runs", legacy)
     with TestClient(create_app(settings, execute=False)) as client:
-        assert "sources" not in client.get(url).json()["effective_configuration"]
+        assert client.get(url).json()["effective_configuration"] == snapshot
 
 
 def test_api_errors_reject_ambiguous_json_and_numbers(settings):

@@ -1,19 +1,17 @@
 """Uploaded catalog identity, strict multipart admission and durable recovery."""
 
 import contextlib
-import copy
 import json
 import socket
 import threading
 import time
-from pathlib import Path
 
 import pytest
 import yaml
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.cli import file_request
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.core import Core, checked_definition
-from dockflow_pipelines.errors import DockflowError
 from dockflow_pipelines.metadata import ControlStore
 from dockflow_pipelines.service import create_app
 from fastapi.testclient import TestClient
@@ -159,8 +157,17 @@ def test_versions_have_distinct_immutable_associations_and_survive_refresh_resta
         assert wrong.status_code == 400
         assert app.state.core.store.check()["valid"]
         # Lose projections deliberately: startup replay must restore their exact bytes.
-        (settings.state / "definitions" / newest / "source.yaml").unlink()
-        (settings.state / "definitions" / newest / "definition.json").unlink()
+        with app.state.core.store.database.transaction() as connection:
+            app.state.core.store.database.execute(
+                connection,
+                "DELETE FROM dockflow_definition_sources WHERE project_id=? AND definition_id=?",
+                (settings.project_id, newest),
+            )
+            app.state.core.store.database.execute(
+                connection,
+                "DELETE FROM dockflow_state_resources WHERE project_id=? AND collection='definitions' AND public_id=?",
+                (settings.project_id, newest),
+            )
 
     with TestClient(create_app(settings, execute=False)) as client:
         assert {
@@ -170,9 +177,7 @@ def test_versions_have_distinct_immutable_associations_and_survive_refresh_resta
             client.get(f"/dockflow/v1/definitions/{newest}").json()["source_text"]
             == source
         )
-        assert (
-            settings.state / "definitions" / newest / "source.yaml"
-        ).read_bytes() == source.encode()
+        assert Core(settings).store.definition_source(newest) == source.encode()
         assert (
             Core(settings).resolve("remote", persist=False)["definition_id"] == newest
         )
@@ -355,41 +360,32 @@ def test_upload_authentication_and_streamed_body_limit(settings):
         assert response.status_code == 413
 
 
-def test_accepted_registration_index_failure_recovers_as_one_event(
-    settings, monkeypatch
-):
+def test_registration_projection_failure_rolls_back_whole_event(settings, monkeypatch):
     core = Core(settings)
     with core.store.owner():
         core.initialize()
-        before = len(core.store.records())
+        before = core.store.records()
 
         def fail(*args):
             raise RuntimeError("injected index failure")
 
-        monkeypatch.setattr(core.store.index, "put", fail)
-        with pytest.raises(
-            DockflowError,
-            match="Registration accepted: pipeline_id=.*pipeline_version_id=",
-        ) as error:
-            core.upload_pipeline(json.dumps(fixture_definition()), "recoverable")
-        assert error.value.status == 503
-        records = core.store.records()
-        assert len(records) == before + 1
-        assert records[-1]["event_kind"] == "pipeline_registration"
-        assert core.store.reconciliation_required
-        with pytest.raises(DockflowError, match="reconciliation"):
-            core.upload_pipeline(json.dumps(fixture_definition()), "blocked")
-    with TestClient(create_app(settings, execute=False)) as client:
-        pipelines = client.get("/apis/v2beta1/pipelines").json()["pipelines"]
-        recovered = next(
-            item for item in pipelines if item["display_name"] == "recoverable"
+        with monkeypatch.context() as patch:
+            patch.setattr(core.store.database, "put_resource", fail)
+            with pytest.raises(DockflowError, match="rolled back"):
+                core.upload_pipeline(json.dumps(fixture_definition()), "recoverable")
+        assert core.store.records() == before
+        assert core.store.list("pipelines") == []
+        assert not core.store.reconciliation_required
+        catalog, definition = core.upload_pipeline(
+            json.dumps(fixture_definition()), "recoverable"
         )
-        assert len(versions(client, recovered["pipeline_id"])) == 1
-        assert upload(client, "recoverable").status_code == 409
+        assert len(core.store.records()) == len(before) + 1
+    with TestClient(create_app(settings, execute=False)) as client:
+        assert len(versions(client, catalog["pipeline_id"])) == 1
         assert client.post("/dockflow/v1/metadata/check", json={}).json()["valid"]
 
 
-def test_partial_projection_failure_replays_complete_accepted_registration(
+def test_partial_projection_failure_leaves_no_accepted_registration(
     settings, monkeypatch
 ):
     core = Core(settings)
@@ -403,58 +399,40 @@ def test_partial_projection_failure_replays_complete_accepted_registration(
                 raise OSError("injected projection interruption")
             original(record)
 
-        monkeypatch.setattr(core.store, "_project", fail_after_catalog)
-        with pytest.raises(DockflowError, match="Registration accepted"):
-            core.upload_pipeline(json.dumps(fixture_definition()), "recoverable")
+        with monkeypatch.context() as patch:
+            patch.setattr(core.store, "_project", fail_after_catalog)
+            with pytest.raises(DockflowError, match="rolled back"):
+                core.upload_pipeline(json.dumps(fixture_definition()), "recoverable")
+        assert not core.store.list("pipelines")
+        assert not core.store.list("definitions")
+        assert not core.store.list("components")
     with TestClient(create_app(settings, execute=False)) as client:
-        pipeline_id = client.get("/apis/v2beta1/pipelines").json()["pipelines"][0][
-            "pipeline_id"
-        ]
-        assert len(versions(client, pipeline_id)) == 1
+        assert all(
+            item["display_name"] != "recoverable"
+            for item in client.get("/apis/v2beta1/pipelines")
+            .json()
+            .get("pipelines", [])
+        )
+        assert upload(client, "recoverable").status_code == 200
         assert client.post("/dockflow/v1/metadata/check", json={}).json()["valid"]
 
 
-def test_readiness_immediately_reports_accepted_registration_hold(
+def test_failed_registration_preserves_readiness_without_partial_acceptance(
     settings, monkeypatch
 ):
-    app = create_app(settings, execute=False)
-    with TestClient(app) as client:
-        assert client.get("/health/ready").status_code == 200
+    application = create_app(settings, execute=False)
+    with TestClient(application) as client:
 
         def fail(*args):
             raise RuntimeError("injected index failure")
 
-        monkeypatch.setattr(app.state.core.store.index, "put", fail)
-        response = upload(client, "accepted")
+        with monkeypatch.context() as patch:
+            patch.setattr(application.state.core.store.database, "put_resource", fail)
+            response = upload(client, "retryable")
         assert response.status_code == 503
-        assert "pipeline_id=" in response.json()["message"]
-        readiness = client.get("/health/ready")
-        assert readiness.status_code == 503
-        assert readiness.json()["checks"]["reconciliation_required"]
-
-
-def test_config_origin_refresh_and_same_name_conflict_do_not_move_api_version(settings):
-    app = create_app(settings, execute=False)
-    with TestClient(app) as client:
-        pipeline_id = upload(client, "remote").json()["pipeline_id"]
-        original = copy.deepcopy(app.state.core.resolve("remote"))
-        settings.definitions["pipelines"]["remote"] = Path(
-            settings.root / "pipeline.yaml"
-        )
-        report = app.state.core.refresh()
-        assert any(item["name"] == "remote" for item in report["diagnostics"])
-        assert app.state.core.store.get("pipelines", pipeline_id)["available"]
-        assert (
-            app.state.core.store.get("definitions", original["definition_id"])
-            == original
-        )
-        del settings.definitions["pipelines"]["remote"]
-        settings.definitions["pipelines"].clear()
-        app.state.core.refresh()
-        assert (
-            app.state.core.resolve("remote")["definition_id"]
-            == original["definition_id"]
-        )
+        assert "rolled back" in response.json()["message"]
+        assert client.get("/health/ready").status_code == 200
+        assert upload(client, "retryable").status_code == 200
 
 
 @pytest.mark.parametrize(
@@ -471,7 +449,7 @@ def test_config_origin_refresh_and_same_name_conflict_do_not_move_api_version(se
 def test_replay_rejects_reparented_ids_or_changed_compiled_snapshots(settings, tamper):
     core = Core(settings)
     with core.store.owner():
-        core.store.initialize(require_mlmd=False)
+        core.store.initialize()
         first_catalog, first = core.upload_pipeline(
             json.dumps(fixture_definition()), "first"
         )
@@ -508,11 +486,16 @@ def test_replay_rejects_reparented_ids_or_changed_compiled_snapshots(settings, t
         version["pipeline_spec"]["pipelineInfo"]["name"] = "unaccepted-name"
     else:
         catalog["version_ids"].insert(0, first["definition_id"])
-    path = settings.state / "records" / f"{event['sequence']:020d}.json"
-    path.write_text(json.dumps(event))
+    with core.store.owner():
+        with core.store.database.transaction() as connection:
+            core.store.database.execute(
+                connection,
+                "UPDATE dockflow_events SET value=? WHERE project_id=? AND sequence=?",
+                (json.dumps(event).encode(), settings.project_id, event["sequence"]),
+            )
     store = ControlStore(settings.state, settings.project_id)
     with pytest.raises(DockflowError) as error, store.owner():
-        store.initialize(require_mlmd=False)
+        store.initialize()
     assert error.value.status == 409
     # The corruption is rejected before overwriting either retained association.
     assert (
@@ -528,7 +511,7 @@ def test_replay_rejects_reparented_ids_or_changed_compiled_snapshots(settings, t
 def test_uploaded_definitions_and_embedded_components_cannot_be_rewritten(settings):
     core = Core(settings)
     with core.store.owner():
-        core.store.initialize(require_mlmd=False)
+        core.store.initialize()
         _, version = core.upload_pipeline(json.dumps(fixture_definition()), "immutable")
         component = core.store.get("components", version["component_ids"]["comp-echo"])
         before = len(core.store.records())

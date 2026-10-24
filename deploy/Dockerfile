@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 ARG WHEEL_SOURCE=source-wheels
-# Ubuntu 24.04 supplies glibc 2.39 required by the qualified MLMD wheel candidate.
+# Retain the qualified Ubuntu base and patched runtime trust stores.
 FROM ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv
 FROM ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac AS dependencies
 ENV DEBIAN_FRONTEND=noninteractive UV_PYTHON_INSTALL_DIR=/opt/python UV_LINK_MODE=copy
@@ -10,6 +10,7 @@ COPY --from=uv /uv /usr/local/bin/uv
 RUN uv python install 3.13.17
 WORKDIR /opt/dockflow
 COPY pyproject.toml uv.lock .python-version ./
+COPY packages/database/pyproject.toml packages/database/README.md packages/database/LICENSE packages/database/
 COPY packages/cli/pyproject.toml packages/cli/README.md packages/cli/LICENSE packages/cli/
 COPY packages/pipelines/pyproject.toml packages/pipelines/README.md packages/pipelines/LICENSE packages/pipelines/
 COPY packages/artifacts/pyproject.toml packages/artifacts/README.md packages/artifacts/LICENSE packages/artifacts/
@@ -21,6 +22,7 @@ COPY tools/check_ca_trust.py /tmp/check_ca_trust.py
 RUN .venv/bin/python /tmp/check_ca_trust.py --runtime --all-bundles --system
 
 FROM dependencies AS source-wheels
+COPY packages/database/src packages/database/src
 COPY packages/cli/src packages/cli/src
 COPY packages/pipelines/src packages/pipelines/src
 COPY packages/artifacts/src packages/artifacts/src

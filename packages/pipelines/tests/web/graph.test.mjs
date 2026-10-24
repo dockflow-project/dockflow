@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { graphModel } from '../../src/dockflow_pipelines/static/graph.js';
+import {
+  graphModel,
+  graphView,
+} from '../../src/dockflow_pipelines/static/graph.js';
 
 function fixture() {
   return {
@@ -178,4 +181,72 @@ test('recursive or missing component references do not recurse indefinitely', ()
     graphModel(spec).nodes.map((node) => node.name),
     ['outer', 'outer/self', 'missing'],
   );
+});
+
+test('the default view collapses nested graphs and retains their external dependencies', () => {
+  const model = graphModel(fixture());
+  const view = graphView(model);
+  assert.deepEqual(
+    view.nodes.map((node) => node.name),
+    ['source', 'train', 'evaluate'],
+  );
+  assert.deepEqual(view.edges, [
+    { from: 'source', to: 'train', kind: 'dependency' },
+    { from: 'train', to: 'evaluate', kind: 'dependency' },
+  ]);
+  assert.equal(view.path, null);
+  assert.equal(model.nodes.length, 5);
+});
+
+test('opening a subpipeline reveals only its own level, with qualified task identities', () => {
+  const spec = fixture();
+  spec.root.dag.tasks.again = { componentRef: { name: 'group' } };
+  const view = graphView(graphModel(spec), { path: 'again' });
+  assert.deepEqual(
+    view.nodes.map((node) => node.name),
+    ['again/prepare', 'again/fit'],
+  );
+  assert.deepEqual(view.edges, [
+    { from: 'again/prepare', to: 'again/fit', kind: 'dependency' },
+  ]);
+  assert.deepEqual(
+    view.ancestors.map((node) => node.name),
+    ['again'],
+  );
+});
+
+test('deep links reveal the containing graph unless a graph location was chosen explicitly', () => {
+  const model = graphModel(fixture());
+  assert.equal(graphView(model, { selected: 'train/fit' }).path, 'train');
+  assert.equal(
+    graphView(model, { selected: 'train/fit', path: '' }).path,
+    null,
+  );
+  const view = graphView(model, { path: 'absent' });
+  assert.equal(view.invalidPath, true);
+  assert.deepEqual(
+    view.nodes.map((node) => node.name),
+    ['source', 'train', 'evaluate'],
+  );
+});
+
+test('all-task inspection preserves every native node and containment edge', () => {
+  const model = graphModel(fixture());
+  const view = graphView(model, { path: 'train', all: true });
+  assert.deepEqual(view.nodes, model.nodes);
+  assert.deepEqual(view.edges, model.edges);
+  assert.equal(view.all, true);
+});
+
+test('breadcrumbs preserve multiple nested scopes and empty graphs remain navigable', () => {
+  const spec = fixture();
+  spec.components.empty = { dag: { tasks: {} } };
+  spec.components.group.dag.tasks.inner = { componentRef: { name: 'empty' } };
+  const view = graphView(graphModel(spec), { path: 'train/inner' });
+  assert.deepEqual(
+    view.ancestors.map((node) => node.name),
+    ['train', 'train/inner'],
+  );
+  assert.deepEqual(view.nodes, []);
+  assert.deepEqual(view.edges, []);
 });

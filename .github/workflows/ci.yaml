@@ -44,7 +44,7 @@ jobs:
       - run: uv sync --locked --all-packages
       - run: uv run --locked python tools/check_ca_trust.py
       - run: uv run --locked python tools/version.py
-      - run: uv run --locked pytest packages/cli/tests packages/pipelines/tests/unit packages/pipelines/tests/test_definitions.py
+      - run: uv run --locked pytest packages/database/tests packages/cli/tests packages/pipelines/tests/unit packages/pipelines/tests/test_definitions.py
       - run: uv run --locked python tools/verify_packages.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -59,6 +59,17 @@ jobs:
         python: ['3.12', '3.13']
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    services:
+      cache-postgresql:
+        image: postgres:18-alpine@sha256:898c60cb390d1085bc97bdd6a1ae968757421df394b071848b52b1c09c89d6a5
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: dockflow_cache_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dockflow_cache_test"
+          --health-interval 5s --health-timeout 3s --health-retries 12
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
@@ -90,6 +101,8 @@ jobs:
       - run: uv run --locked pytest --cov --cov-report=xml
         env:
           DOCKFLOW_TEST_DOCKER: '1'
+          DOCKFLOW_TEST_CACHE_POSTGRES_DSN: postgresql://postgres@127.0.0.1:5432/dockflow_cache_test
+          DOCKFLOW_TEST_STATE_POSTGRES_DSN: postgresql://postgres@127.0.0.1:5432/dockflow_cache_test
       - name: Verify service trust stores
         if: matrix.python == '3.13'
         run: |

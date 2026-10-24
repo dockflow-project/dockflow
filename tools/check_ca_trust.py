@@ -60,7 +60,7 @@ def installed_bundles(runtime: bool, all_bundles: bool):
         spec = importlib.util.find_spec(module)
         if spec and spec.origin:
             yield module, Path(spec.origin).parent / relative
-        elif runtime and module != "pip":
+        elif runtime and module == "certifi":
             raise ValueError(f"{module}: required runtime certificate bundle missing")
     if all_bundles:
         spec = importlib.util.find_spec("botocore")

@@ -54,7 +54,7 @@ index credentials and machine-local authentication out of tracked metadata.
 ## Workspace and environment
 
 Use a single uv workspace with members `packages/cli`, `packages/pipelines`
-and `packages/artifacts`,
+`packages/artifacts` and `packages/database`,
 one root lock, and the normal root `.venv` application environment. The repository
 root is a development workspace, not a published distribution. Keep each
 member's metadata and `src/` import boundary independently buildable.
@@ -86,3 +86,13 @@ locks, release declarations, Git refs, or publication state.
 
 References: [uv workspaces](https://docs.astral.sh/uv/concepts/projects/workspaces/)
 and [uv build backend](https://docs.astral.sh/uv/concepts/build-backend/).
+
+Pipelines and Artifacts require the exact shared application version of
+`dockflow-database`. The common library has a standard-library SQLite core and a
+lazy optional PostgreSQL driver. It must not import CLI, Pipelines or Artifacts.
+Database drivers, physical schema and immutable artifact records have one owner
+there; domain repositories retain their execution/publication policies.
+
+Pipelines also requires the exact shared Artifacts application version so offline
+backups validate standalone completion manifests against their copied payloads.
+Artifacts remains independent from Pipelines and CLI.

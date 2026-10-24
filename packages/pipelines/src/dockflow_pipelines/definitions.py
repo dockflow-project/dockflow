@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 
 from .canonical import MAX_INTEGER, validate_json
+from .compiled_source import read_compiled_source
 
 PROFILE = "dockflow-kfp-2.17-v1"
 MAX_DEFINITION_BYTES = 16_777_216
@@ -128,6 +129,45 @@ def _fields(value: Any, allowed: set[str], location: str) -> None:
         )
 
 
+def _booleans(value: dict, names: tuple[str, ...], location: str) -> None:
+    for name in names:
+        if name in value and type(value[name]) is not bool:
+            raise DefinitionError(f"{location}.{name}: expected a boolean")
+
+
+def resource_value(field: str, value: Any) -> float:
+    """Validate and normalize the admitted CPU/core and memory/byte units."""
+    cpu = field in {"cpuLimit", "resourceCpuLimit"}
+    if isinstance(value, str):
+        pattern = (
+            r"(\d+(?:\.\d+)?)(m)?" if cpu else r"(\d+(?:\.\d+)?)([EPTGMK]i?|[eptgmk])?"
+        )
+        match = re.fullmatch(pattern, value)
+        if not match:
+            raise UnsupportedCapability(
+                f"resources.{field}: unsupported resource expression"
+            )
+        number, unit = match.groups()
+        result = float(number)
+        if cpu:
+            result /= 1000 if unit else 1
+        else:
+            power = (
+                "KMGTPE".find((unit or "").upper().replace("I", "")) + 1 if unit else 0
+            )
+            result *= (1024 if unit and "i" in unit else 1000) ** power
+    elif type(value) in {int, float}:
+        result = float(value) * (1 if cpu else 1_000_000_000)
+    else:
+        raise DefinitionError(f"resources.{field}: positive numeric value required")
+    quantity = result * 1_000_000_000 if cpu else result
+    if not math.isfinite(quantity) or quantity < 1 or quantity >= 2**63:
+        raise DefinitionError(
+            f"resources.{field}: finite positive representable value required"
+        )
+    return result
+
+
 def validate_parameter(
     value: Any, contract: dict[str, Any], location: str, *, compiled: bool = False
 ) -> Any:
@@ -169,6 +209,7 @@ def _contracts(component: dict[str, Any], location: str) -> None:
                 raise UnsupportedCapability(
                     f"{location}.{name}: unsupported parameter type"
                 )
+            _booleans(contract, ("isOptional",), f"{location}.{name}")
             if "defaultValue" in contract:
                 validate_parameter(
                     contract["defaultValue"],
@@ -184,6 +225,7 @@ def _contracts(component: dict[str, Any], location: str) -> None:
                 {"artifactType", "isArtifactList", "isOptional", "description"},
                 f"{location}.{name}",
             )
+            _booleans(contract, ("isOptional", "isArtifactList"), f"{location}.{name}")
             if contract.get("isArtifactList"):
                 raise UnsupportedCapability(
                     f"{location}.{name}: artifact lists are not supported"
@@ -193,7 +235,10 @@ def _contracts(component: dict[str, Any], location: str) -> None:
                 {"schemaTitle", "schemaVersion"},
                 f"{location}.{name}.artifactType",
             )
-            if not contract.get("artifactType", {}).get("schemaTitle"):
+            if any(
+                not isinstance(value, str) or not value
+                for value in contract["artifactType"].values()
+            ) or not contract["artifactType"].get("schemaTitle"):
                 raise DefinitionError(
                     f"{location}.{name}: artifact schemaTitle is required"
                 )
@@ -210,6 +255,7 @@ def _validate_executor(executor: dict[str, Any], location: str) -> None:
             {"artifactUri", "typeSchema", "metadata", "reimport"},
             location + ".importer",
         )
+        _booleans(importer, ("reimport",), location + ".importer")
         _fields(
             importer.get("artifactUri", {}),
             {"constant", "runtimeParameter"},
@@ -255,25 +301,25 @@ def _validate_executor(executor: dict[str, Any], location: str) -> None:
         },
         location + ".resources",
     )
+    if {"cpuLimit", "resourceCpuLimit"} <= resources.keys() or {
+        "memoryLimit",
+        "resourceMemoryLimit",
+    } <= resources.keys():
+        raise DefinitionError(f"{location}: conflicting resource aliases")
     for field, value in resources.items():
         if field in {"cpuRequest", "memoryRequest"}:
             raise UnsupportedCapability(
                 f"{location}.resources.{field}: Docker has no qualified request mapping"
             )
-        if isinstance(value, str):
-            if not re.fullmatch(r"\d+(?:\.\d+)?(?:m|[EPTGMK]i?|[eptgmk])?", value):
-                raise UnsupportedCapability(
-                    f"{location}.resources.{field}: unsupported resource expression"
-                )
-        elif type(value) not in {int, float} or value <= 0:
-            raise DefinitionError(
-                f"{location}.resources.{field}: positive value required"
-            )
+        resource_value(field, value)
 
 
 def load_definition(source: str | bytes | Path | dict[str, Any]) -> Definition:
     if isinstance(source, Path):
-        raw = source.read_bytes()
+        try:
+            raw = read_compiled_source(source, MAX_DEFINITION_BYTES)
+        except (OSError, ValueError) as exc:
+            raise DefinitionError(str(exc)) from exc
     elif isinstance(source, dict):
         validate_json(source)
         raw = json.dumps(
@@ -408,6 +454,11 @@ def load_definition(source: str | bytes | Path | dict[str, Any]) -> Definition:
                 {"enableCache", "cacheKey"},
                 location + ".cachingOptions",
             )
+            _booleans(
+                task.get("cachingOptions", {}),
+                ("enableCache",),
+                location + ".cachingOptions",
+            )
             if task.get("cachingOptions", {}).get("cacheKey"):
                 raise UnsupportedCapability(
                     f"{location}: explicit upstream cache keys are unsupported"
@@ -424,9 +475,18 @@ def load_definition(source: str | bytes | Path | dict[str, Any]) -> Definition:
                 location + ".retryPolicy",
             )
             count = retry.get("maxRetryCount", 0)
-            if not isinstance(count, int) or not 0 <= count <= 3:
+            if type(count) is not int or not 0 <= count <= 3:
                 raise UnsupportedCapability(
                     f"{location}: at most 3 retries are supported"
+                )
+            factor = retry.get("backoffFactor", 2)
+            if (
+                type(factor) not in {int, float}
+                or not math.isfinite(factor)
+                or factor < 1
+            ):
+                raise DefinitionError(
+                    f"{location}.backoffFactor: finite value at least 1 required"
                 )
             for duration in ("backoffDuration", "backoffMaxDuration"):
                 value = retry.get(duration, "0s")

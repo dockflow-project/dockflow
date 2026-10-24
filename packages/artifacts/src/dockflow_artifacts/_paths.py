@@ -11,8 +11,6 @@ from typing import Any, BinaryIO
 
 from .errors import ArtifactError, IntegrityError
 
-CONTROL = ".dockflow/dockflow-artifacts"
-
 
 def relative(value: str, *, internal: bool = False) -> str:
     if not isinstance(value, str) or not value or len(value.encode()) > 1024:

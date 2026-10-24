@@ -1,0 +1,17 @@
+schema_version: 1
+id: state-cache-integration
+summary: Accept and archive completed state/cache workflows and distinguish delivery
+  limits from required gaps.
+origin:
+  commit: 032444d3686f5951cb0b2457e64a023ded502387
+  specification: specs-0.1.0
+  implementation: imp-0.1.1
+impact:
+  specification: none
+  implementation: none
+deliverables: []
+requirements: []
+evidence:
+- validation/conformance-corrections.md
+- Completed integration preparation records closure, qualified scope and staged validation.
+gaps: []

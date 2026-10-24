@@ -1,10 +1,31 @@
 """Dispatch the small management operations without duplicating adapter logic."""
 
+from dockflow_database.errors import DockflowError
+
 from .core import capabilities
-from .errors import DockflowError
 
 
 def operate(core, action: str, values: dict):
+    if action.startswith("cache."):
+        from .cache_registry import Registry
+
+        options = {
+            **core.settings.cache,
+            "storage_token": core.artifacts.storage_identity(create=False),
+        }
+        registry = Registry(options, core.settings.project_id)
+        key = values.get("id", "")
+        if action == "cache.show":
+            return registry.inspect(key)
+        if action == "cache.invalidate":
+            return registry.invalidate(
+                key, values.get("artifact_id", ""), values.get("reason", "")
+            )
+        if action == "cache.reset":
+            return registry.reset_retry_episode(
+                key, values.get("revision", -1), values.get("reason", "")
+            )
+        raise DockflowError("Unknown cache operation")
     if action == "capabilities":
         return capabilities(core.settings)
     if action.endswith(".list"):

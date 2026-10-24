@@ -4,10 +4,10 @@ All core names are exported by `dockflow_artifacts`. Imports perform no I/O.
 
 | API | Contract |
 | --- | --- |
-| `Publisher(root, *, s3=None)` | Configure an absolute filesystem or S3-compatible root. Optional S3 SDK is loaded only for remote roots. |
-| `Publisher.from_config(path)` | Explicitly read a schema-version 1 JSON config. See storage documentation for fields. |
+| `Publisher(root, *, s3=None, database=None, project_id="default")` | Configure an absolute filesystem or S3-compatible root. Optional S3 SDK is loaded only for remote roots. |
+| `Publisher.from_config(path)` | Explicitly read a schema-version 2 JSON config. See storage documentation for fields. |
 | `publisher.publish(source, destination, *, artifact_type="system.Artifact", metadata=None)` | Publish a file or nonempty directory; return a completed `Publication`. Destination is relative to the root. |
-| `publisher.verify(destination)` | Re-read the completion manifest and all payload bytes; return a `Publication` or raise an integrity error. |
+| `publisher.verify(destination)` | Read the SQL completion manifest and all payload bytes; return a `Publication` or raise an integrity error. |
 | `format_path(template, **values)` | Expand simple named fields; substitutions must each be safe single segments. No conversion/format-spec expressions. |
 | `step_path(filename, *, step_number, step_digits, component_name, pipeline_name, publication_id, exploration_id="global")` | Return `<exploration>/<pipeline>/step_<padded-number>__<component>__<publication-id>/<filename>`; explicit width 1–12 and safe single-segment names. |
 | `publication_id(*, component_name, component_version, parameters, inputs=None)` | Full SHA-256 of a versioned, typed canonical invocation descriptor. Supply resolved defaults, context and all relevant inputs. No cache lookup. |
@@ -16,6 +16,9 @@ All core names are exported by `dockflow_artifacts`. Imports perform no I/O.
 
 `Publication` fields: `uri`, `manifest_uri`, `digest` (SHA-256), `kind` (`file` or
 `directory`), `artifact_type` (schema title) and `metadata` (caller JSON).
+
+`manifest_uri` identifies an SQL publication record through a logical `dockflow://`
+address. Payload `uri` values remain ordinary filesystem/S3 locations.
 
 `ArtifactError` is the public base exception. `ConflictError` indicates a
 reserved destination incompatible with this publication. `IntegrityError`

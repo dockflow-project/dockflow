@@ -14,9 +14,10 @@ constraint-dependencies = ["certifi>=2026.10.19", "grpcio>=1.84.1"]
 override-dependencies = ["urllib3==2.8.0"]
 
 [tool.uv.workspace]
-members = ["packages/cli", "packages/pipelines", "packages/artifacts"]
+members = ["packages/cli", "packages/pipelines", "packages/artifacts", "packages/database"]
 
 [tool.uv.sources]
+dockflow-database = { workspace = true }
 dockflow-cli = { workspace = true }
 dockflow-pipelines = { workspace = true }
 dockflow-artifacts = { workspace = true }
@@ -44,12 +45,12 @@ pythonVersion = "3.12"
 typeCheckingMode = "basic"
 venvPath = "."
 venv = ".venv"
-include = ["packages/cli/src", "packages/pipelines/src", "packages/artifacts/src"]
+include = ["packages/cli/src", "packages/pipelines/src", "packages/artifacts/src", "packages/database/src"]
 exclude = ["**/__pycache__"]
 
 [tool.pytest.ini_options]
-testpaths = ["packages/cli/tests", "packages/pipelines/tests", "packages/artifacts/tests", "tests"]
-markers = ["docker: requires a running Docker daemon", "s3: requires S3 service"]
+testpaths = ["packages/cli/tests", "packages/pipelines/tests", "packages/artifacts/tests", "packages/database/tests", "tests"]
+markers = ["docker: requires a running Docker daemon", "s3: requires S3 service", "postgresql: requires an explicit disposable PostgreSQL test database"]
 
 [tool.coverage.run]
-source = ["dockflow_cli", "dockflow_pipelines", "dockflow_artifacts"]
+source = ["dockflow_cli", "dockflow_pipelines", "dockflow_artifacts", "dockflow_database"]

@@ -5,11 +5,11 @@ import subprocess
 import sys
 
 import pytest
+from dockflow_database.errors import DockflowError
 from dockflow_pipelines.cli import app, require_direct_idle
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.core import Core
-from dockflow_pipelines.errors import DockflowError
-from dockflow_pipelines.metadata import new_id
+from dockflow_pipelines.records import new_id
 from dockflow_pipelines.service import Scheduler
 from test_interfaces import fixture_definition
 from typer.testing import CliRunner
@@ -199,7 +199,9 @@ def test_direct_idle_guard_rejects_index_reconciliation_before_admission(setting
     core = Core(settings)
     with core.store.owner():
         core.initialize()
-        core.store.write("index-status.json", {"reconciliation_required": True})
+        core.store.set_project_metadata(
+            "reconciliation", {"reconciliation_required": True}
+        )
         before = core.store.records()
         with pytest.raises(DockflowError, match="reconciliation") as error:
             require_direct_idle(core)
@@ -226,6 +228,9 @@ class ControlledContainer:
         self.stop_timeouts.append(timeout)
         if self.confirm_stop:
             self.attrs["State"]["Running"] = False
+
+    def remove(self, *, force):
+        self.attrs["State"]["Running"] = False
 
     def logs(self, *, stdout, stderr):
         return b""
@@ -382,13 +387,10 @@ def test_recovery_appends_only_the_unsaved_log_tail(settings, monkeypatch):
         == "early\nlast\n"
     )
     assert "".join(e["text"] for e in entries if e["stream"] == "stderr") == "warning\n"
-    log = (
-        core.store.attempt_path(
-            run["run_id"], attempt["task_id"], attempt["attempt_id"]
-        )
-        / "logs/stdout.log"
+    assert (
+        core.store.attempt_log_snapshot(attempt["attempt_id"], "stdout").decode()
+        == "early\nlast\n"
     )
-    assert log.read_text() == "early\nlast\n"
 
 
 @pytest.mark.parametrize("failure", ["unreachable", "unconfirmed_stop"])
@@ -456,3 +458,17 @@ def test_partial_recovery_keeps_run_hold_until_all_stops_confirmed_then_retry_su
     assert client.lookups.count(first["container_id"]) == 1
     assert client.lookups.count(second["container_id"]) == 2
     assert client.close_count == 2
+
+
+def test_recovery_refuses_a_different_daemon(settings, monkeypatch):
+    import docker
+
+    core, run, attempts, client = seed_recovery(settings)
+    with core.store.owner():
+        core.store.put("attempts", {**attempts[0], "daemon_id": "original-daemon"})
+        client.info = lambda: {"ID": "different-daemon"}
+        monkeypatch.setattr(docker, "from_env", lambda: client)
+        with pytest.raises(DockflowError, match="different Docker daemon"):
+            Scheduler(core).reconcile()
+        assert core.store.get("runs", run["run_id"])["reconciliation_required"]
+        assert client.lookups == []

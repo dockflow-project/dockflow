@@ -1,0 +1,27 @@
+schema_version: 1
+id: distributed-artifact-cache
+summary: Coordinate validated artifact production and reuse across independent Dockflow state owners.
+origin:
+  commit: "032444d3686f5951cb0b2457e64a023ded502387"
+  specification: "specs-0.1.0"
+  implementation: "imp-0.1.1"
+impact:
+  specification: major
+  implementation: major
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Atomic durable claim-or-reuse, full ownership fencing and shared retry episodes on SQLite and PostgreSQL (014 sections 4-9, 12-14).
+    implementation: One transition protocol uses short serialized transactions, idempotent request recovery, database time, renewable leases and durable attempts/artifacts/scope policy.
+    verification: Backend conformance, repeated 20-process barriers, independent-key execution, real lock contention, crash/clock/renewal/ambiguous-commit faults and terminal-state races.
+  - requirement: Complete immutable output sets, portable shared storage, verified hits and artifact-specific invalidation (014 sections 5, 10-11, 16).
+    implementation: Versioned reservations, sealed filesystem output, conditional S3 writes, persistent store identity, complete manifests and conditional validity changes.
+    verification: Cross-state execution/lineage, corruption/access failures, incomplete multi-output rejection, finalization response loss, real S3 and freshness tests.
+  - requirement: Integrate scheduling, bounded cancellation/waiting, migration and diagnostic/maintenance surfaces (014 sections 15, 20; A32).
+    implementation: Registry resolution replaces automatic legacy candidate discovery; independent heartbeats and read-only omitted-prerequisite resolution integrate with owner-serialized publication and atomic producer-provenance import. CLI/API expose inspection and expected-identity maintenance.
+    verification: Actual Docker/service regressions, partial selection, cache API/CLI contracts, stop intent, journal failure recovery, optional-import checks, generated API/schema checks and clean distribution installation.
+evidence:
+  - validation/distributed-artifact-cache.md
+gaps: []
+delivery_limits:
+  - Physical multi-host deployment qualification remains outstanding; local independent-process evidence must not be advertised as that qualification.

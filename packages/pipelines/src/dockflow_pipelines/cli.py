@@ -12,11 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import typer
+from dockflow_database.errors import DockflowError
 
 from .canonical import loads
 from .config import find_config, load_settings
 from .console import DEFAULT_OUTPUT_LIMIT, OutputMode, RunConsole, run_summary
-from .errors import DockflowError
 
 app = typer.Typer(
     help="Execute and inspect compiled KFP pipelines.",
@@ -31,6 +31,9 @@ runs = typer.Typer(help="Durable Runs.", no_args_is_help=True)
 tasks = typer.Typer(help="Task lineage and attempts.", no_args_is_help=True)
 artifacts = typer.Typer(help="Typed immutable artifacts.", no_args_is_help=True)
 experiments = typer.Typer(help="Run groupings.", no_args_is_help=True)
+cache_app = typer.Typer(
+    help="Inspect and manage coordinated artifact reuse.", no_args_is_help=True
+)
 metadata_app = typer.Typer(help="Check and rebuild metadata.", no_args_is_help=True)
 for name, group in [
     ("definitions", definitions),
@@ -40,6 +43,7 @@ for name, group in [
     ("artifacts", artifacts),
     ("experiments", experiments),
     ("metadata", metadata_app),
+    ("cache", cache_app),
 ]:
     app.add_typer(group, name=name)
 
@@ -167,15 +171,50 @@ def invoke(ctx: typer.Context, action: str, values: dict, *, mutate: bool = Fals
     if mutate:
         with core.store.owner():
             if action == "metadata.rebuild":
-                # The authoritative journal must remain usable when the index
-                # being repaired cannot be opened as a database.
-                core.store.initialize(require_mlmd=False)
+                # Rebuild validates the authoritative journal before replacing projections.
+                core.store.initialize()
             else:
                 core.initialize()
             return operate(core, action, values)
-    if action == "metadata.check":
-        core.store.open_readonly_index()
     return operate(core, action, values)
+
+
+@cache_app.command("show")
+@boundary
+def cache_show(ctx: typer.Context, key: str):
+    emit(ctx, invoke(ctx, "cache.show", {"id": key}))
+
+
+@cache_app.command("invalidate")
+@boundary
+def cache_invalidate(
+    ctx: typer.Context,
+    key: str,
+    artifact_id: str = typer.Option(...),
+    reason: str = typer.Option(...),
+):
+    emit(
+        ctx,
+        invoke(
+            ctx,
+            "cache.invalidate",
+            {"id": key, "artifact_id": artifact_id, "reason": reason},
+        ),
+    )
+
+
+@cache_app.command("reset")
+@boundary
+def cache_reset(
+    ctx: typer.Context,
+    key: str,
+    revision: int = typer.Option(...),
+    reason: str = typer.Option(...),
+):
+    emit(
+        ctx,
+        invoke(ctx, "cache.reset", {"id": key, "revision": revision, "reason": reason}),
+    )
 
 
 def assignments(values: list[str], *, json_values: bool = False) -> dict:
@@ -190,10 +229,12 @@ def assignments(values: list[str], *, json_values: bool = False) -> dict:
 
 def require_direct_idle(core) -> None:
     """Acquiring a released lock does not confirm earlier containers stopped."""
-    from .core import TERMINAL
+    from .records import TERMINAL
 
     core.store.require_owner()
     core.store.ensure_reconciled()
+    if core.store.database.adapter.concurrent_runs:
+        return
     unresolved_runs = [
         run["run_id"]
         for run in core.store.list("runs")
@@ -369,7 +410,7 @@ def run(
                 }
                 request.pop("pipeline_spec", None)
                 request.pop("source_text", None)
-            result, _ = core.submit(request)
+            result, _ = core.submit(request, reserve=True)
             console = RunConsole(
                 output,
                 output_limit,

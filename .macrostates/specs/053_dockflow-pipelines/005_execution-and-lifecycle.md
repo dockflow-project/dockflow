@@ -2,101 +2,63 @@
 
 ## Admission, ownership and scheduling
 
-Every mutating local operation acquires exclusive project-state ownership.
-The service holds ownership for its lifetime and serializes state/MLMD writes.
-Use a nonblocking OS-backed exclusive lock on the stable `state/owner.lock`
-file, held until the coordinating operation or service has safely stopped.
-Acquire that lock before initializing or mutating project records, SQLite,
-catalogs or artifact state. Workers act through the existing coordinator; they
-do not acquire independent writer ownership. Nested use by the same coordinator
-retains its current lock and owner identity.
+`state.backend` selects the coordination model in direct CLI and service modes.
+SQLite is local deployment: one database, one lifetime execution owner, one active
+Run and one task attempt. PostgreSQL is distributed deployment: multiple
+coordinators on isolated hosts share one project database and artifact store,
+with one authorized execution owner per Run. Each coordinator dispatches one Run
+at a time initially, and each Run executes tasks sequentially. Different Runs
+may execute concurrently. No additional deployment-mode flag or broker is needed.
 
-After each successful outer acquisition, write UTF-8 JSON diagnostic metadata
-to the locked file with this schema:
+Each coordinator uses its own pinned database session. PostgreSQL coordinators
+hold a shared project maintenance gate rather than an exclusive execution lock.
+Short project transactions serialize accepted journal sequence allocation,
+resource aliases, admission/idempotency, catalog updates and stop/publication
+ordering. No transaction spans execution or artifact transfer. Lost or uncertain
+session commits fail closed and never transparently reconnect that coordinator.
+SQLite retains its stable database-inode ownership lock.
 
-| Field | Meaning |
-| --- | --- |
-| schema_version | Integer `1`. |
-| owner_id | Fresh canonical lowercase UUIDv4 identifying this acquisition/coordinator instance. |
-| hostname | Label reported by the execution environment; a container hostname may differ from its physical host. |
-| pid | Coordinator process ID in that execution environment's PID namespace. |
-| mode | `local` for a direct coordinating operation or `service` for the persistent API owner. |
-| project_id | Configured stable project identity. |
-| acquired_at | UTC RFC3339 acquisition time. |
-| endpoint | Explicit service HTTP(S) base URL when available, otherwise `null`; never a credential-bearing URL. |
+PostgreSQL Run claims MUST be atomic and persist project/Run identity, random
+coordinator owner ID, monotonically increasing fencing generation, active state
+and database-time lease deadline. A valid current claim excludes other claimants.
+Heartbeats renew only the matching unexpired claim; failure revokes local execution
+authority. Every execution mutation and cache publication checks current owner,
+fence and deadline. An old worker may not write after expiry or takeover, renew a
+replacement, or mutate a different Run. Operational claims do not become restored
+execution authority. Lease expiry alone does not prove container termination.
 
-`owner_id` distinguishes owner instances even when their hostnames/PIDs repeat.
-It is neither a globally unique physical-machine identity, authentication token,
-nor a distributed fencing token. Hostname and PID describe where this owner
-executes; neither alone identifies a physical host or proves liveness.
+A direct PostgreSQL submission may execute its own newly accepted Run while other
+Runs are active or awaiting reconciliation. Re-executing a terminal or abandoned
+Run is not an implicit retry. Services atomically claim eligible queued Runs,
+skipping Runs owned by another coordinator and preserving acceptance order among
+claimable work. Persist up to 100 waiting Runs by default before acknowledgement;
+serialize capacity checks and idempotency so concurrent callers cannot over-admit
+or duplicate one request. Client disconnect does not cancel accepted work.
+SQLite direct admission retains its busy/unresolved-project guard and serial FIFO
+service queue.
 
-The OS lock is the sole authority. File existence, valid or stale metadata,
-hostname, PID visibility, elapsed time and a previously recorded `owner_id`
-never grant ownership, permit takeover or expire the lock. A live owner's PID
-may be invisible or reused in another container namespace. Do not steal or
-delete a lock on that basis. Normal exit or process death releases OS ownership;
-retained metadata may remain and is replaced in place only after the next
-successful acquisition. Empty, legacy, truncated or malformed metadata does not
-prevent acquisition when the OS lock is free and never permits acquisition when
-it is held.
+Resolve the Default Experiment and immutable definition snapshots within durable
+admission transactions. Validation, help and reads never initialize project data.
+Workers retain isolated process-global KFP configuration and act through their
+coordinator's constrained RPC, carrying that Run's authority. Multiple service
+instances and direct processes may share PostgreSQL without changing the artifact
+store identity or creating another state/cache database.
 
-Keep the lock file's inode stable: do not unlink, atomically replace, rename away
-or recreate it while the state directory is operational. Update diagnostic
-contents through the locked file itself and flush them; ordinary atomic-rename
-rules for control projections do not apply to `owner.lock`. Different paths or
-same-host bind-mount aliases for that file must contend on the same OS lock.
-Failure to initialize diagnostic contents after acquiring the lock fails the
-operation before project-state mutation and releases ownership safely.
+Recovery after coordinator loss MUST first claim the expired/released abandoned
+Run with a newer fence. A surviving authorized coordinator may reconcile its own
+failed worker under its current claim.
+Never recover, interrupt or rewrite a live Run owned by another coordinator.
+Reconcile only that Run's recorded handles, outputs and logs against the original
+Docker daemon, retire stopped handles, and preserve unresolved activity when its
+daemon cannot be reached. Failure to reconcile one Run does not stop unrelated
+PostgreSQL Runs. No automatic rerun of abandoned computation is implied. SQLite
+reacquisition still requires project-wide reconciliation before dispatch.
 
-A competing owner fails with `CONFLICT` (HTTP 409 where applicable). Its
-operational diagnostic names the resolved state root and reports recognized,
-validated owner metadata when readable, through the existing `field`/`reason`
-error-details envelope and the structured owner-conflict extension in
-[Service API](010_service-api.md). Accept diagnostic contents up to 8192 bytes;
-a bounded read may consume one extra byte only to detect an oversized file.
-Classify oversized, unsupported-schema or malformed contents without treating
-them as authority. Include the recorded endpoint as an explicit connection option
-when present; otherwise advise finishing/stopping the current owner before
-retrying. Unreadable/legacy/malformed metadata reports unavailable diagnostic
-fields without dumping arbitrary file contents. A lock-capability failure or
-lock-file I/O failure is `UNAVAILABLE` (503), distinct from a busy owner, and
-fails closed. Do not automatically switch modes, discover/start a service,
-retry a mutation against an endpoint, or open a competing SQLite writer.
-
-This contract is qualified only on local filesystems with working OS locking,
-rename/fsync and SQLite semantics, including same-host bind mounts of the same
-underlying state. It does not promise cross-machine or network-filesystem
-coordination, a distributed lease, or safety after an operator replaces a live
-lock inode. External SQL does not itself solve distributed execution ownership.
-
-Reacquiring a free OS lock establishes only control-state ownership. Task
-containers or workers may outlive a dead coordinator, and accepted queued work
-may remain. Before accepting a new direct CLI Run, fail closed if retained Runs
-are nonterminal (including queued), or a retained Run/attempt is marked
-`reconciliation_required` or has unresolved activity. Explain that an explicitly
-started service must reconcile prior execution and drain accepted queued work
-before another direct Run. Do not infer task termination from coordinator death,
-discard the old queue, create a replacement Run or implicitly rerun interrupted
-work. This direct-admission guard does not change the service's durable queue:
-its owner still reconciles before dispatch and accepts work under the existing
-service admission rules.
-
-Allow one active Run and one active task attempt. Direct execution is foreground;
-a second direct submission is rejected as busy. The service accepts up to 100
-waiting Runs by default, persists each before acknowledging it, and dispatches
-FIFO by acceptance sequence. Reject overflow before acceptance. A queued Run has
-its own immutable invocation and isolated paths. Client disconnect does not cancel
-accepted service work.
-
-Resolve the default Experiment named Default under ownership on the first
-mutating submission that needs it. Creating it is part of durable admission;
-help, validation and read-only listing must not create state.
-
-The owner coordinates storage and state; a separate worker process hosts each
-Run's process-global KFP local configuration. Workers report structured events
-to the owner. All metadata mutations remain serialized through ownership.
-Never concurrently reinitialize KFP from HTTP request threads. No extra queue
-broker is required.
+Migrations, restore, projection rebuild and destructive cleanup require an
+exclusive project maintenance gate. Refuse while another coordinator holds a
+shared gate; independent cache transactions also respect that gate. Preview
+operations remain read-only. Ownership diagnostics remain informational and
+credential-free; never discover another service automatically.
 
 ## Immutable invocation and states
 
@@ -130,7 +92,8 @@ Cancellation intent is recorded separately until termination is confirmed.
 An interrupted/crashed executor with unconfirmed activity is marked
 reconciliation_required in recovery metadata; do not declare it stopped or
 dispatch a replacement. This is an operational hold, not a successful terminal
-outcome. Publication committed but MLMD not reconciled similarly holds dispatch.
+outcome. A committed cache result can survive an uncertain execution-journal response;
+inspect/reconcile SQL history before further dispatch.
 
 A Run succeeds only when every required selected task succeeds or is validly
 reused, with inactive branches skipped. All attempt outputs/parameters must be
@@ -182,7 +145,8 @@ guesses.
 Explicit cancellation of a queued Run removes it from the dispatchable queue
 and marks cancelled. For an active Run mark cancelling, stop dispatch and request
 termination. Only confirmed stopped execution becomes cancelled. Uncertain or
-unreachable containers remain reconciliation_required and block further dispatch.
+unreachable containers remain reconciliation_required and block replacement work
+for that Run; SQLite retains its project-wide dispatch hold.
 
 Stopping a waiting service client only stops waiting; accepted work continues.
 Explicit cancellation uses its documented API. Graceful service shutdown stops
@@ -212,8 +176,8 @@ record the actual applied settings.
 
 Record task stdout/stderr separately with timestamps/sequence where available,
 plus owner events and concise failure details. Preserve the original ordering
-within each stream; do not invent total ordering across streams. File logs
-persist under the attempt's logs directory and are exposed through CLI/API.
+within each stream; do not invent total ordering across streams. Log chunks
+persist in the SQL journal and are exposed through CLI/API.
 Service application diagnostics also use container stdout/stderr.
 
 Attach stdout/stderr before container start and persist chunks during execution,
@@ -234,3 +198,34 @@ Only explicitly declared task environment and data access is forwarded. Artifact
 transfer by the owner is preferred so ordinary components need no storage SDK
 or credentials. Component commands may perform declared network work; that is
 part of their computation, not permission for Dockflow to build images.
+
+## Cache connections and execution ownership
+
+[Cache coordination](014_cache-coordination.md) governs producer connections to
+the same database as execution state. Local staging roots may differ; SQLite ownership is project-wide, while
+PostgreSQL execution authority is per Run. Waiting records a cache-wait disposition without a
+container attempt. Cache leases never grant execution-journal ownership. Shared
+cache retry budgets supersede Run-local retry multiplication for cacheable tasks;
+uncacheable tasks retain their compiled bounded retry behavior.
+
+## Supervision and accepted execution choices
+
+The service supervises its complete scheduler lifetime. An escaping queue-read,
+recovery or worker-start failure revokes readiness and Run admission, records a
+non-secret diagnostic and preserves accepted work. Fail-stop with explicit service
+restart is the initial recovery policy; do not silently replace an uncertain
+owner. Readiness checks scheduler liveness when execution is enabled.
+
+Admission records a versioned immutable execution-choice value: timeout, shutdown
+grace, CPU/memory caps, image pull policy, resolved task policies and cache policy.
+Execution uses these choices after restart and across PostgreSQL coordinators.
+Database access, credentials, local work paths and provider connections remain
+coordinator deployment settings. Remap explicit task mounts only by matching
+logical target and access mode; never grant a mount absent from the current
+coordinator's configuration. Refuse incompatible deployment constraints with a
+recorded failure, without silently changing accepted computation settings.
+
+Use common lifecycle transitions for normal completion, cancellation and crash
+recovery. After confirmed reconciliation, Run, Task and Attempt outcomes agree.
+Preserve committed successes; terminalize abandoned running Tasks and block
+unstarted dependent work. Unresolved execution retains its recovery hold.

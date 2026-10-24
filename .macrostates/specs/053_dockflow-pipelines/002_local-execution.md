@@ -4,7 +4,7 @@
 
 Direct CLI execution runs installed Python core code with KFP DockerRunner and a
 selected local Docker daemon. It starts no HTTP service or Compose project.
-Filesystem artifacts and MLMD/SQLite need no additional service containers.
+Filesystem artifacts and SQL need no additional service containers.
 Prepare component images and compile definitions before invocation.
 
 Publish a generic service image at
@@ -27,15 +27,19 @@ Use a single-machine Compose stack:
 
 | Service | Responsibility |
 | --- | --- |
-| dockflow | API, single owner/queue, isolated execution worker and storage/metadata integration. |
+| dockflow | API, durable queue, isolated execution worker and storage/metadata integration. |
 | docker-engine | Dedicated Docker-in-Docker daemon for dynamic task containers. |
 | minio | Default S3-compatible artifact provider with persistent object data. |
 | registry | Local image registry for externally prepared component images. |
 
 SQLite lives in the Dockflow state volume; no separate database container is
-needed initially. External MLMD SQL backends, beginning with a qualified MySQL
-profile, may be added without changing artifact/run semantics. PostgreSQL and
-other database images are not advertised merely because upstream documents them.
+required by default. PostgreSQL is the supported external execution-state and
+cache backend. With PostgreSQL plus shared artifact storage, local work/state
+bases can be disposable. [Metadata and recovery](007_metadata-and-recovery.md)
+owns database authority, project exclusion and backup. Connecting to PostgreSQL
+enables per-Run coordination between isolated hosts. The local SQLite profile
+retains one coordinator/Run per project; PostgreSQL coordinators each dispatch one
+Run at a time, with different coordinators executing different Runs concurrently.
 
 Artifact backend and execution mode are independent. A persistent service may
 use filesystem artifacts on an explicitly mounted persistent directory and
@@ -137,8 +141,7 @@ Desktop backends separately; cross-building or emulation does not establish nati
 support. Multi-node, cloud execution, Kubernetes and native Windows containers
 remain outside the initial deployment profile.
 
-The image's base must satisfy the qualified runtime dependencies. MLMD 1.21
-Linux wheels require glibc 2.39 on x86-64; use an Ubuntu 24.04-based qualification
-candidate instead of assuming every Python slim image works. Linux ARM64 needs a
-reproducible MLMD source-build qualification before publication.
+The image's base must satisfy the qualified KFP/Docker/provider dependencies.
+SQLite state uses the Python standard library; PostgreSQL uses its optional
+provider driver. Retain explicit platform qualification before publication.
 [Review and qualification](012_review-and-qualification.md) records those gates.

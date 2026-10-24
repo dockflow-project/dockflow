@@ -1,5 +1,6 @@
 """Bounded KFP 2.17 v2beta1 adapter; native extensions stay on native routes."""
 
+from dockflow_database.errors import DockflowError
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from python_multipart.exceptions import MultipartParseError
@@ -8,7 +9,6 @@ from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
 
 from .core import only_fields
-from .errors import DockflowError
 
 STATES = {
     "queued": "PENDING",
@@ -103,24 +103,20 @@ def run_view(core, record):
             "start_time": task.get("started_at"),
             "end_time": task.get("finished_at"),
         }
-        if task.get("attempt_ids") and core.store.index:
-            attempt_id = task["attempt_ids"][-1]
-            execution = core.store.index.store.get_execution_by_type_and_name(
-                "dockflow.v1.attempt", attempt_id
+        if task.get("attempt_ids"):
+            execution_id = core.store.database.internal_id(
+                "attempts", task["attempt_ids"][-1]
             )
-            if execution:
-                item["execution_id"] = str(execution.id)
+            if execution_id is not None:
+                item["execution_id"] = str(execution_id)
         for field in ("inputs", "outputs"):
             mapped = {}
-            if core.store.index:
-                for name, artifact_id in task.get(field, {}).items():
-                    if not isinstance(artifact_id, str):
-                        continue
-                    node = core.store.index.store.get_artifact_by_type_and_name(
-                        "dockflow.v1.artifact", artifact_id
-                    )
-                    if node:
-                        mapped[name] = {"artifact_ids": [str(node.id)]}
+            for name, artifact_id in task.get(field, {}).items():
+                if not isinstance(artifact_id, str):
+                    continue
+                numeric_id = core.store.database.internal_id("artifacts", artifact_id)
+                if numeric_id is not None:
+                    mapped[name] = {"artifact_ids": [str(numeric_id)]}
             item[field] = mapped
         if task.get("error"):
             item["error"] = {"code": 2, "message": str(task["error"]), "details": []}
@@ -183,7 +179,7 @@ def mount_kfp(app, core, scheduler):
             return form
 
     async def upload(request: Request, *, version: bool):
-        if not scheduler.ready:
+        if not scheduler.available():
             raise DockflowError("Service is not ready", "UNAVAILABLE", 503)
         allowed = {"name", "display_name", "description"} | (
             {"pipelineid"} if version else {"namespace"}
@@ -338,13 +334,7 @@ def mount_kfp(app, core, scheduler):
                 filters=filters,
                 sort_by=sort or "created_at desc",
             )
-            total = len(
-                [
-                    item
-                    for item in core.store.list(collection)
-                    if all(item.get(key) == value for key, value in filters.items())
-                ]
-            )
+            total = core.store.database.queries.count(collection, filters=filters)
             return {
                 envelope: [view(item) for item in page["items"]],
                 "total_size": total,
@@ -380,7 +370,7 @@ def mount_kfp(app, core, scheduler):
 
     @app.post(prefix + "/runs")
     def create_run(request: Request):
-        if not scheduler.ready:
+        if not scheduler.available():
             raise DockflowError("Service is not ready", "UNAVAILABLE", 503)
         body = request.state.body
         only_fields(
