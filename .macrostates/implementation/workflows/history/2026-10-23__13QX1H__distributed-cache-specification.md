@@ -58,7 +58,7 @@ explicitly outstanding; no such deployment claim is made. Acceptance and workflo
 closure require explicit Definer confirmation. No integration or publication was requested.
 
 
-## Acceptance and closure
+## Definer-confirmed closure
 
 The Definer explicitly accepted the completed delivery and authorized closure of
 all open workflows on 2026-10-24 23:48 UTC, together with reviewed integration and

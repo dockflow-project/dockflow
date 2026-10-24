@@ -53,7 +53,7 @@ Full Python, frontend, real S3, clean package and service execution checks passe
 evidence. [The pending patch](../../changes/history/emsign-ca-remediation.yaml) preserves
 starting baselines. No specification or release-version change is required.
 
-## Closure and integration
+## Definer-confirmed closure
 
 Closed under the Definer's explicit instruction to complete, close, push and
 merge this remediation. Local review and applicable verification are complete;

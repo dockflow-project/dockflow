@@ -69,7 +69,7 @@ closure remained pending; no baseline finalization or publication occurred.
 No implementation gap remains for the
 eight findings; broader release/platform qualification gates are unchanged.
 
-## Closure
+## Definer-confirmed closure
 
 On 2026-10-21, the Definer explicitly authorized closure of the complete existing
 open-workflow set. Review confirmed that this workflow's recorded scope was

@@ -67,7 +67,7 @@ commit with no specification or implementation version impact. Hosted checks on
 the corrected commit remain required after submission; the earlier failed run is
 retained as evidence, not claimed as successful qualification.
 
-## Closure
+## Definer-confirmed closure
 
 The Definer explicitly approved closure and submission of this completed correction
 on 2026-10-22, with the previously approved public publication continuing afterward.

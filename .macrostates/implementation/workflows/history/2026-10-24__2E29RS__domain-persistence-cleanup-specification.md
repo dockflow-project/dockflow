@@ -53,7 +53,7 @@ of existing project data. The work is ready for acceptance; the workflow remains
 open. No commit, publication or closure was performed.
 
 
-## Acceptance and closure
+## Definer-confirmed closure
 
 The Definer explicitly accepted the completed delivery and authorized closure of
 all open workflows on 2026-10-24 23:48 UTC, together with reviewed integration and

@@ -63,7 +63,7 @@ local report at `tmp/reviews/source-publication-readiness.md` keeps the
 publication assessment outside user documentation. That ignored review artifact
 is not included in the published source; the linked readiness receipt is retained.
 
-## Closure
+## Definer-confirmed closure
 
 The Definer's explicit 2026-10-21 authorization covers the entire open-workflow
 set and this readiness work after delivery review. Status is completed and

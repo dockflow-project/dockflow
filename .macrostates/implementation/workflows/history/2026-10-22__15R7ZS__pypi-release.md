@@ -85,7 +85,7 @@ publication remain distinct recorded gates.
   integrated-source CI and the hosted candidate are still required; no registry
   upload, release tag or finalized baseline is claimed.
 
-## Closure and subsequent release gates
+## Definer-confirmed closure
 
 The Definer explicitly confirmed closure on 2026-10-22, accepted the documented
 bounded 0.1.0 implementation as the first baseline and authorized the transition

@@ -55,7 +55,7 @@ physical multi-host qualification is not claimed. Keep this workflow open pendin
 explicit Definer acceptance/closure. No commit or publication was performed.
 
 
-## Acceptance and closure
+## Definer-confirmed closure
 
 The Definer explicitly accepted the completed delivery and authorized closure of
 all open workflows on 2026-10-24 23:48 UTC, together with reviewed integration and

@@ -7,6 +7,7 @@
 - Change depth: `large`
 - Branch: `feat/distributed-artifact-cache`
 - Requested by: Definer
+- Closure authorized by: Definer; explicit all-workflow closure and integration instruction
 - Implementer: Implementer
 - Started at: 2026-10-24 23:48 (UTC)
 - Last updated at: 2026-10-24 23:48 (UTC)

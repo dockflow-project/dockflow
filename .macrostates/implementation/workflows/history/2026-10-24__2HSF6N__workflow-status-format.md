@@ -19,7 +19,7 @@ in Markdown code delimiters. No acceptance decision or runtime behavior changes.
 The Definer's all-workflow closure and integration instruction covers completing
 and closing this correction before proposal submission.
 
-## Closure
+## Definer-confirmed closure
 
 Normalized 53 status fields without changing their meaning. Runtime
 source and accepted qualification remain unchanged. The explicitly authorized

@@ -46,7 +46,7 @@ publication. Corrective work was separately tracked in the
 [specification-consistency remediation workflow](2026-10-21__1P3AJ4__specification-consistency-remediation.md)
 with proportionate checks.
 
-## Closure
+## Definer-confirmed closure
 
 On 2026-10-21, the Definer explicitly authorized closure of the complete existing
 open-workflow set. Review confirmed that this workflow's recorded scope was
