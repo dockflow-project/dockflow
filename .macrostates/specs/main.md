@@ -8,9 +8,10 @@ Kubernetes. Local requirements are organized into
 [Dockflow Pipelines](053_dockflow-pipelines/README.md), and
 [Dockflow Artifacts](054_dockflow-artifacts/README.md) packages.
 
-The specification set is the accepted contract for the first bounded application
-release. The composition selects `specs-0.1.0`; the accepted implementation scope
-and qualification limits are recorded in the
+The specification set defines the accepted product contracts. The composition
+records the selected project baseline; implemented scope and current qualification
+limits are described in the [implementation overview](../implementation/main.md).
+The first bounded milestone remains recorded in the
 [initial release review](../implementation/validation/initial-release.md).
 Reviewed integration finalizes the baseline declarations. Annotated tags and
 versioned distributions are published separately under the

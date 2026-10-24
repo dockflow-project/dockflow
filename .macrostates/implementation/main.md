@@ -2,26 +2,20 @@
 
 ## Phase and identity
 
-Project phase: **active**. The Definer accepted the first bounded implementation
-baseline and this phase transition on 2026-10-22. The
-[release declaration](release.yaml) proposes `imp-0.1.1` against `specs-0.1.0`;
-selected specification package versions belong to the
-[composition](../specs/composition.yaml). The
-[initial release review](validation/initial-release.md) records delivered scope,
-qualification evidence and explicit limits.
+Project phase: **active**. The composition and [release declaration](release.yaml)
+record the specification/implementation baseline pair. The
+[release plan](release-plan.yaml) binds its exact collected scope and target;
+reviewed integration finalizes candidate declarations. Application identity is
+owned by root `VERSION` and synchronized across all four packages. Its version is
+independent of the repository baseline numbers.
 
-Application version `0.1.1` is the coordinated security maintenance candidate.
-Only the earlier CLI 0.1.0 was uploaded; its image candidate was withdrawn.
-The [release plan](release-plan.yaml) collects accepted patch maintenance against
-unchanged `specs-0.1.0`; reviewed integration finalizes `imp-0.1.1`.
-Existing 0.1.0 tags and uploaded files retain their original identities.
-Annotated tags, exact-candidate approval and registry uploads are separate gates.
-Git commits identify source snapshots independently. The closed
-[release preparation](workflows/history/2026-10-22__15R7ZS__pypi-release.md) records
-acceptance and local qualification. Subsequent CI, integration and publication
-evidence belongs to the hosting system and release assets. Earlier workflows
-remain in [history](workflows/history/). Imported specification snapshots remain
-unchanged.
+The [0.2.0 qualification record](validation/release-0.2.0.md) describes current
+release preparation and scope. The [initial release review](validation/initial-release.md)
+retains the first bounded milestone. Registry publication, immutable source tags
+and hosted artifacts are separate from baseline finalization. Earlier released
+identities and dated evidence retain their original meaning. Workflow records
+are closed and archived before reviewed integration; later publication outcomes
+belong to the external release record.
 
 [User documentation](../../docs/README.md) is the entrypoint for installation,
 authoring, CLI/API/browser use, configuration, deployment and operations.
@@ -360,9 +354,9 @@ The candidate workflow builds and verifies package artifacts, supplies those
 wheels to the service Dockerfile through a named build context, smoke-tests the
 result, and saves that exact image with a SHA-256 manifest. The publishing
 workflow checks successful canonical-main candidate provenance and the manually
-reviewed manifest hash before protected OIDC jobs. CLI publishes first;
-Pipelines and Artifacts use distinct environments, as required for pending PyPI
-project creation. Image/release publication follows all package uploads.
+reviewed manifest hash before protected OIDC jobs. CLI and Database publish
+before Artifacts and Pipelines, with a distinct environment per distribution for
+pending PyPI project creation. Image/release publication follows all package uploads.
 
 `tools/release.py` verifies bundle inventories, hashes, exact source/baseline tags
 and existing PyPI file identity. `tools/verify_service_image.py` owns disposable

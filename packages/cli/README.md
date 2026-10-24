@@ -17,9 +17,9 @@ invalid or conflicting plugin registrations rather than silently omitting them.
 Install the command host with Python 3.12 or newer:
 
 ```bash
-pip install dockflow-cli==0.1.1
+pip install dockflow-cli==0.2.0
 ```
 
-Installing `dockflow-pipelines==0.1.1` also installs this matching host.
+Installing `dockflow-pipelines==0.2.0` also installs this matching host.
 MIT licensed. See [installation](https://github.com/dockflow-project/dockflow/blob/main/docs/installation.md),
 [CLI usage](https://github.com/dockflow-project/dockflow/blob/main/docs/cli.md) and the [contribution guide](https://github.com/dockflow-project/dockflow/blob/main/CONTRIBUTING.md).

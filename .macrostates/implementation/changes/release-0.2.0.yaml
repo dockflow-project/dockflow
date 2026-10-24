@@ -1,0 +1,21 @@
+schema_version: 1
+id: release-0.2.0
+summary: Prepare coordinated Dockflow 0.2.0 application metadata and publication provenance.
+origin:
+  commit: 4c7e35cca44b90f59fef93cb3da5ea71e1258c65
+  specification: specs-0.1.0
+  implementation: imp-0.1.1
+impact:
+  specification: none
+  implementation: none
+deliverables:
+- dockflow-cli
+- dockflow-database
+- dockflow-artifacts
+- dockflow-pipelines
+- dockflow-pipelines-image
+requirements: []
+evidence:
+- validation/conformance-corrections.md
+- validation/release-0.2.0.md
+gaps: []

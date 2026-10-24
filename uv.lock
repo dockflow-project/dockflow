@@ -530,7 +530,7 @@ wheels = [
 
 [[package]]
 name = "dockflow-artifacts"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "packages/artifacts" }
 dependencies = [
     { name = "dockflow-database" },
@@ -562,7 +562,7 @@ provides-extras = ["postgresql", "s3", "kfp"]
 
 [[package]]
 name = "dockflow-cli"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "packages/cli" }
 dependencies = [
     { name = "typer" },
@@ -573,7 +573,7 @@ requires-dist = [{ name = "typer", specifier = ">=0.27.3,<0.28.0" }]
 
 [[package]]
 name = "dockflow-database"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "packages/database" }
 
 [package.optional-dependencies]
@@ -587,7 +587,7 @@ provides-extras = ["postgresql"]
 
 [[package]]
 name = "dockflow-pipelines"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "packages/pipelines" }
 dependencies = [
     { name = "dockflow-artifacts" },
@@ -639,7 +639,7 @@ provides-extras = ["postgresql", "runtime", "service", "s3"]
 
 [[package]]
 name = "dockflow-workspace"
-version = "0.1.1"
+version = "0.2.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]

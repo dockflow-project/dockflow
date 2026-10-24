@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.2.0
+
+This pre-1.0 release introduces incompatible persisted-state and backup formats.
+Use fresh state; no migration from earlier formats is provided. All four packages
+share this version, including the new `dockflow-database` library. Artifacts use
+separate filesystem/S3 payload storage and one database for durable bookkeeping.
+
+
 - Supervise scheduler failures and revoke readiness/admission; resolve named
   definitions through the catalog's current pointer, including source rollback.
 - Preserve immutable execution choices across coordinators and share terminal

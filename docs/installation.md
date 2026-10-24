@@ -2,13 +2,11 @@
 
 [Documentation index](README.md) · Next: [quickstart](quickstart.md)
 
-Use the locked source checkout for the current security fixes. The initial
-0.1.0 publication stopped after the CLI upload; Pipelines, Artifacts and the
-service image remain unpublished. The PyPI commands below describe the planned
-0.1.1 release and become usable when its matching packages are available. The qualified execution
-platform is Linux x86-64, with Python 3.12–3.13. See the
-[compatibility guide](compatibility.md) for the distinction between base client
-installation and execution support.
+Install the coordinated Dockflow 0.2.0 packages below, or use the locked source
+checkout. The qualified execution platform is Linux x86-64 with Python 3.12–3.13.
+See the [compatibility guide](compatibility.md) for base client installation and
+execution support. This version requires fresh state; earlier database and backup
+formats are not migrated.
 
 ## Requirements
 
@@ -31,14 +29,14 @@ for your OS using the [Docker installation guide](https://docs.docker.com/engine
 In a virtual environment, install the remote client:
 
 ```bash
-pip install dockflow-pipelines==0.1.1
+pip install dockflow-pipelines==0.2.0
 dockflow --version
 dockflow pipelines --endpoint http://127.0.0.1:8080 runs list
 ```
 
 The matching `dockflow-cli` is installed automatically. For the independent
-artifact library, use `pip install dockflow-artifacts==0.1.1` (or
-`'dockflow-artifacts[s3]==0.1.1'`).
+artifact library, use `pip install dockflow-artifacts==0.2.0` (or
+`'dockflow-artifacts[s3]==0.2.0'`).
 
 Local execution and serving need the KFP dependency override explained below.
 These commands work without a source checkout:
@@ -46,11 +44,11 @@ These commands work without a source checkout:
 ```bash
 uv venv --python 3.13
 uv pip install \
-  --overrides https://raw.githubusercontent.com/dockflow-project/dockflow/v0.1.1/tools/runtime-overrides.txt \
-  'dockflow-pipelines[runtime,service,s3]==0.1.1'
+  --overrides https://raw.githubusercontent.com/dockflow-project/dockflow/v0.2.0/tools/runtime-overrides.txt \
+  'dockflow-pipelines[runtime,service,s3]==0.2.0'
 ```
 
-Add `'dockflow-artifacts[s3,kfp]==0.1.1'` to that same command when authoring
+Add `'dockflow-artifacts[s3,kfp]==0.2.0'` to that same command when authoring
 pipelines that use the artifact library. On Linux/macOS activate with
 `source .venv/bin/activate`; on PowerShell use `.venv\Scripts\Activate.ps1`.
 These commands install software; they do not start services or create storage.
