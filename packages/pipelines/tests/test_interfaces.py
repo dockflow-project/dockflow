@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.cli import app
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.core import Core

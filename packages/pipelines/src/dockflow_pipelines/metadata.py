@@ -18,37 +18,15 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import digest, json_bytes, loads, validate_json
+from dockflow_core.errors import DockflowError
+from dockflow_core.filesystem import atomic_write, fsync_directory
+from dockflow_core.time import utc_now
 
-from .canonical import digest, json_bytes, loads, validate_json
 from .lifecycle import merge_run, terminal_task
 from .projections import DOMAINS, expected_rows, project_record
-from .records import COLLECTIONS, TERMINAL, utc_now
+from .records import COLLECTIONS, TERMINAL
 from .state_database import StateDatabase
-
-
-def _fsync_directory(path: Path) -> None:
-    if os.name != "nt":
-        fd = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
-
-
-def atomic_write(path: Path, data: bytes) -> None:
-    """Write and sync a backup manifest on the destination filesystem."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
-    try:
-        with temporary.open("xb") as stream:
-            stream.write(data)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        _fsync_directory(path.parent)
-    finally:
-        temporary.unlink(missing_ok=True)
 
 
 def _project_mutation(method):
@@ -203,7 +181,7 @@ class ControlStore:
         )
 
     def check_execution(self):
-        if not self.database.adapter.concurrent_runs:
+        if not self.database.adapter.supports_shared_owners:
             return None
         try:
             with self.database.transaction():
@@ -226,7 +204,7 @@ class ControlStore:
             self.database.local.control_run = previous
 
     def _guard_execution(self, kind, payload):
-        if not self.database.adapter.concurrent_runs:
+        if not self.database.adapter.supports_shared_owners:
             return
         resource = payload.get("resource", {})
         claim = self.database.run_claim
@@ -299,7 +277,7 @@ class ControlStore:
             self.set_project_metadata(
                 "project", {**expected, "created_at": utc_now()}, immutable=True
             )
-        if self.database.adapter.concurrent_runs:
+        if self.database.adapter.supports_shared_owners:
             if self.database.current_sequence() != len(self.records()):
                 raise DockflowError(
                     "Journal sequence counter differs from accepted history",
@@ -1137,7 +1115,7 @@ class ControlStore:
         self.require_owner()
         boundary = (
             self.database.transaction()
-            if self.database.adapter.concurrent_runs
+            if self.database.adapter.supports_shared_owners
             else contextlib.nullcontext()
         )
         with self._mutex, boundary:
@@ -1153,7 +1131,7 @@ class ControlStore:
                     "Stop intent prevents new cache publication", "CONFLICT", 409
                 )
             claim = self.database.run_claim
-            if self.database.adapter.concurrent_runs:
+            if self.database.adapter.supports_shared_owners:
                 if claim is None or claim.run_id != run_id:
                     raise DockflowError(
                         "Cache publication requires Run ownership",
@@ -1239,7 +1217,7 @@ class ControlStore:
         claim = self.database.run_claim
         if (
             existing is not None
-            and self.database.adapter.concurrent_runs
+            and self.database.adapter.supports_shared_owners
             and (claim is None or claim.run_id != producer["run_id"])
         ):
             # Cache publication is already committed, but only the original Run
@@ -1783,7 +1761,7 @@ class ControlStore:
                     "accepted_sequence": len(records),
                     "created_at": utc_now(),
                     "state_backend": self.database.backend,
-                    "state_format": "dockflow-sql-v4",
+                    "state_format": "dockflow-sql-v5",
                     "artifacts_backend": artifacts.backend,
                     "artifacts_root": str(artifacts.options["root"])
                     if artifacts.backend == "filesystem" and "root" in artifacts.options
@@ -1801,9 +1779,9 @@ class ControlStore:
                     for name in files:
                         with (Path(directory) / name).open("rb") as stream:
                             os.fsync(stream.fileno())
-                    _fsync_directory(Path(directory))
+                    fsync_directory(Path(directory))
                 os.rename(temporary, destination)
-                _fsync_directory(destination.parent)
+                fsync_directory(destination.parent)
                 return {"destination": str(destination), **manifest}
             finally:
                 if temporary.exists():
@@ -1867,7 +1845,7 @@ class ControlStore:
                 code="CONFLICT",
                 status=409,
             )
-        if manifest.get("state_format") != "dockflow-sql-v4":
+        if manifest.get("state_format") != "dockflow-sql-v5":
             raise DockflowError("Unsupported backup state format", "CONFLICT", 409)
         snapshot = StateDatabase(
             {"backend": "sqlite", "database": str(source.absolute() / "state.sqlite")},

@@ -7,7 +7,6 @@ opens a database, creates state, or acquires execution ownership.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 
 COLLECTIONS = {
     "pipelines": "pipeline",
@@ -20,10 +19,6 @@ COLLECTIONS = {
     "artifacts": "artifact",
 }
 TERMINAL = {"succeeded", "failed", "cancelled", "interrupted"}
-
-
-def utc_now() -> str:
-    return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def new_id(kind: str) -> str:

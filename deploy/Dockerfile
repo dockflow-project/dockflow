@@ -10,7 +10,7 @@ COPY --from=uv /uv /usr/local/bin/uv
 RUN uv python install 3.13.17
 WORKDIR /opt/dockflow
 COPY pyproject.toml uv.lock .python-version ./
-COPY packages/database/pyproject.toml packages/database/README.md packages/database/LICENSE packages/database/
+COPY packages/core/pyproject.toml packages/core/README.md packages/core/LICENSE packages/core/
 COPY packages/cli/pyproject.toml packages/cli/README.md packages/cli/LICENSE packages/cli/
 COPY packages/pipelines/pyproject.toml packages/pipelines/README.md packages/pipelines/LICENSE packages/pipelines/
 COPY packages/artifacts/pyproject.toml packages/artifacts/README.md packages/artifacts/LICENSE packages/artifacts/
@@ -22,7 +22,7 @@ COPY tools/check_ca_trust.py /tmp/check_ca_trust.py
 RUN .venv/bin/python /tmp/check_ca_trust.py --runtime --all-bundles --system
 
 FROM dependencies AS source-wheels
-COPY packages/database/src packages/database/src
+COPY packages/core/src packages/core/src
 COPY packages/cli/src packages/cli/src
 COPY packages/pipelines/src packages/pipelines/src
 COPY packages/artifacts/src packages/artifacts/src
@@ -55,7 +55,7 @@ ARG IMPLEMENTATION=unaccepted-development
 LABEL org.opencontainers.image.title="Dockflow Pipelines service" \
       org.opencontainers.image.source="https://github.com/dockflow-project/dockflow" \
       org.opencontainers.image.revision=$SOURCE_REVISION \
-      org.opencontainers.image.version="0.1.1" \
+      org.opencontainers.image.version="0.2.0" \
       org.opencontainers.image.licenses="MIT" \
       io.macrostates.specification=$SPECIFICATION \
       io.macrostates.implementation=$IMPLEMENTATION

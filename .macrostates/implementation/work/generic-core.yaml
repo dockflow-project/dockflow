@@ -1,0 +1,6 @@
+schema_version: 1
+id: generic-core
+origin:
+  commit: 68ec3df884e80c384f4590c35648dbfd991fa965
+  specification: specs-0.1.0
+  implementation: imp-0.1.1

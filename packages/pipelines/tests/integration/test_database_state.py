@@ -3,7 +3,7 @@
 import json
 
 import pytest
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.core import Core
 from dockflow_pipelines.metadata import ControlStore
@@ -137,7 +137,7 @@ def test_portable_export_import_both_backends(database_state):
     if options["backend"] == "postgresql":
         with store.owner():
             with store.database.transaction() as connection:
-                from dockflow_database.database_schema import PROJECT_TABLES
+                from dockflow_pipelines.database_schema import PROJECT_TABLES
 
                 for table in reversed(PROJECT_TABLES):
                     predicate = (
@@ -160,7 +160,7 @@ def test_unknown_schema_and_legacy_files_fail_without_reinterpretation(tmp_path)
     with store.owner():
         store.initialize()
         with store.database.transaction() as connection:
-            connection.execute("UPDATE dockflow_schema SET version=999")
+            connection.execute("UPDATE dockflow_schema_components SET version=999")
     with pytest.raises(DockflowError, match="schema"), store.owner():
         pass
     legacy = tmp_path / "legacy"
@@ -262,14 +262,14 @@ def test_foreign_sqlite_database_is_not_reinterpreted(tmp_path):
         "dockflow-fresh",
         storage={"backend": "sqlite", "database": str(database)},
     )
-    with pytest.raises(DockflowError, match="not a unified Dockflow"), store.owner():
+    with pytest.raises(DockflowError, match="fresh state"), store.owner():
         pass
     with sqlite3.connect(database) as connection:
         assert connection.execute("SELECT value FROM original_records").fetchall() == [
             ("retained",)
         ]
         assert not connection.execute(
-            "SELECT name FROM sqlite_master WHERE name='dockflow_schema'"
+            "SELECT name FROM sqlite_master WHERE name='dockflow_schema_components'"
         ).fetchall()
 
 
@@ -291,8 +291,8 @@ def test_missing_authoritative_table_is_not_a_fresh_project(database_state):
 
         with store.database.reader() as connection:
 
-            def execute(sql):
-                cursor = connection.execute(sql)
+            def execute(sql, parameters=()):
+                cursor = connection.execute(sql, parameters)
                 if "pg_catalog.pg_tables" in sql:
                     return SimpleNamespace(
                         fetchall=lambda: [

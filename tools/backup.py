@@ -6,9 +6,9 @@ import json
 import shutil
 from pathlib import Path
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import loads
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.artifacts import ArtifactStore
-from dockflow_pipelines.canonical import loads
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.metadata import ControlStore
 
@@ -19,7 +19,7 @@ def restore(source: Path, config: Path, apply: bool) -> dict:
     settings = load_settings(config)
     if manifest["project_id"] != settings.project_id:
         raise DockflowError("Backup project ID differs from configuration")
-    if manifest.get("state_format") != "dockflow-sql-v4":
+    if manifest.get("state_format") != "dockflow-sql-v5":
         raise DockflowError(
             "Unsupported backup state format; SQL state backup required"
         )

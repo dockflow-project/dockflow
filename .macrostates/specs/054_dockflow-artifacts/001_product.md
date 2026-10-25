@@ -3,7 +3,10 @@
 The Python distribution is dockflow-artifacts; the import package is
 dockflow_artifacts. Support Python 3.12 and 3.13 on POSIX for filesystem
 publication. Keep the standard-library core independent from Pipelines, CLI, KFP,
-cloud SDKs and framework-global state. Use the shared dockflow-database package for persistence. Optional postgresql, s3 and kfp extras own their
+cloud SDKs and framework-global state. Use dockflow-core for generic primitives under the
+[Core boundary](../051_dockflow/007_core.md). Artifacts owns its publication
+schema, version and persistence logic; standalone initialization creates only
+that schema, without any Pipelines tables. Optional postgresql, s3 and kfp extras own their
 dependencies, imported only when used.
 
 Public API: Publisher, Publication, format_path, step_path, publication_id, fingerprint, ArtifactError,

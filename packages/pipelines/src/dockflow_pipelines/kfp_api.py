@@ -1,6 +1,6 @@
 """Bounded KFP 2.17 v2beta1 adapter; native extensions stay on native routes."""
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from python_multipart.exceptions import MultipartParseError
@@ -283,7 +283,7 @@ def mount_kfp(app, core, scheduler):
             if collection not in {"experiments", "pipelines"}:
                 raise DockflowError("This KFP collection does not support filters")
             try:
-                from .canonical import loads
+                from dockflow_core.canonical import loads
 
                 parsed = loads(query["filter"])
                 only_fields(parsed, {"predicates"}, "filter")

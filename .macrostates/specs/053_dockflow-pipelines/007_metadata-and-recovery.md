@@ -12,7 +12,7 @@ rebuild query projections without inventing identities or producer facts.
 Both CLI and service use the same persistence adapter. Database state is scoped
 by stable project ID; projects in one server/database cannot see each other.
 The [cache registry](014_cache-coordination.md) retains its coordination authority
-in tables of the same physical database and versioned schema.
+in Pipelines-owned tables of the same physical database.
 
 ## Public identities and query model
 
@@ -280,13 +280,14 @@ not make component side effects exactly once.
 Both SQLite and PostgreSQL MUST store execution history, projections, settings,
 logs, cache coordination, artifact publication claims/manifests and recovery
 descriptors in one physical database. Only artifact bytes, their storage identity
-marker and local disposable execution data remain outside it. Use one backend abstraction
-(provided by dockflow-database) for connections, dialect, durability settings, transactions, schema initialization,
-clock/row locks and driver failure classification. Repositories retain their
-respective execution and cache policies rather than duplicating database drivers.
-One versioned schema covers both domains and is initialized atomically in either
-repository order. Read-only access never creates or repairs a schema. Reject
-unknown, incomplete, legacy split and foreign SQLite schemas without migration.
+marker and local disposable execution data remain outside it. The shared
+[Core boundary](../051_dockflow/007_core.md) owns generic database services.
+Pipelines supplies and versions its execution and cache schemas, query/index
+logic and project export selection. It explicitly initializes the Artifacts
+publication schema that it consumes. Each schema is initialized atomically;
+consumer versions are independent and both initialization orders are supported.
+Read-only access never creates or repairs a schema. Reject unknown, incomplete,
+legacy split and conflicting schemas without migration.
 
 Each coordinator retains its pinned session. Cache operations use independent,
 short connections to that same database; they must progress while coordinators hold execution authority. Domain commits remain distinct: cache publication
@@ -328,9 +329,10 @@ replay and backup. Existing artifact projections remain unchanged; missing cache
 artifact facts may be projected from the verified manifest. Cache authority does
 not fabricate a successful original Run or grant its execution lease.
 
-Publication bookkeeping shares the physical schema and project export with state
-and cache. Standalone Artifacts uses that same adapter and immutable-record
-repository without importing Pipelines. Storage reserves a small identity marker;
+Publication bookkeeping uses the Artifacts-owned schema in the same physical
+database and project export as state and cache. Pipelines consumes Artifacts
+persistence through its declared dependency; standalone Artifacts uses Core
+without importing Pipelines. Storage reserves a small identity marker;
 all publication/descriptor records are SQL-only. Pipelines publication mutations
 retain their Run fence checks. Independent publisher transactions honor exclusive
 project maintenance; no database transaction spans payload transfer.

@@ -2,17 +2,7 @@
 
 import errno
 import os
-from pathlib import Path
 from typing import Any
-
-from .errors import DockflowError
-
-
-def no_links(path: Path) -> None:
-    path = path.absolute()
-    for candidate in (path, *path.parents):
-        if candidate.is_symlink():
-            raise DockflowError("Database paths cannot contain symlinks")
 
 
 def owner_lock(stream: Any, *, acquire: bool) -> None:

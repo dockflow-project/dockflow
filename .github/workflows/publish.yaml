@@ -49,7 +49,7 @@ jobs:
         run: python tools/release.py pypi --directory candidate
 
   publish-cli:
-    needs: verify
+    needs: [verify, publish-core]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment:
@@ -77,13 +77,13 @@ jobs:
           packages-dir: candidate/packages/cli/
           skip-existing: true
 
-  publish-database:
+  publish-core:
     needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment:
-      name: pypi-database
-      url: https://pypi.org/project/dockflow-database/
+      name: pypi-core
+      url: https://pypi.org/project/dockflow-core/
     permissions:
       contents: read
       actions: read
@@ -100,14 +100,14 @@ jobs:
           path: candidate
       - run: python tools/release.py verify --directory candidate --sha256 "$MANIFEST_SHA256" --commit "$GITHUB_SHA"
       - run: python tools/release.py pypi --directory candidate
-      - name: Publish Database with upstream Trusted Publishing
+      - name: Publish Core with upstream Trusted Publishing
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
-          packages-dir: candidate/packages/database/
+          packages-dir: candidate/packages/core/
           skip-existing: true
 
   publish-artifacts:
-    needs: [publish-cli, publish-database]
+    needs: [publish-cli, publish-core]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment:

@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import typer
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import loads
+from dockflow_core.errors import DockflowError
 
-from .canonical import loads
 from .config import find_config, load_settings
 from .console import DEFAULT_OUTPUT_LIMIT, OutputMode, RunConsole, run_summary
 
@@ -233,7 +233,7 @@ def require_direct_idle(core) -> None:
 
     core.store.require_owner()
     core.store.ensure_reconciled()
-    if core.store.database.adapter.concurrent_runs:
+    if core.store.database.adapter.supports_shared_owners:
         return
     unresolved_runs = [
         run["run_id"]

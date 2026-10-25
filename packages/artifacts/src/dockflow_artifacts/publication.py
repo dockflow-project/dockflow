@@ -16,12 +16,13 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from dockflow_database import ArtifactRecords, Database, DockflowError
-from dockflow_database.records import configured_database
+from dockflow_core import Database, DockflowError
+from dockflow_core.database import configured_database
 
 from ._paths import canonical, file_info, inventory, no_links, relative
 from ._storage import FileStore, make_store
 from .errors import ArtifactError, ConflictError, IntegrityError
+from .persistence import ArtifactRecords
 
 
 @dataclass(frozen=True)

@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
-from dockflow_pipelines.canonical import canonical_bytes, digest, loads
+from dockflow_core.canonical import canonical_bytes, digest, loads
 
 
 def test_normative_digest_vectors():

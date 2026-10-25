@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
 
-from .canonical import loads
+from dockflow_core.canonical import loads
 
 OWNER_METADATA_MAX_BYTES = 8192
 

@@ -9,9 +9,9 @@ Python 3.12–3.13. MIT licensed. Developed with AI assistance.
 Install with Python 3.12 or newer:
 
 ```bash
-pip install dockflow-artifacts==0.1.1
+pip install dockflow-artifacts==0.2.0
 # Optional S3 integration:
-pip install 'dockflow-artifacts[s3]==0.1.1'
+pip install 'dockflow-artifacts[s3]==0.2.0'
 ```
 
 For the optional `kfp` extra, follow the installation guide's explicit urllib3
@@ -33,7 +33,7 @@ store.verify("models/demo/v1/model.json")
 ```
 
 Publication bookkeeping uses SQLite/PostgreSQL through the shared
-`dockflow-database` package. Filesystem roots default to `.dockflow/state.sqlite`
+`dockflow-core` package. Filesystem roots default to `.dockflow/state.sqlite`
 under their parent; remote roots require explicit database configuration.
 Pass Pipelines’ database and project ID to share its state. Install the
 `postgresql` extra for an external PostgreSQL database.

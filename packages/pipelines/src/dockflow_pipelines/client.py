@@ -6,9 +6,9 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import loads
+from dockflow_core.errors import DockflowError
 
-from .canonical import loads
 from .config import validate_endpoint
 
 

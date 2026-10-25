@@ -22,6 +22,16 @@ contents remain their source owner's responsibility.
 This is a fresh database format. Old file-authoritative state is rejected; no
 migration/import of that history is provided. Select fresh state locations.
 
+## Schema ownership
+`dockflow-core` provides the generic database adapters and schema registry.
+Artifacts and Pipelines supply their own definitions, versions and persistence
+logic. Standalone Artifacts creates only its publication schema; Pipelines adds
+its execution/cache schema and explicitly consumes the Artifacts schema. Either
+initialization order uses the same physical database. Verification checks the
+required consumer versions and objects without creating or repairing anything.
+This fresh format replaces the previous combined schema; existing state may be
+discarded, and no migration or compatibility package is supplied.
+
 ## Ownership and isolated environments
 
 SQLite has one coordinator, active Run and task attempt per project database.
@@ -149,7 +159,7 @@ unknown schema versions fail closed.
 Cache registry tables share the configured state database and one schema version.
 The execution journal and cache remain distinct commit boundaries, with different
 ownership and retry rules, but there is no second database to configure or back up.
-The `dockflow-database` library supplies the shared SQLite/PostgreSQL adapter
+The `dockflow-core` library supplies the shared SQLite/PostgreSQL adapter
 for history, cache and publication records.
 
 The project backup includes every cache namespace, its entries, attempts, retry

@@ -8,9 +8,10 @@ from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import digest
+from dockflow_core.errors import DockflowError
+from dockflow_core.time import utc_now
 from dockflow_pipelines.cache_storage import make_manifest
-from dockflow_pipelines.canonical import digest
 from dockflow_pipelines.cli import file_request
 from dockflow_pipelines.client import Client
 from dockflow_pipelines.compiled_source import read_compiled_source
@@ -20,7 +21,7 @@ from dockflow_pipelines.definitions import DefinitionError, load_definition
 from dockflow_pipelines.engine import _Execution, execute_run
 from dockflow_pipelines.executor import resource_limits
 from dockflow_pipelines.projections import DOMAINS
-from dockflow_pipelines.records import new_id, utc_now
+from dockflow_pipelines.records import new_id
 from dockflow_pipelines.service import Scheduler, create_app
 from fastapi.testclient import TestClient
 
@@ -107,7 +108,7 @@ def test_scheduler_failure_closes_admission_and_preserves_queue(
             elif failure == "recovery":
                 patch.setattr(
                     application.state.core.store.database.adapter,
-                    "concurrent_runs",
+                    "supports_shared_owners",
                     True,
                 )
                 patch.setattr(scheduler, "reconcile", fail)
@@ -501,10 +502,10 @@ def test_configuration_rejects_unrepresentable_resource_caps(settings, field, va
 
 
 def test_pipeline_identity_flushes_ancestors_again_on_retry(settings, monkeypatch):
-    from dockflow_pipelines import metadata
+    import dockflow_pipelines.artifacts as filesystem
 
     core = Core(settings)
-    original = metadata._fsync_directory
+    original = filesystem.fsync_directory
     directories = []
     root = core.artifacts.managed_root
 
@@ -514,7 +515,7 @@ def test_pipeline_identity_flushes_ancestors_again_on_retry(settings, monkeypatc
         return original(path)
 
     with monkeypatch.context() as patch:
-        patch.setattr(metadata, "_fsync_directory", fail)
+        patch.setattr(filesystem, "fsync_directory", fail)
         with pytest.raises(OSError, match="ancestor"):
             core.artifacts.storage_identity()
     assert (root / ".dockflow" / "storage.json").is_file()
@@ -523,7 +524,7 @@ def test_pipeline_identity_flushes_ancestors_again_on_retry(settings, monkeypatc
         directories.append(path)
         return original(path)
 
-    monkeypatch.setattr(metadata, "_fsync_directory", synced)
+    monkeypatch.setattr(filesystem, "fsync_directory", synced)
     identity = core.artifacts.storage_identity()
     assert identity == core.artifacts.storage_identity(create=False)
     assert directories == [root / ".dockflow", *(root / ".dockflow").parents]

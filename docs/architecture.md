@@ -9,7 +9,7 @@ core; the service adds durable queuing and a worker process for each Run.
 
 ```mermaid
 flowchart LR
-    Direct[Direct CLI] --> Core[Application core]
+    Direct[Direct CLI] --> Core[Pipelines application]
     Remote[Remote CLI] --> HTTP[HTTP API]
     Browser[Web interface] --> HTTP
     HTTP --> Core
@@ -47,11 +47,13 @@ not a separate network service for each box.
 | `metadata.py` | Accepted records, commit ordering, replay, maintenance and coordination of persistence adapters. |
 | `state_database.py` | Domain repositories, transactions, query projections, stable numeric aliases and pinned execution ownership. |
 | `ownership.py` | Bounded validation of non-authoritative coordinator diagnostics. |
-| `records.py`, `canonical.py` | Record identities, versions, UTC timestamps and canonical JSON/hash primitives. |
+| `records.py` | Pipeline-specific record identities and lifecycle state sets. |
 | `artifacts.py` | Source admission, inventory, verification, materialization and managed publication. |
 
-The listed domain modules are inside Pipelines. The shared `dockflow-database`
-distribution owns drivers, the physical schema and immutable publication records.
+The listed domain modules are inside Pipelines. The shared `dockflow-core`
+distribution owns domain-independent drivers, schema coordination, JSON encoding,
+common errors and filesystem primitives. Pipelines owns its execution/cache
+schema and queries; Artifacts owns its publication schema and records.
 Pipelines and standalone Artifacts both use it; Artifacts does not import the
 orchestrator. Artifact storage retains bytes and its identity marker. This does
 not introduce extra deployments, databases or background services.
@@ -141,8 +143,11 @@ and routes cache publication through the journal owner to serialize stop intent.
 Registry publication is a separate durable boundary from each Run's output-set
 marker. Original producer facts can be imported atomically into another journal.
 
-`dockflow_database.database` supplies the shared backend abstraction for execution and cache
-repositories; `dockflow_database.database_schema` owns one atomic versioned schema. `[state]`
+`dockflow_core.database` supplies the shared backend abstraction for execution and cache
+repositories. Consumers supply independent versioned definitions through
+`dockflow_core.schema.Schema`: `dockflow_pipelines.database_schema` owns execution
+and cache; `dockflow_artifacts.persistence` owns publication records. Core keeps
+only a generic version registry and never imports consumers. `[state]`
 selects the only physical database. Cache transactions use independent short
 connections while execution ownership holds its pinned session. SQLite retains one project coordinator; PostgreSQL coordinators claim distinct
 Runs through fenced leases and short project mutation transactions. Database access alone does not provide

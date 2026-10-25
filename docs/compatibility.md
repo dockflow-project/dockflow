@@ -17,7 +17,7 @@ SDK version, IR schema and HTTP backend API version are separate identities.
 The current [qualification record](../.macrostates/implementation/main.md)
 describes tested combinations and remaining platform gaps.
 
-Version 0.1.1 releases this bounded profile. It does not qualify every intended
+Version 0.2.0 releases this bounded profile. It does not qualify every intended
 deployment target or claim complete KFP parity. Use the
 [installation instructions](installation.md) and retain the limits below when
 choosing an environment. Base-package CI covers Python 3.12/3.13 on Ubuntu 24.04

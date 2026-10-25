@@ -3,8 +3,8 @@
 import sys
 
 import pytest
-from dockflow_database import DockflowError
-from dockflow_database.records import configured_database
+from dockflow_core import DockflowError
+from dockflow_core.database import configured_database
 
 
 @pytest.mark.parametrize(
@@ -40,5 +40,5 @@ def test_postgresql_configuration_does_not_import_driver_or_connect(monkeypatch)
     adapter = configured_database(
         {"backend": "postgresql", "dsn_env": "DOCKFLOW_SYNTHETIC_MISSING_DSN"}
     )
-    with pytest.raises(DockflowError, match=r"dockflow-database\[postgresql\]"):
+    with pytest.raises(DockflowError, match=r"dockflow-core\[postgresql\]"):
         adapter.connect()

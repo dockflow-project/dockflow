@@ -3,7 +3,7 @@
 import subprocess
 import sys
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.metadata import ControlStore
 
 
@@ -24,7 +24,7 @@ class NoRuntime(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, NoRuntime())
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.core import Core
-from dockflow_pipelines.records import new_id, utc_now
+from dockflow_pipelines.records import new_id
 
 core = Core(load_settings(sys.argv[1]))
 result = core.validate({"pipeline_spec": {

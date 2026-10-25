@@ -8,9 +8,10 @@ from threading import Event
 
 import pytest
 from dockflow_artifacts import ArtifactError, ConflictError, IntegrityError, Publisher
-from dockflow_database import ArtifactRecords, DockflowError
-from dockflow_database.database_schema import PROJECT_TABLES
+from dockflow_artifacts.persistence import ArtifactRecords
+from dockflow_core import DockflowError
 from dockflow_pipelines.artifacts import ArtifactStore
+from dockflow_pipelines.database_schema import PROJECT_TABLES
 
 
 def publisher_for(store, options, root):

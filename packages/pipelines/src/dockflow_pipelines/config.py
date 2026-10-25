@@ -10,8 +10,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlsplit
 
-from dockflow_database.database import reject_network_sqlite
-from dockflow_database.errors import DockflowError
+from dockflow_core.database import reject_network_sqlite
+from dockflow_core.errors import DockflowError
 
 from .cache_registry import (
     CACHE_FIELDS,

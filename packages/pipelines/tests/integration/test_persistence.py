@@ -6,9 +6,9 @@ import sys
 from pathlib import Path
 
 import pytest
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import digest
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.artifacts import ArtifactStore, inventory
-from dockflow_pipelines.canonical import digest
 from dockflow_pipelines.metadata import ControlStore
 from dockflow_pipelines.records import new_id
 

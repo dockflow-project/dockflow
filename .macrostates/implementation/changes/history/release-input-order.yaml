@@ -1,0 +1,20 @@
+schema_version: 1
+id: release-input-order
+summary: Normalize closure and review documentation before exact release planning.
+origin:
+  commit: a3736e391c36be788e6027204b56b70314341807
+  specification: specs-0.1.0
+  implementation: imp-0.1.1
+impact:
+  specification: none
+  implementation: none
+deliverables:
+- dockflow-core
+- dockflow-cli
+- dockflow-artifacts
+- dockflow-pipelines
+- dockflow-pipelines-image
+requirements: []
+evidence:
+- validation/release-0.2.0.md
+gaps: []

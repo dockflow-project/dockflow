@@ -77,3 +77,7 @@ submission/waiting behavior, results, and runtime failure semantics.
 - [Typer command groups](https://typer.tiangolo.com/tutorial/subcommands/add-typer/)
 - [Typer version option](https://typer.tiangolo.com/tutorial/options/version/)
 - [Typer 0.27.3 metadata](https://pypi.org/project/typer/0.27.3/)
+
+Use the exact shared application version of dockflow-core for common primitives.
+The [Core boundary](../051_dockflow/007_core.md) governs dependency direction;
+CLI registration and discovery remain CLI-owned.

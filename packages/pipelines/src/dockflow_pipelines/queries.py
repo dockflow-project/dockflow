@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import loads
+from dockflow_core.errors import DockflowError
 
-from .canonical import loads
+from .database_schema import resource_sort_name
 from .records import COLLECTIONS
 
 FIELDS = {
@@ -41,7 +42,7 @@ class ResourceQueries:
         )
 
     def _sort_name(self):
-        return self.database.adapter.resource_sort_name("r.value", "r.collection")
+        return resource_sort_name(self.database.adapter, "r.value", "r.collection")
 
     def _predicate(self, collection, filters):
         if collection not in COLLECTIONS:

@@ -7,10 +7,10 @@ from types import SimpleNamespace
 
 import pytest
 from dockflow_cli.main import create_app
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import json_bytes
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.artifacts import ArtifactStore
 from dockflow_pipelines.cache_registry import Registry, validate_cache
-from dockflow_pipelines.canonical import json_bytes
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.engine import execute_run
 from dockflow_pipelines.execution_choices import ExecutionChoices
@@ -137,7 +137,7 @@ def run(settings, pipeline=None, *, state=None):
             "parameters": {},
             "inputs": {},
         }
-        from dockflow_pipelines.canonical import loads
+        from dockflow_core.canonical import loads
 
         policies = (
             loads(settings.policies["file"].read_text()).get("tasks", {})
@@ -368,7 +368,7 @@ def test_cache_cli_inspection_and_conditional_reset(runtime):
 
 
 def test_known_network_mount_rejection(tmp_path, monkeypatch):
-    from dockflow_database.database import reject_network_sqlite
+    from dockflow_core.database import reject_network_sqlite
 
     original = Path.read_text
     monkeypatch.setattr(

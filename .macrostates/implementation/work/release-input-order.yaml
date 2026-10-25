@@ -1,0 +1,6 @@
+schema_version: 1
+id: release-input-order
+origin:
+  commit: a3736e391c36be788e6027204b56b70314341807
+  specification: specs-0.1.0
+  implementation: imp-0.1.1

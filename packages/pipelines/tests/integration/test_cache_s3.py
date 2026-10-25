@@ -4,11 +4,11 @@ import os
 import uuid
 
 import pytest
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import digest
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.artifacts import ArtifactStore
 from dockflow_pipelines.cache_registry import Registry
 from dockflow_pipelines.cache_storage import make_manifest
-from dockflow_pipelines.canonical import digest
 from dockflow_pipelines.metadata import ControlStore
 from dockflow_pipelines.records import new_id
 

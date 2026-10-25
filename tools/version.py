@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MEMBERS = [
     ROOT / "packages" / name / "pyproject.toml"
-    for name in ("cli", "pipelines", "artifacts", "database")
+    for name in ("cli", "pipelines", "artifacts", "core")
 ]
 
 
@@ -36,7 +36,7 @@ def main() -> int:
                 r'(?m)^version = "[^"]+"$', f'version = "{version}"', source, count=1
             )
             source = re.sub(
-                r'(dockflow-(?:cli|database|artifacts)(?:\[postgresql\])?)==[^"\s]+',
+                r'(dockflow-(?:cli|core|artifacts)(?:\[postgresql\])?)==[^"\s]+',
                 rf"\1=={version}",
                 source,
             )
@@ -56,9 +56,13 @@ def main() -> int:
             and f"dockflow-artifacts=={version}" not in metadata["dependencies"]
         ):
             errors.append("Pipelines must require the exact shared Artifacts version")
-        if metadata["name"] in {"dockflow-pipelines", "dockflow-artifacts"}:
-            if f"dockflow-database=={version}" not in metadata["dependencies"]:
-                errors.append(f"{metadata['name']}: shared database version differs")
+        if metadata["name"] in {
+            "dockflow-cli",
+            "dockflow-pipelines",
+            "dockflow-artifacts",
+        }:
+            if f"dockflow-core=={version}" not in metadata["dependencies"]:
+                errors.append(f"{metadata['name']}: shared Core version differs")
     # The nonpackaged workspace advertises its development version to uv too.
     workspace = ROOT / "pyproject.toml"
     source = workspace.read_text()

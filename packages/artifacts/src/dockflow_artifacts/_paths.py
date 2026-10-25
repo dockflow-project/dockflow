@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import stat
 from pathlib import Path
-from typing import Any, BinaryIO
+from typing import Any
+
+from dockflow_core.canonical import stable_json_bytes
+from dockflow_core.filesystem import hash_stream, reject_symlinks
 
 from .errors import ArtifactError, IntegrityError
 
@@ -31,27 +33,17 @@ def relative(value: str, *, internal: bool = False) -> str:
 
 
 def no_links(path: Path) -> None:
-    for item in (path, *path.parents):
-        if item.is_symlink():
-            raise ArtifactError("Artifact paths cannot contain symlinks")
+    try:
+        reject_symlinks(path)
+    except ValueError:
+        raise ArtifactError("Artifact paths cannot contain symlinks") from None
 
 
 def canonical(value: Any) -> bytes:
     try:
-        return json.dumps(
-            value, sort_keys=True, separators=(",", ":"), allow_nan=False
-        ).encode()
+        return stable_json_bytes(value)
     except (TypeError, ValueError) as exc:
         raise ArtifactError("Metadata must contain finite JSON values") from exc
-
-
-def hash_stream(stream: BinaryIO) -> tuple[int, str]:
-    count = 0
-    digest = hashlib.sha256()
-    while chunk := stream.read(1024 * 1024):
-        count += len(chunk)
-        digest.update(chunk)
-    return count, digest.hexdigest()
 
 
 def file_info(path: Path) -> tuple[int, str]:

@@ -8,7 +8,7 @@ import time
 
 import pytest
 import yaml
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.cli import file_request
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.core import Core, checked_definition

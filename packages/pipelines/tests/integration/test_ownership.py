@@ -7,8 +7,8 @@ import sys
 import threading
 
 import pytest
-from dockflow_database.errors import DockflowError
-from dockflow_pipelines.canonical import json_bytes
+from dockflow_core.canonical import json_bytes
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.metadata import ControlStore
 from dockflow_pipelines.records import new_id
 

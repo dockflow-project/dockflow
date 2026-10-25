@@ -7,9 +7,8 @@ import re
 import uuid
 from typing import Any
 
-from dockflow_database.errors import DockflowError
-
-from .canonical import digest, validate_json
+from dockflow_core.canonical import digest, validate_json
+from dockflow_core.errors import DockflowError
 
 MANIFEST_FORMAT = "dockflow-cache-manifest-v1"
 VALIDATION_VERSION = "dockflow-output-set-v1"

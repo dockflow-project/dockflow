@@ -13,13 +13,26 @@ import threading
 import uuid
 from typing import Any
 
-from dockflow_database.database import OwnerConflict, database
-from dockflow_database.errors import DockflowError
+from dockflow_artifacts.persistence import (
+    has_project_records,
+    project_destinations,
+    project_storage_ids,
+    publication_scope,
+)
+from dockflow_core.canonical import json_bytes, loads
+from dockflow_core.database import OwnerConflict, database
+from dockflow_core.errors import DockflowError
+from dockflow_core.time import utc_now
 
-from .canonical import json_bytes, loads
+from .database_schema import (
+    PIPELINE_SCHEMA,
+    event_field,
+    initialize_schema,
+    project_rows,
+    validate_schema,
+)
 from .ownership import _owner_endpoint, parse_owner_metadata
 from .queries import ResourceQueries
-from .records import utc_now
 
 
 class StateDatabase:
@@ -41,7 +54,8 @@ class StateDatabase:
         self.exclusive = False
         self.maintenance_depth = 0
         self.active_run: str | None = None
-        self.lock_id = self.adapter.project_key(project_id)
+        self.scope = publication_scope(self.adapter, project_id)
+        self.lock_id = self.scope.key
 
     @property
     def held(self) -> bool:
@@ -68,10 +82,10 @@ class StateDatabase:
             ) from None
 
     def _schema_exists(self, connection: Any) -> bool:
-        return self.adapter.schema_exists(connection)
+        return self.adapter.schema_exists(connection, PIPELINE_SCHEMA)
 
     def _validate_schema(self, connection: Any) -> None:
-        self.adapter.validate_schema(connection)
+        validate_schema(self.adapter, connection)
 
     @contextlib.contextmanager
     def reader(self):
@@ -106,7 +120,7 @@ class StateDatabase:
             if (
                 self.snapshot_active
                 or self.depth
-                or (self.held and not self.adapter.concurrent_runs)
+                or (self.held and not self.adapter.supports_shared_owners)
             ):
                 yield
                 return
@@ -153,7 +167,7 @@ class StateDatabase:
             if outer:
                 self.execute(self.connection, self.adapter.write_begin)
                 try:
-                    self.adapter.project_transaction(self.connection, self.project_id)
+                    self.scope.serialize(self.connection)
                     self.check_run_authority(self.connection)
                 except BaseException:
                     with contextlib.suppress(Exception):
@@ -211,9 +225,7 @@ class StateDatabase:
                     "Maintenance cannot run inside execution ownership", "CONFLICT", 409
                 )
             outer = self.maintenance_depth == 0
-            if outer and not self.adapter.try_maintenance(
-                self.connection, self.project_id
-            ):
+            if outer and not self.scope.try_exclusive(self.connection):
                 raise DockflowError(
                     "Other coordinators prevent exclusive maintenance", "CONFLICT", 409
                 )
@@ -223,7 +235,7 @@ class StateDatabase:
             finally:
                 self.maintenance_depth -= 1
                 if outer:
-                    self.adapter.end_maintenance(self.connection, self.project_id)
+                    self.scope.release_exclusive(self.connection)
 
     def current_sequence(self) -> int:
         with self.reader() as connection:
@@ -255,7 +267,7 @@ class StateDatabase:
 
     def _initialize_schema(self) -> None:
         with self.transaction() as connection:
-            self.adapter.initialize_schema(connection)
+            initialize_schema(self.adapter, connection)
 
     def _conflict(self) -> DockflowError:
         owner = {}
@@ -304,7 +316,7 @@ class StateDatabase:
             except OwnerConflict:
                 raise self._conflict() from None
             self.connection = connection
-            self.exclusive = exclusive or not self.adapter.concurrent_runs
+            self.exclusive = exclusive or not self.adapter.supports_shared_owners
             self.poisoned = False
             self.lock_stream = stream
             self._initialize_schema()
@@ -427,13 +439,13 @@ class StateDatabase:
         clauses = ["project_id=?"]
         parameters = [self.project_id]
         if kind is not None:
-            clauses.append(self.adapter.event_field("kind") + "=?")
+            clauses.append(event_field(self.adapter, "kind") + "=?")
             parameters.append(kind)
         if run_id is not None:
-            clauses.append(self.adapter.event_field("run_id") + "=?")
+            clauses.append(event_field(self.adapter, "run_id") + "=?")
             parameters.append(run_id)
         if attempt_id is not None:
-            expression = self.adapter.event_field("attempt_id")
+            expression = event_field(self.adapter, "attempt_id")
             clauses.append(expression + "=?")
             parameters.append(attempt_id)
         with self.reader() as connection:
@@ -644,13 +656,8 @@ class StateDatabase:
         with self.reader() as connection:
             if connection is None:
                 return True
-            if (
-                include_cache
-                and self.execute(
-                    connection,
-                    "SELECT 1 FROM dockflow_artifact_records WHERE project_id=? LIMIT 1",
-                    (self.project_id,),
-                ).fetchone()
+            if include_cache and has_project_records(
+                self.adapter, connection, self.project_id
             ):
                 return False
             if self.execute(
@@ -717,27 +724,13 @@ class StateDatabase:
         with self.reader() as connection:
             if connection is None:
                 return set()
-            return {
-                row[0]
-                for row in self.execute(
-                    connection,
-                    "SELECT DISTINCT storage_id FROM dockflow_artifact_records WHERE project_id=?",
-                    (self.project_id,),
-                ).fetchall()
-            }
+            return project_storage_ids(self.adapter, connection, self.project_id)
 
     def publication_destinations(self) -> list[str]:
         with self.reader() as connection:
             if connection is None:
                 return []
-            return [
-                row[0]
-                for row in self.execute(
-                    connection,
-                    "SELECT record_key FROM dockflow_artifact_records WHERE project_id=? AND namespace='publication-manifests'",
-                    (self.project_id,),
-                ).fetchall()
-            ]
+            return project_destinations(self.adapter, connection, self.project_id)
 
     def cache_store_tokens(self) -> set[str]:
         with self.reader() as connection:
@@ -758,8 +751,9 @@ class StateDatabase:
             source.adapter.snapshot() as source_connection,
             self.transaction() as target_connection,
         ):
-            for table, columns, rows in source.adapter.project_rows(
-                source_connection, source.project_id
+            validate_schema(source.adapter, source_connection)
+            for table, columns, rows in project_rows(
+                source.adapter, source_connection, source.project_id
             ):
                 placeholders = ",".join("?" for _ in columns)
                 statement = (

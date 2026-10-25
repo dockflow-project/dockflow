@@ -1,9 +1,9 @@
-"""Backend boundary shared by all Dockflow repositories.
+"""Domain-independent database backend boundary.
 
 Connections, SQL dialect, durability, schema and driver failure classification
-live here. Repositories retain their own transaction/retry policies: an uncertain
-execution commit must poison its pinned owner, while idempotent cache operations
-may retry on fresh short-lived connections. No connection is shared by workers.
+live here. Callers retain their transaction/retry policies and decide whether an
+uncertain commit invalidates their session or an idempotent operation may retry.
+No connection is shared by workers.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import hashlib
 import importlib
 import math
 import os
+import re
 import sqlite3
 import stat
 import time
@@ -21,22 +22,13 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from .database_schema import (
-    CACHE_SCHEMA,
-    PROJECT_TABLES,
-    REQUIRED_INDEXES,
-    REQUIRED_TABLES,
-    RESOURCE_QUERY_FIELDS,
-    SCHEMA_LOCK,
-    SCHEMA_VERSION,
-    STATE_SCHEMA,
-)
 from .errors import DockflowError
 from .locking import owner_lock as _owner_lock
+from .schema import Schema
 
 
 class OwnerConflict(Exception):
-    """Another coordinator holds the operational execution lock."""
+    """Another process holds the requested database lock."""
 
 
 class Database(ABC):
@@ -71,30 +63,32 @@ class Database(ABC):
         self, lock_id: int, *, exclusive: bool = False
     ) -> tuple[Any, Any]: ...
 
-    concurrent_runs = False
+    supports_shared_owners = False
 
     @staticmethod
-    def project_key(project_id: str, purpose: str = "state-v1") -> int:
+    def lock_key(namespace: str, identity: str) -> int:
+        """Derive a stable signed advisory key from caller-owned names."""
+        encoded_namespace = namespace.encode()
+        framed = (
+            str(len(encoded_namespace)).encode()
+            + b":"
+            + encoded_namespace
+            + identity.encode()
+        )
         return int.from_bytes(
-            hashlib.sha256(
-                ("dockflow-" + purpose + ":" + project_id).encode()
-            ).digest()[:8],
+            hashlib.sha256(framed).digest()[:8],
             "big",
             signed=True,
         )
 
-    def project_transaction(self, connection, project_id: str) -> None:
-        """Serialize short shared-state mutations; SQLite has its writer lock."""
+    def transaction_lock(self, connection, key: int, *, shared=False) -> None:
+        """SQLite's write transaction already serializes writers."""
         return None
 
-    def transaction_gate(self, connection, project_id: str) -> None:
-        """Exclude maintenance from independent cache/lease transactions."""
-        return None
-
-    def try_maintenance(self, connection, project_id: str) -> bool:
+    def try_lock(self, connection, key: int, *, shared=False) -> bool:
         return True
 
-    def end_maintenance(self, connection, project_id: str) -> None:
+    def unlock(self, connection, key: int, *, shared=False) -> None:
         return None
 
     def sql(self, statement: str) -> str:
@@ -119,83 +113,37 @@ class Database(ABC):
         collation = '"C"' if self.backend == "postgresql" else "BINARY"
         return f"({expression} COLLATE {collation})"
 
-    def resource_sort_name(self, column="value", collection="collection"):
-        version = self.json_text(column, "version_name")
-        name = self.json_text(column, "name")
-        display = self.json_text(column, "display_name")
-        return f"CASE WHEN {collection}='definitions' THEN COALESCE(NULLIF({version},''),{name},'') WHEN {collection}='pipelines' THEN COALESCE({name},'') ELSE COALESCE({display},'') END"
-
-    def event_field(self, field):
-        paths = {
-            "kind": ("event_kind", "kind"),
-            "run_id": (
-                "payload.run_id",
-                "payload.marker.run_id",
-                "payload.manifest.producer.run_id",
-            ),
-            "attempt_id": (
-                "payload.attempt_id",
-                "payload.marker.attempt_id",
-                "payload.manifest.producer.attempt_id",
-            ),
-        }[field]
-        return (
-            "COALESCE("
-            + ",".join(self.json_text("value", path) for path in paths)
-            + ")"
-        )
-
-    def query_indexes(self, connection):
-        created = self.text_order(
-            f"COALESCE({self.json_text('value', 'created_at')},'')"
-        )
-        name = self.text_order(self.resource_sort_name())
-        connection.execute(
-            f"CREATE INDEX dockflow_resource_created ON dockflow_state_resources(project_id,collection,{created} DESC,public_id)"
-        )
-        connection.execute(
-            f"CREATE INDEX dockflow_resource_name_order ON dockflow_state_resources(project_id,collection,{name},public_id)"
-        )
-        for field in RESOURCE_QUERY_FIELDS:
-            identifier = "dockflow_query_" + field.replace(".", "_")
-            expression = self.json_text("value", field)
-            connection.execute(
-                f"CREATE INDEX {identifier} ON dockflow_state_resources(project_id,collection,{expression},{created} DESC,public_id)"
-            )
-        state = self.json_text("value", "state")
-        sequence = f"CAST({self.json_text('value', 'acceptance_sequence')} AS BIGINT)"
-        connection.execute(
-            f"CREATE INDEX dockflow_queue ON dockflow_state_resources(project_id,collection,{state},{sequence},public_id)"
-        )
-        event = self.event_field("kind")
-        run = self.event_field("run_id")
-        attempt = self.event_field("attempt_id")
-        connection.execute(
-            f"CREATE INDEX dockflow_event_lookup ON dockflow_events(project_id,{event},{run},{attempt},sequence)"
-        )
-
-        connection.execute(
-            f"CREATE INDEX dockflow_event_attempt ON dockflow_events(project_id,{event},{attempt},sequence)"
-        )
-
     def begin(self, connection, *, readonly=False):
         connection.execute(self.snapshot_begin if readonly else self.write_begin)
 
-    def schema_exists(self, connection) -> bool:
-        return "dockflow_schema" in self.tables(connection)
+    def schema_exists(self, connection, schema: Schema) -> bool:
+        if "dockflow_schema_components" not in self.tables(connection):
+            return False
+        return (
+            self.execute(
+                connection,
+                "SELECT version FROM dockflow_schema_components WHERE name=?",
+                (schema.name,),
+            ).fetchone()
+            is not None
+        )
 
-    def validate_schema(self, connection) -> None:
-        if not self.schema_exists(connection):
-            raise DockflowError("Dockflow database schema is missing", "CONFLICT", 409)
-        rows = connection.execute("SELECT version FROM dockflow_schema").fetchall()
-        versions = [row["version"] if isinstance(row, dict) else row[0] for row in rows]
-        if versions != [SCHEMA_VERSION]:
-            raise DockflowError("Unsupported Dockflow database schema", "CONFLICT", 409)
-        if not REQUIRED_TABLES <= self.tables(
+    def validate_schema(self, connection, schema: Schema) -> None:
+        if not self.schema_exists(connection, schema):
+            raise DockflowError("Database schema is missing", "CONFLICT", 409)
+        row = self.execute(
+            connection,
+            "SELECT version FROM dockflow_schema_components WHERE name=?",
+            (schema.name,),
+        ).fetchone()
+        version = row["version"] if isinstance(row, dict) else row[0]
+        if version != schema.version:
+            raise DockflowError("Unsupported database schema version", "CONFLICT", 409)
+        if not schema.tables <= self.tables(
             connection
-        ) or not REQUIRED_INDEXES <= self.indexes(connection):
+        ) or not schema.indexes <= self.indexes(connection):
             raise DockflowError(
-                "Dockflow database schema is incomplete; restore a verified backup",
+                "Database schema is incomplete; restore a verified backup",
                 "CONFLICT",
                 409,
             )
@@ -204,32 +152,35 @@ class Database(ABC):
         """The SQLite write transaction already serializes schema creation."""
         return None
 
-    def initialize_schema(self, connection) -> None:
-        """Called inside a write transaction by either repository."""
+    def initialize_schema(self, connection, schema: Schema) -> None:
+        """Initialize only the supplied definition inside a caller write transaction."""
         self.schema_lock(connection)
-        if self.schema_exists(connection):
-            self.validate_schema(connection)
+        if self.schema_exists(connection, schema):
+            self.validate_schema(connection, schema)
             return
         tables = self.tables(connection)
-        if tables and (
-            self.backend == "sqlite"
-            or any(name.startswith(("dockflow_", "df_cache_")) for name in tables)
+        registry = "dockflow_schema_components"
+        if schema.tables & tables or (
+            self.backend == "sqlite" and tables and registry not in tables
         ):
             raise DockflowError(
-                "Existing database is not a unified Dockflow database; select fresh state",
+                "Unregistered database objects conflict; select fresh state",
                 "CONFLICT",
                 409,
             )
-        connection.execute("CREATE TABLE dockflow_schema (version INTEGER PRIMARY KEY)")
-        self.execute(
-            connection, "INSERT INTO dockflow_schema VALUES (?)", (SCHEMA_VERSION,)
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS dockflow_schema_components (name TEXT PRIMARY KEY, version INTEGER NOT NULL CHECK(version>0))"
         )
-        for statement in STATE_SCHEMA:
+        for statement in schema.statements:
             connection.execute(statement.format(binary=self.binary_type))
-        for statement in CACHE_SCHEMA:
-            connection.execute(statement)
-        self.query_indexes(connection)
-        self.validate_schema(connection)
+        if schema.initialize is not None:
+            schema.initialize(self, connection)
+        self.execute(
+            connection,
+            "INSERT INTO dockflow_schema_components VALUES (?,?)",
+            (schema.name, schema.version),
+        )
+        self.validate_schema(connection, schema)
 
     @contextlib.contextmanager
     def snapshot(self):
@@ -239,7 +190,6 @@ class Database(ABC):
             if connection is None:
                 raise DockflowError("Database snapshot is missing", "NOT_FOUND", 404)
             self.begin(connection, readonly=True)
-            self.validate_schema(connection)
             yield connection
         except DockflowError:
             raise
@@ -250,20 +200,6 @@ class Database(ABC):
         finally:
             if connection is not None:
                 connection.close()
-
-    def project_rows(self, connection, project_id: str):
-        """Portable project export including all cache namespaces, excluding owners."""
-        for table in PROJECT_TABLES:
-            predicate = (
-                "project_id=?"
-                if table.startswith("dockflow_") or table == "df_cache_scopes"
-                else "scope_id IN (SELECT scope_id FROM df_cache_scopes WHERE project_id=?)"
-            )
-            cursor = self.execute(
-                connection, f"SELECT * FROM {table} WHERE {predicate}", (project_id,)
-            )
-            columns = [column[0] for column in cursor.description]
-            yield table, columns, cursor
 
     @staticmethod
     def unique_error(error) -> bool:
@@ -345,10 +281,13 @@ class SQLiteDatabase(Database):
             raise
 
     def prepare(self):
-        from .locking import no_links as _no_links
+        from .filesystem import reject_symlinks
 
         path = Path(self.options["database"])
-        _no_links(path)
+        try:
+            reject_symlinks(path)
+        except ValueError:
+            raise DockflowError("Database paths cannot contain symlinks") from None
         reject_network_sqlite(path.absolute())
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -386,7 +325,9 @@ class SQLiteDatabase(Database):
         if not stat.S_ISREG(os.fstat(descriptor).st_mode):
             os.close(descriptor)
             raise DockflowError(
-                "State ownership requires a regular database file", "UNAVAILABLE", 503
+                "Database ownership requires a regular database file",
+                "UNAVAILABLE",
+                503,
             )
         stream = os.fdopen(descriptor, "r+b")
         try:
@@ -403,7 +344,7 @@ class SQLiteDatabase(Database):
 
 
 class PostgreSQLDatabase(Database):
-    concurrent_runs = True
+    supports_shared_owners = True
     backend = "postgresql"
     binary_type = "BYTEA"
     write_begin = "BEGIN ISOLATION LEVEL READ COMMITTED"
@@ -416,7 +357,7 @@ class PostgreSQLDatabase(Database):
             module = importlib.import_module("psycopg")
         except ImportError:
             raise DockflowError(
-                "Install dockflow-database[postgresql] for PostgreSQL",
+                "Install dockflow-core[postgresql] for PostgreSQL",
                 "UNAVAILABLE",
                 503,
             ) from None
@@ -461,33 +402,23 @@ class PostgreSQLDatabase(Database):
         }
 
     def schema_lock(self, connection):
-        self.execute(connection, "SELECT pg_advisory_xact_lock(?)", (SCHEMA_LOCK,))
-
-    def project_transaction(self, connection, project_id):
         self.execute(
             connection,
             "SELECT pg_advisory_xact_lock(?)",
-            (self.project_key(project_id, "mutation-v1"),),
+            (self.lock_key("dockflow-core", "schema-registry-v1"),),
         )
 
-    def transaction_gate(self, connection, project_id):
-        self.execute(
-            connection,
-            "SELECT pg_advisory_xact_lock_shared(?)",
-            (self.project_key(project_id),),
-        )
+    def transaction_lock(self, connection, key, *, shared=False):
+        function = "pg_advisory_xact_lock_shared" if shared else "pg_advisory_xact_lock"
+        self.execute(connection, f"SELECT {function}(?)", (key,))
 
-    def try_maintenance(self, connection, project_id):
-        return self.execute(
-            connection,
-            "SELECT pg_try_advisory_lock(?)",
-            (self.project_key(project_id),),
-        ).fetchone()[0]
+    def try_lock(self, connection, key, *, shared=False):
+        function = "pg_try_advisory_lock_shared" if shared else "pg_try_advisory_lock"
+        return self.execute(connection, f"SELECT {function}(?)", (key,)).fetchone()[0]
 
-    def end_maintenance(self, connection, project_id):
-        self.execute(
-            connection, "SELECT pg_advisory_unlock(?)", (self.project_key(project_id),)
-        )
+    def unlock(self, connection, key, *, shared=False):
+        function = "pg_advisory_unlock_shared" if shared else "pg_advisory_unlock"
+        self.execute(connection, f"SELECT {function}(?)", (key,))
 
     def owner_connection(self, lock_id, *, exclusive=False):
         connection = self.connect()
@@ -545,3 +476,26 @@ def reject_network_sqlite(path: Path) -> None:
             "lustre",
         }:
             raise DockflowError("SQLite requires a local filesystem")
+
+
+def configured_database(options: dict | Database) -> Database:
+    if isinstance(options, Database):
+        return options
+    if not isinstance(options, dict):
+        raise DockflowError("Database configuration must be an object")
+    backend = options.get("backend")
+    field = "database" if backend == "sqlite" else "dsn_env"
+    if (
+        not isinstance(backend, str)
+        or backend not in {"sqlite", "postgresql"}
+        or set(options) != {"backend", field}
+        or not isinstance(options.get(field), str)
+        or not options[field]
+    ):
+        raise DockflowError("Expected SQLite database path or PostgreSQL dsn_env")
+    if backend == "sqlite":
+        if not Path(options[field]).is_absolute():
+            raise DockflowError("Database path must be absolute")
+    elif not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", options[field]):
+        raise DockflowError("Database dsn_env must name an environment variable")
+    return database(options)

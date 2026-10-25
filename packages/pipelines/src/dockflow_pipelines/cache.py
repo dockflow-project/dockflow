@@ -8,7 +8,7 @@ import time
 import uuid
 from collections.abc import Callable
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 
 from .cache_registry import Ownership, Registry, Resolution, cache_error
 

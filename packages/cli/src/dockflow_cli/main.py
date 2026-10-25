@@ -5,6 +5,7 @@ import sys
 from importlib import metadata
 
 import typer
+from dockflow_core.errors import DockflowError
 from typer.main import get_command
 
 
@@ -27,10 +28,12 @@ def create_app() -> typer.Typer:
     seen = {}
     for entry in entries:
         if not re.fullmatch(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*", entry.name):
-            raise RuntimeError(f"Invalid module {entry.name!r} from {_provider(entry)}")
+            raise DockflowError(
+                f"Invalid module {entry.name!r} from {_provider(entry)}"
+            )
         if entry.name in {"help", "version"} or entry.name in seen:
             other = _provider(seen[entry.name]) if entry.name in seen else "built-in"
-            raise RuntimeError(
+            raise DockflowError(
                 f"Module {entry.name!r} conflicts: {_provider(entry)} and {other}"
             )
         seen[entry.name] = entry
@@ -42,7 +45,7 @@ def create_app() -> typer.Typer:
             get_command(plugin)
             app.add_typer(plugin, name=entry.name)
         except Exception as exc:
-            raise RuntimeError(
+            raise DockflowError(
                 f"Cannot load module {entry.name!r} from {_provider(entry)}: {exc}"
             ) from exc
 
