@@ -58,3 +58,12 @@ service-image qualification. Editorial release references are reconciled; runtim
 source matches the qualified inventory. Current composition, coverage, generated
 API/version, lint/format, anonymous local links and whitespace checks pass.
 External CI is pending. No upload or release success is asserted by this closure.
+
+## Final input normalization
+
+The preliminary candidate identified above was rejected by strict provenance
+validation because closing/review documentation changed after planning. Its plan
+is preserved and all record hashes were checked before returning scope to pending.
+A bounded release-input-order preparation places those notes before recalculation.
+The final stored release plan supersedes the preliminary binding above. No runtime
+source, previous published identity or original change-record bytes changed.

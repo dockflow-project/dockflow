@@ -25,17 +25,23 @@ source/target and change records, and closes local workflows before submission.
 Publication outcomes are verified externally against the preserved manifest and
 annotated tags; preparation or a merge alone does not establish upload success.
 
-## Prepared baseline scope
+## Baseline preparation and input ordering
 
-Input a3736e391c36be788e6027204b56b70314341807 and fetched target
-4c7e35cca44b90f59fef93cb3da5ea71e1258c65 bind the stored release plan.
-Twelve records are archived unchanged, with hashes verified. Candidate declarations
-are specs-1.0.0 / imp-1.0.0 and release date 2026-10-25. The retired database
-distribution is an affected historical identity; the active publication artifact
-set is Core, CLI, Artifacts and Pipelines plus the service image.
+The stored release plan is the authority for exact input/target identities,
+collected record hashes and candidate numbers. The Major impact proposes
+specs-1.0.0 / imp-1.0.0. The retired database distribution is an affected historical
+identity; the active publication set is Core, CLI, Artifacts and Pipelines plus
+the service image.
 
-All local workflows are explicitly closed before submission. Hosted CI, reviewed
-merge, exact-main candidate construction and protected publication remain pending.
-The GitHub pypi-core environment has required-reviewer and main-branch protections
-matching the existing publisher policy; PyPI's private pending publisher requires
-separate setup. No protection is relaxed and no local success implies publication.
+The first resumed plan was invalidated when closure and review notes changed its
+input. It is preserved at tmp/reviews/core-release/superseded-plan-after-closure.yaml.
+All twelve record hashes matched before they returned to pending scope unchanged.
+No integration, tag or publication used that plan. Closure and final review notes
+now precede fresh planning, preventing a stale or double-counted baseline.
+
+The Definer explicitly closes preparation workflows before submission. Hosted CI,
+reviewed merge, exact-main candidate construction and protected publication remain
+subsequent external gates. GitHub's pypi-core environment has required-reviewer
+and main-branch protections matching the existing publisher policy; PyPI's private
+pending publisher requires separate setup. No protection is relaxed and no local
+success implies publication.

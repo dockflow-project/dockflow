@@ -2,7 +2,7 @@ schema_version: 1
 project:
   name: dockflow
   entrypoint: main.md
-  version: specs-1.0.0
+  version: specs-0.1.0
 packages:
 - name: meta
   version: 3.0.0
