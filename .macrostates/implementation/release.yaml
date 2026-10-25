@@ -1,5 +1,4 @@
-# Security maintenance candidate; finalization occurs through reviewed integration.
 schema_version: 2
-version: "imp-0.1.1"
-specification: "specs-0.1.0"
-release_date: "2026-10-22"
+version: imp-1.0.0
+specification: specs-1.0.0
+release_date: '2026-10-25'

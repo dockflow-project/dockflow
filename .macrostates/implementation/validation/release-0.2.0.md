@@ -24,3 +24,18 @@ authorizes reviewed integration and publication. Preparation preserves exact
 source/target and change records, and closes local workflows before submission.
 Publication outcomes are verified externally against the preserved manifest and
 annotated tags; preparation or a merge alone does not establish upload success.
+
+## Prepared baseline scope
+
+Input a3736e391c36be788e6027204b56b70314341807 and fetched target
+4c7e35cca44b90f59fef93cb3da5ea71e1258c65 bind the stored release plan.
+Twelve records are archived unchanged, with hashes verified. Candidate declarations
+are specs-1.0.0 / imp-1.0.0 and release date 2026-10-25. The retired database
+distribution is an affected historical identity; the active publication artifact
+set is Core, CLI, Artifacts and Pipelines plus the service image.
+
+All local workflows are explicitly closed before submission. Hosted CI, reviewed
+merge, exact-main candidate construction and protected publication remain pending.
+The GitHub pypi-core environment has required-reviewer and main-branch protections
+matching the existing publisher policy; PyPI's private pending publisher requires
+separate setup. No protection is relaxed and no local success implies publication.

@@ -1,35 +1,60 @@
 schema_version: 1
 status: candidate
+target_commit: a3736e391c36be788e6027204b56b70314341807
+target_tree: 70df64396ac772c0df85d502e091fffc3063713f
 integration_ref: origin/main
-integration_target: 7491beded1b08a3f08f93c2fcfd2bd9deadea601
-target_commit: 1050844f1f246518482ba44e7c8cd8631b9c8c9a
-target_tree: 21e8713ecf6a78b89278448ddb19f948a2e9ae8f
+integration_target: 4c7e35cca44b90f59fef93cb3da5ea71e1258c65
 baselines:
   specification: specs-0.1.0
-  implementation: imp-0.1.0
+  implementation: imp-0.1.1
   implementation_specification: specs-0.1.0
 records:
+- id: collapsed-pipeline-graphs
+  sha256: 05da46d3d6a1c89d12eb736e19bcdb6641a5be1e0c50ab63998e3395ca391385
+- id: concurrent-postgresql-runs
+  sha256: b92285b3eb3bccda37ca81a953aff8a0e702bf197518b1215976c969c4c0ae76
+- id: conformance-corrections
+  sha256: fb6645b599b37fffce64618a5e4d5426cde20e126900eca2e22e89f7fe5c4d1f
+- id: core-release-finalization
+  sha256: 7163614fe6ca65726fc456a13c687fd93eb2df225b958ee5d4585d1f3f3eb5e7
+- id: database-artifact-records
+  sha256: 0b5c817e76b321da60a3520eba5eb5d66fc8d65345fa78ff8a8a62aac5bb3791
+- id: database-execution-state
+  sha256: 9bf287591290d444c770eec48291e9ec715358a29d35eb2dcbc05e1cfcb23f2e
+- id: distributed-artifact-cache
+  sha256: ea3979420429aecc3440c8a772f20a89fe9022f18533c76a0e25d2b28cfe4cef
+- id: domain-persistence-cleanup
+  sha256: 0fa5beb514ef2ddb694e657c8c840734a67a2c84f4faa700ed28f3a9552e6952
+- id: generic-core
+  sha256: cc7522be39d12ea8462e515ce50f0293434a1682d5b28c4759f9fd2124f4bd33
+- id: release-0.2.0
+  sha256: d18395a1871c0b1ddce474abc41de1401ee81233a696ee04ab1102f88580fb04
+- id: state-cache-integration
+  sha256: cbd484ac25b621f33396e06b9b52faf516ff3c83aaad423bb44f3be470b9df82
+- id: unified-database
+  sha256: 15e77354bf7733449b8a4c95605cec9718afb50a8ce63ec1d8e49988d5624241
+history_records:
 - id: emsign-ca-remediation
   sha256: 1361e4337338330b5f843748179c1bfbe7f4a5dc79619ee27d492e80839f3c9f
 - id: release-0.1.1
   sha256: bd3c9927ba3a47756f3a3d6885643226dcd4b7ad39278c42888c0b590a47fb74
-history_records:
 - id: source-publication-ci
   sha256: af506bac660e499df417cdb1c8bcdbd7d8a216c122d4f2b7db5ff2d50ea87c94
 declarations:
-  composition_sha256: fffaeaea07f03fde8b366d10ae57962e1f6ec3eb3327a7370c40091a6c99f029
-  release_sha256: 4d2b04374652ced2eba6d0e1e943dd60eec3dea6d79355dd3381580d06e21995
+  composition_sha256: 14a474e96a58da0026716d26953b149a64450adf107e5589b219343dd93cf59f
+  release_sha256: 9746dde919eb105dba63ee34bd68827b3604651f0085a17c21c2003d83100a0c
 candidate:
-  specification: specs-0.1.0
-  implementation: imp-0.1.1
-  implementation_specification: specs-0.1.0
+  specification: specs-1.0.0
+  implementation: imp-1.0.0
+  implementation_specification: specs-1.0.0
 impact:
-  specification: none
-  implementation: patch
+  specification: major
+  implementation: major
 deliverables:
-- dockflow-cli
-- dockflow-pipelines
 - dockflow-artifacts
+- dockflow-cli
+- dockflow-core
+- dockflow-database
+- dockflow-pipelines
 - dockflow-pipelines-image
-release_date: '2026-10-22'
-review: validation/release-0.1.1.md
+release_date: '2026-10-25'
