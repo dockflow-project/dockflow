@@ -1,6 +1,6 @@
 """Pure control-intent and terminal Task transitions for normal/recovered Runs."""
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 
 IMMUTABLE_RUN_FIELDS = {
     "definition_id",

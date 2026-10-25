@@ -7,7 +7,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.config import load_settings
 from dockflow_pipelines.core import Core
 from dockflow_pipelines.metadata import ControlStore
@@ -249,9 +249,9 @@ def test_independent_process_claims_and_crash_recovery(distributed):
 def test_expired_run_cannot_commit_cache_publication(distributed, monkeypatch, fault):
     import time
 
+    from dockflow_core.canonical import digest
     from dockflow_pipelines.cache_registry import Registry
     from dockflow_pipelines.cache_storage import make_manifest
-    from dockflow_pipelines.canonical import digest
 
     store, _ = distributed
     with store.owner():
@@ -340,8 +340,8 @@ def test_heartbeat_connection_failure_revokes_only_its_run(distributed, monkeypa
 def test_maintenance_blocks_independent_cache_transactions(distributed, monkeypatch):
     import threading
 
+    from dockflow_core.canonical import digest
     from dockflow_pipelines.cache_registry import Registry
-    from dockflow_pipelines.canonical import digest
 
     store, options = distributed
     registry = Registry(
@@ -448,9 +448,9 @@ with core.store.owner():
 
 
 def test_cache_consumer_does_not_rewrite_live_producer_lifecycle(distributed):
+    from dockflow_core.canonical import digest
     from dockflow_pipelines.cache_registry import Registry
     from dockflow_pipelines.cache_storage import make_manifest
-    from dockflow_pipelines.canonical import digest
 
     store, options = distributed
     second = other(store, options)

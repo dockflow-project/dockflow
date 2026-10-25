@@ -10,7 +10,7 @@ from urllib.request import HTTPSHandler
 from urllib.response import addinfourl
 
 import pytest
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.client import Client
 
 

@@ -5,7 +5,8 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 
-from .canonical import json_bytes, loads
+from dockflow_core.canonical import json_bytes, loads
+
 from .records import COLLECTIONS
 
 # Key columns and remaining columns, in deterministic inspection order.

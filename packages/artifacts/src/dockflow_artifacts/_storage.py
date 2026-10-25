@@ -9,20 +9,10 @@ from pathlib import Path
 from typing import Any, BinaryIO
 from urllib.parse import unquote, urlsplit
 
-from ._paths import file_info, hash_stream, no_links, relative
+from dockflow_core.filesystem import fsync_ancestors, hash_stream
+
+from ._paths import file_info, no_links, relative
 from .errors import ArtifactError, IntegrityError
-
-
-def _sync_ancestors(path: Path) -> None:
-    """Flush every potentially new directory entry, including identical retries."""
-    for directory in (path, *path.parents):
-        descriptor = os.open(
-            directory, os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0)
-        )
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
 
 
 class FileStore:
@@ -54,7 +44,7 @@ class FileStore:
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
-        _sync_ancestors(path.parent)
+        fsync_ancestors(path.parent)
 
     def put(self, key: str, body: BinaryIO) -> bool:
         path = self.path(key)
@@ -77,7 +67,7 @@ class FileStore:
                 # still needs a durable file and directory boundary.
                 self.sync(key)
                 return False
-            _sync_ancestors(path.parent)
+            fsync_ancestors(path.parent)
             return True
         finally:
             Path(temporary).unlink(missing_ok=True)

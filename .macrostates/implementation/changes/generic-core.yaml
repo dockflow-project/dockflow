@@ -1,0 +1,28 @@
+schema_version: 1
+id: generic-core
+summary: Replace domain-coupled database distribution with generic Core and consumer-owned
+  persistence.
+origin:
+  commit: 68ec3df884e80c384f4590c35648dbfd991fa965
+  specification: specs-0.1.0
+  implementation: imp-0.1.1
+impact:
+  specification: major
+  implementation: major
+deliverables:
+- dockflow-core
+- dockflow-cli
+- dockflow-artifacts
+- dockflow-pipelines
+- dockflow-pipelines-image
+requirements:
+- requirement: 051 Core boundary; consumer-owned schemas and one database (053 A39,
+    054).
+  implementation: Core provides generic adapters, schema coordination and reusable
+    primitives; consumer packages own domain DDL, queries and persistence logic.
+  verification: Static and isolated-import boundaries, arbitrary schema/version/rollback
+    tests, fresh SQLite/PostgreSQL initialization orders, and full domain/provider
+    regressions.
+evidence:
+- validation/generic-core.md
+gaps: []

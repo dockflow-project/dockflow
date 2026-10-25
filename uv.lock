@@ -10,7 +10,7 @@ resolution-markers = [
 members = [
     "dockflow-artifacts",
     "dockflow-cli",
-    "dockflow-database",
+    "dockflow-core",
     "dockflow-pipelines",
     "dockflow-workspace",
 ]
@@ -533,7 +533,7 @@ name = "dockflow-artifacts"
 version = "0.2.0"
 source = { editable = "packages/artifacts" }
 dependencies = [
-    { name = "dockflow-database" },
+    { name = "dockflow-core" },
 ]
 
 [package.optional-dependencies]
@@ -542,7 +542,7 @@ kfp = [
     { name = "kfp" },
 ]
 postgresql = [
-    { name = "dockflow-database", extra = ["postgresql"] },
+    { name = "dockflow-core", extra = ["postgresql"] },
 ]
 s3 = [
     { name = "boto3" },
@@ -554,8 +554,8 @@ requires-dist = [
     { name = "boto3", marker = "extra == 's3'", specifier = ">=1.40,<2" },
     { name = "certifi", marker = "extra == 'kfp'", specifier = ">=2026.10.19,<2027" },
     { name = "certifi", marker = "extra == 's3'", specifier = ">=2026.10.19,<2027" },
-    { name = "dockflow-database", editable = "packages/database" },
-    { name = "dockflow-database", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "packages/database" },
+    { name = "dockflow-core", editable = "packages/core" },
+    { name = "dockflow-core", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "packages/core" },
     { name = "kfp", marker = "extra == 'kfp'", specifier = ">=2.17.0,<2.18" },
 ]
 provides-extras = ["postgresql", "s3", "kfp"]
@@ -565,16 +565,20 @@ name = "dockflow-cli"
 version = "0.2.0"
 source = { editable = "packages/cli" }
 dependencies = [
+    { name = "dockflow-core" },
     { name = "typer" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "typer", specifier = ">=0.27.3,<0.28.0" }]
+requires-dist = [
+    { name = "dockflow-core", editable = "packages/core" },
+    { name = "typer", specifier = ">=0.27.3,<0.28.0" },
+]
 
 [[package]]
-name = "dockflow-database"
+name = "dockflow-core"
 version = "0.2.0"
-source = { editable = "packages/database" }
+source = { editable = "packages/core" }
 
 [package.optional-dependencies]
 postgresql = [
@@ -592,14 +596,14 @@ source = { editable = "packages/pipelines" }
 dependencies = [
     { name = "dockflow-artifacts" },
     { name = "dockflow-cli" },
-    { name = "dockflow-database" },
+    { name = "dockflow-core" },
     { name = "pyyaml" },
     { name = "typer" },
 ]
 
 [package.optional-dependencies]
 postgresql = [
-    { name = "dockflow-database", extra = ["postgresql"] },
+    { name = "dockflow-core", extra = ["postgresql"] },
 ]
 runtime = [
     { name = "certifi" },
@@ -625,8 +629,8 @@ requires-dist = [
     { name = "docker", marker = "extra == 'runtime'", specifier = ">=7.1.0,<8" },
     { name = "dockflow-artifacts", editable = "packages/artifacts" },
     { name = "dockflow-cli", editable = "packages/cli" },
-    { name = "dockflow-database", editable = "packages/database" },
-    { name = "dockflow-database", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "packages/database" },
+    { name = "dockflow-core", editable = "packages/core" },
+    { name = "dockflow-core", extras = ["postgresql"], marker = "extra == 'postgresql'", editable = "packages/core" },
     { name = "fastapi", marker = "extra == 'service'", specifier = ">=0.136.3,<0.137" },
     { name = "kfp", marker = "extra == 'runtime'", specifier = ">=2.17.0,<2.18" },
     { name = "python-multipart", marker = "extra == 'service'", specifier = ">=0.0.20,<0.1" },

@@ -29,6 +29,22 @@ def test_canonical_mapping_order_and_resolved_parameters():
         assert identity({field: "one"}) != identity({field: "two"})
 
 
+@pytest.mark.parametrize(
+    "parameters,expected",
+    [
+        ({}, "a72d1460d52666645b7c1c1e771d6f002e4ba990621b19bda8bed0f8b044637b"),
+        (
+            {"x": -0.0, "nested": {"z": [1, 1.0, None, True], "a": "é"}},
+            "24a958e122de6432852806627f76c364498ecb55511626d5a72108c99af8a3fa",
+        ),
+    ],
+)
+def test_publication_identity_golden_bytes_survive_shared_encoding(
+    parameters, expected
+):
+    assert identity(parameters) == expected
+
+
 def test_types_and_order_are_preserved():
     values = [None, False, 0, 0.0, -0.0, True, 1, 1.0, "1", [], {}, [1, 2], [2, 1]]
     assert len({identity({"x": value}) for value in values}) == len(values)

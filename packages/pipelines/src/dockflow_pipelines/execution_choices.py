@@ -6,10 +6,10 @@ import math
 from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import json_bytes, loads, validate_json
+from dockflow_core.errors import DockflowError
 
 from .cache_registry import DEFAULT_CACHE, validate_cache
-from .canonical import json_bytes, loads, validate_json
 from .reuse import resolve_policy
 
 EXECUTION_FIELDS = {

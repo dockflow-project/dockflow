@@ -1,6 +1,6 @@
 """Dispatch the small management operations without duplicating adapter logic."""
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 
 from .core import capabilities
 

@@ -44,7 +44,7 @@ jobs:
       - run: uv sync --locked --all-packages
       - run: uv run --locked python tools/check_ca_trust.py
       - run: uv run --locked python tools/version.py
-      - run: uv run --locked pytest packages/database/tests packages/cli/tests packages/pipelines/tests/unit packages/pipelines/tests/test_definitions.py
+      - run: uv run --locked pytest packages/core/tests packages/cli/tests packages/pipelines/tests/unit packages/pipelines/tests/test_definitions.py
       - run: uv run --locked python tools/verify_packages.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import math
-import struct
 from pathlib import Path
 from typing import Any
+
+from dockflow_core.canonical import canonical_tree
 
 from ._paths import canonical, inventory
 from .errors import ArtifactError
@@ -15,32 +15,11 @@ PUBLICATION_ID_FORMAT = "dockflow-publication-id-v1"
 
 
 def _typed(value: Any) -> list[Any]:
-    """Canonical JSON tree preserving numeric types and negative zero."""
-    if value is None:
-        return ["null"]
-    if type(value) is bool:
-        return ["bool", value]
-    if type(value) is int:
-        if abs(value) > 2**53 - 1:
-            raise ArtifactError("Identity integers must fit the portable 53-bit range")
-        return ["int", str(value)]
-    if type(value) is float:
-        if not math.isfinite(value):
-            raise ArtifactError("Identity numbers must be finite")
-        return ["float64", struct.pack(">d", value).hex()]
-    if type(value) is str:
-        try:
-            value.encode("utf-8")
-        except UnicodeError:
-            raise ArtifactError("Identity strings must be valid UTF-8") from None
-        return ["string", value]
-    if type(value) is list:
-        return ["array", [_typed(item) for item in value]]
-    if type(value) is dict:
-        if any(type(key) is not str for key in value):
-            raise ArtifactError("Identity object keys must be strings")
-        return ["object", [[_typed(key), _typed(value[key])] for key in sorted(value)]]
-    raise ArtifactError("Identity values must be portable JSON values")
+    """Retain this publication format's typed object keys and strict input types."""
+    try:
+        return canonical_tree(value, typed_keys=True, strict_types=True)
+    except ValueError as exc:
+        raise ArtifactError(str(exc)) from None
 
 
 def publication_id(

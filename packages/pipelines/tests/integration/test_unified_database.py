@@ -4,12 +4,12 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-from dockflow_database.database import Database, database
-from dockflow_database.database_schema import REQUIRED_TABLES
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import digest
+from dockflow_core.database import Database, database
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.cache_registry import Registry
 from dockflow_pipelines.cache_storage import make_manifest
-from dockflow_pipelines.canonical import digest
+from dockflow_pipelines.database_schema import REQUIRED_TABLES
 from dockflow_pipelines.metadata import ControlStore
 from dockflow_pipelines.records import new_id
 
@@ -118,8 +118,8 @@ def test_snapshot_preserves_all_cache_namespaces_and_excludes_other_projects(
             connection.execute("SELECT * FROM dockflow_state_owners").fetchall() == []
         )
         assert connection.execute(
-            "SELECT COUNT(*) FROM dockflow_schema"
-        ).fetchone() == (1,)
+            "SELECT COUNT(*) FROM dockflow_schema_components"
+        ).fetchone() == (2,)
     # Restore to a fresh SQLite database, including when the source is PostgreSQL.
     restored_options = {
         "backend": "sqlite",
@@ -177,7 +177,7 @@ def test_split_database_is_not_silently_adopted(tmp_path):
             (1,)
         ]
         assert not connection.execute(
-            "SELECT name FROM sqlite_master WHERE name='dockflow_schema'"
+            "SELECT name FROM sqlite_master WHERE name='dockflow_schema_components'"
         ).fetchall()
 
 
@@ -232,7 +232,7 @@ def test_export_keeps_one_snapshot_during_independent_cache_commit(
 def test_portable_snapshot_restores_cache_into_selected_backend(
     database_state, tmp_path
 ):
-    from dockflow_database.database_schema import PROJECT_TABLES
+    from dockflow_pipelines.database_schema import PROJECT_TABLES
 
     store, options = database_state
     with store.owner():

@@ -6,7 +6,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
-dependencies = ["dockflow-artifacts==0.2.0", "dockflow-database==0.2.0", "dockflow-cli==0.2.0", "typer>=0.27.3,<0.28.0", "PyYAML>=6.0.2,<7"]
+dependencies = ["dockflow-artifacts==0.2.0", "dockflow-core==0.2.0", "dockflow-cli==0.2.0", "typer>=0.27.3,<0.28.0", "PyYAML>=6.0.2,<7"]
 
 [project.urls]
 Homepage = "https://github.com/dockflow-project/dockflow"
@@ -15,7 +15,7 @@ Issues = "https://github.com/dockflow-project/dockflow/issues"
 Changelog = "https://github.com/dockflow-project/dockflow/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-postgresql = ["dockflow-database[postgresql]==0.2.0"]
+postgresql = ["dockflow-core[postgresql]==0.2.0"]
 runtime = ["kfp>=2.17.0,<2.18", "docker>=7.1.0,<8", "certifi>=2026.10.19,<2027"]
 service = ["fastapi>=0.136.3,<0.137", "starlette>=1.9.0,<2", "uvicorn>=0.34.2,<0.35", "python-multipart>=0.0.20,<0.1"]
 s3 = ["boto3>=1.38,<2", "certifi>=2026.10.19,<2027"]
@@ -25,7 +25,7 @@ pipelines = "dockflow_pipelines.cli:app"
 
 [tool.uv.sources]
 dockflow-artifacts = { workspace = true }
-dockflow-database = { workspace = true }
+dockflow-core = { workspace = true }
 dockflow-cli = { workspace = true }
 
 [build-system]

@@ -127,7 +127,8 @@ component side effects. No historical file migration is required.
 ### A34: Unified database
 
 Exercise SQLite and real PostgreSQL through the shared adapter. Verify both
-initialization orders create one complete versioned schema, cache operations
+initialization orders create the required independently versioned consumer
+schemas in one database, cache operations
 progress with state ownership held, restart retains both domains, alternate
 cache connections are rejected, and unknown/incomplete schemas fail closed.
 Export and restore one project with all cache namespaces and fences, excluding
@@ -186,3 +187,14 @@ them through rebuild without losing stable aliases. Verify stable bounded source
 capture with symlinks, nonregular files, oversize data and observed mutation.
 Exercise indexed SQL filtering/paging, queue selection and log ranges with unrelated
 large history, both database backends, stable tokens and backup/rebuild consistency.
+
+### A39. Generic Core and consumer-owned persistence
+
+Verify the [shared Core boundary](../051_dockflow/007_core.md), dependency
+direction and clean installation. Supply an unrelated schema without importing
+a consumer. Initialize Artifacts alone without creating Pipelines tables, then
+add Pipelines; exercise the opposite order too, on both databases. Verify
+independent versions, concurrent first use, transaction rollback, read-only
+validation and missing/unsupported schemas. Retain backup/export selection,
+publication/maintenance fencing, cache coordination and golden identity bytes
+after relocating shared serialization and filesystem primitives.

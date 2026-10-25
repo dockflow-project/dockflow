@@ -131,7 +131,7 @@ relative paths in a JSON config resolve against that config's directory.
 All writers sharing a publication root must use the same database and project ID.
 For containerized SQLite publishers, mount the containing database directory so
 its WAL/SHM companions are shared as well. Use PostgreSQL across isolated hosts.
-The shared `dockflow-database` package supplies both backend implementations.
+The shared `dockflow-core` package supplies both backend implementations.
 Configuration and imports open no connections. Publishing initializes a fresh
 schema; verification opens an existing read-only snapshot. Completion records
 remain immutable. `manifest_uri` is now a logical `dockflow://` database address;

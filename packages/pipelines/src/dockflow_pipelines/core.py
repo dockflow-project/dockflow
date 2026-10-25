@@ -17,9 +17,9 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import digest, loads, validate_json
+from dockflow_core.errors import DockflowError
 
-from .canonical import digest, loads, validate_json
 from .config import Settings
 from .definitions import (
     Definition,
@@ -250,7 +250,9 @@ class Core:
         pipeline_id: str | None,
         registration_origin: str | None,
     ) -> tuple[dict, list[dict]]:
-        from .records import new_id, utc_now
+        from dockflow_core.time import utc_now
+
+        from .records import new_id
 
         record = {
             **definition.to_record(),
@@ -292,7 +294,9 @@ class Core:
         pipeline_id: str | None = None,
     ) -> tuple[dict, dict]:
         """Validate first, then accept a catalog/version and its exact source once."""
-        from .records import new_id, utc_now
+        from dockflow_core.time import utc_now
+
+        from .records import new_id
 
         definition = checked_definition(source)
         if not isinstance(description, str) or len(description) > 4096:
@@ -361,7 +365,9 @@ class Core:
 
     @_project_mutation
     def refresh(self, name: str | None = None) -> dict:
-        from .records import new_id, utc_now
+        from dockflow_core.time import utc_now
+
+        from .records import new_id
 
         report = {"added": [], "updated": [], "unavailable": [], "diagnostics": []}
         for collection in ("pipelines", "components"):
@@ -554,7 +560,9 @@ class Core:
 
     @_project_mutation
     def create_experiment(self, name: str, description: str = "") -> dict:
-        from .records import new_id, utc_now
+        from dockflow_core.time import utc_now
+
+        from .records import new_id
 
         if (
             not isinstance(name, str)
@@ -587,7 +595,9 @@ class Core:
         *,
         reserve: bool = False,
     ) -> tuple[dict, bool]:
-        from .records import new_id, utc_now
+        from dockflow_core.time import utc_now
+
+        from .records import new_id
 
         self.store.ensure_reconciled()
         only_fields(request, RUN_FIELDS)
@@ -768,7 +778,7 @@ class Core:
             return run, False
 
     def cancel(self, run_id: str, *, interruption: bool = False) -> dict:
-        from .records import utc_now
+        from dockflow_core.time import utc_now
 
         with self.mutex, self.store.stop_request(run_id):
             run = self.store.get("runs", run_id)

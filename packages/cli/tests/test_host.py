@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 import typer
 from dockflow_cli.main import create_app, main
+from dockflow_core.errors import DockflowError
 from rich.text import Text
 from typer.testing import CliRunner
 
@@ -50,7 +51,7 @@ def test_cli_without_features_and_deterministic_registration(monkeypatch):
 )
 def test_broken_providers_fail_with_identity(monkeypatch, entries):
     monkeypatch.setattr(metadata, "entry_points", lambda **kwargs: entries)
-    with pytest.raises(RuntimeError, match="fixture-provider"):
+    with pytest.raises(DockflowError, match="fixture-provider"):
         create_app()
 
 

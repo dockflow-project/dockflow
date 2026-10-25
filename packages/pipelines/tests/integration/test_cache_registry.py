@@ -14,12 +14,12 @@ import uuid
 from pathlib import Path
 
 import pytest
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import digest, json_bytes
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.artifacts import ArtifactStore
 from dockflow_pipelines.cache import Lease, wait_for_resolution
 from dockflow_pipelines.cache_registry import Registry
 from dockflow_pipelines.cache_storage import make_manifest
-from dockflow_pipelines.canonical import digest, json_bytes
 from dockflow_pipelines.metadata import ControlStore
 from dockflow_pipelines.records import new_id
 

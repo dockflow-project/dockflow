@@ -8,12 +8,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import digest, loads
+from dockflow_core.errors import DockflowError
+from dockflow_core.time import utc_now
 
 from .cache import Lease, wait_for_resolution
 from .cache_registry import Registry, cache_error
 from .cache_storage import make_manifest
-from .canonical import digest, loads
 from .definitions import (
     Definition,
     DefinitionError,
@@ -32,12 +33,6 @@ from .reuse import candidates, resolve_policy, task_signature
 
 def _id(kind: str) -> str:
     return kind + "_" + str(uuid.uuid4())
-
-
-def _now() -> str:
-    from datetime import UTC, datetime
-
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _error(exc: BaseException, phase: str) -> dict[str, Any]:
@@ -168,7 +163,7 @@ class _Execution:
             "attempt_ids": [],
             "reuse": None,
             "error": None,
-            "created_at": _now(),
+            "created_at": utc_now(),
         }
         self.records[spec.name] = record
         self.put("tasks", record)
@@ -664,8 +659,8 @@ class _Execution:
                 "run_id": self.run["run_id"],
                 "task_id": record["task_id"],
                 "state": "running",
-                "created_at": _now(),
-                "started_at": _now(),
+                "created_at": utc_now(),
+                "started_at": utc_now(),
                 "finished_at": None,
                 "image": image,
                 "signature": signature,
@@ -807,7 +802,7 @@ class _Execution:
                             "run_id": self.run["run_id"],
                             "task_id": record["task_id"],
                             "attempt_id": attempt["attempt_id"],
-                            "finished_at": _now(),
+                            "finished_at": utc_now(),
                         },
                         signature["value"],
                         registry.options["storage_identity"],
@@ -845,7 +840,7 @@ class _Execution:
                     publication_state="committed",
                     outputs=output_ids,
                     output_parameters=parameters,
-                    finished_at=_now(),
+                    finished_at=utc_now(),
                 )
                 self.put("attempts", attempt)
                 record.update(
@@ -887,7 +882,7 @@ class _Execution:
                         state = "failed"
                     attempt["reconciliation_required"] = not exc.confirmed
                 attempt.update(
-                    state=state, error=_error(exc, phase), finished_at=_now()
+                    state=state, error=_error(exc, phase), finished_at=utc_now()
                 )
                 if isinstance(exc, ContainerFailed):
                     attempt["exit_status"] = exc.exit_code
@@ -1115,7 +1110,7 @@ class _Execution:
 
     def execute(self) -> dict[str, Any]:
         self.store.ensure_reconciled()
-        self.run.update(state="running", started_at=_now())
+        self.run.update(state="running", started_at=utc_now())
         self.put("runs", self.run)
         for spec in self.definition.tasks.values():
             self.make_task(spec)
@@ -1178,7 +1173,7 @@ class _Execution:
         finally:
             if self.adapter is not None:
                 self.adapter.close()
-            self.run["finished_at"] = _now()
+            self.run["finished_at"] = utc_now()
             self.run.update(self.store.finish_run(self.run))
         return self.run
 
@@ -1201,7 +1196,7 @@ def execute_run(
                 {
                     **run,
                     "state": "failed",
-                    "finished_at": _now(),
+                    "finished_at": utc_now(),
                     "error": _error(exc, "execution_configuration"),
                 }
             )

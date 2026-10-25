@@ -2,7 +2,7 @@
 
 from importlib.resources import files
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from fastapi import Request
 from fastapi.responses import RedirectResponse, Response
 

@@ -110,7 +110,7 @@ a source checkout installs the local workspace members:
 
 | Distribution / extra | Purpose |
 | --- | --- |
-| `dockflow-database` | Shared SQLite/PostgreSQL adapter and physical schema; optional `postgresql` driver. |
+| `dockflow-core` | Generic database adapters, schema coordination, JSON and filesystem primitives; optional `postgresql` driver. |
 | `dockflow-artifacts` | Independent publication and integrity API; optional `postgresql`, `s3` and `kfp` extras. |
 | `dockflow-cli` | Shared `dockflow` executable and installed command discovery. |
 | `dockflow-pipelines` | Pipeline commands, remote client and definition validation. |
@@ -123,7 +123,7 @@ do not remove dependencies from an existing development environment:
 
 ```bash
 uv venv .venv-client --python 3.13
-uv pip install --python .venv-client/bin/python ./packages/database ./packages/artifacts ./packages/cli ./packages/pipelines
+uv pip install --python .venv-client/bin/python ./packages/core ./packages/artifacts ./packages/cli ./packages/pipelines
 .venv-client/bin/dockflow pipelines --endpoint http://127.0.0.1:8080 runs list
 ```
 

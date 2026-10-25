@@ -33,7 +33,7 @@ store.verify("models/demo/v1/model.json")
 ```
 
 Publication bookkeeping uses SQLite/PostgreSQL through the shared
-`dockflow-database` package. Filesystem roots default to `.dockflow/state.sqlite`
+`dockflow-core` package. Filesystem roots default to `.dockflow/state.sqlite`
 under their parent; remote roots require explicit database configuration.
 Pass Pipelines’ database and project ID to share its state. Install the
 `postgresql` extra for an external PostgreSQL database.

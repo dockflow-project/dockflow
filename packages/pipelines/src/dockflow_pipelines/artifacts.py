@@ -15,12 +15,14 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote, urlsplit
 
-from dockflow_database import ArtifactRecords
-from dockflow_database.errors import DockflowError
+from dockflow_artifacts.persistence import ArtifactRecords
+from dockflow_core.canonical import digest, json_bytes, loads, validate_json
+from dockflow_core.errors import DockflowError
+from dockflow_core.filesystem import fsync_directory, hash_stream, reject_symlinks
+from dockflow_core.time import utc_now
 
-from .canonical import digest, json_bytes, loads, validate_json
 from .metadata import ControlStore
-from .records import new_id, utc_now
+from .records import new_id
 
 METADATA_TYPES = {"system.Metrics", "system.ClassificationMetrics"}
 BUILTIN_TYPES = {
@@ -80,12 +82,10 @@ def _relative_path(value: str) -> PurePosixPath:
 
 
 def _no_links(path: Path) -> None:
-    path = path.absolute()
-    for candidate in (path, *path.parents):
-        if candidate.is_symlink():
-            raise DockflowError(
-                "Artifact paths cannot contain symlinks", code="INVALID_ARGUMENT"
-            )
+    try:
+        reject_symlinks(path)
+    except ValueError:
+        raise DockflowError("Artifact paths cannot contain symlinks") from None
 
 
 def _hash_file(path: Path) -> tuple[int, str]:
@@ -93,8 +93,6 @@ def _hash_file(path: Path) -> tuple[int, str]:
     before = path.stat(follow_symlinks=False)
     if not stat.S_ISREG(before.st_mode):
         raise DockflowError("Artifact payloads must be regular files/directories")
-    hasher = hashlib.sha256()
-    size = 0
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(path, flags)
     with os.fdopen(fd, "rb") as stream:
@@ -106,9 +104,7 @@ def _hash_file(path: Path) -> tuple[int, str]:
             raise DockflowError(
                 "Artifact source changed while opening", code="CONFLICT", status=409
             )
-        while chunk := stream.read(1024 * 1024):
-            hasher.update(chunk)
-            size += len(chunk)
+        size, sha = hash_stream(stream)
         after = os.fstat(stream.fileno())
     observed = path.stat(follow_symlinks=False)
 
@@ -129,7 +125,7 @@ def _hash_file(path: Path) -> tuple[int, str]:
         raise DockflowError(
             "Artifact source changed during fingerprinting", code="CONFLICT", status=409
         )
-    return size, hasher.hexdigest()
+    return size, sha
 
 
 def inventory(path: Path) -> dict[str, Any]:
@@ -346,18 +342,15 @@ class ArtifactStore:
                         os.link(temporary, path)
                     except FileExistsError:
                         pass
-                    from .metadata import _fsync_directory
 
-                    _fsync_directory(path.parent)
+                    fsync_directory(path.parent)
                 finally:
                     temporary.unlink(missing_ok=True)
             if create:
-                from .metadata import _fsync_directory
-
                 with path.open("rb") as stream:
                     os.fsync(stream.fileno())
                 for ancestor in (path.parent, *path.parent.parents):
-                    _fsync_directory(ancestor)
+                    fsync_directory(ancestor)
             try:
                 content = loads(path.read_bytes())
             except OSError:
@@ -909,12 +902,10 @@ class ArtifactStore:
                         "Finalized cache bytes differ", "CACHE_CONFLICT", 409
                     )
                 if os.name != "nt":
-                    from .metadata import _fsync_directory
-
                     for ancestor in (parent, *parent.parents):
                         if not ancestor.is_relative_to(self.managed_root):
                             break
-                        _fsync_directory(ancestor)
+                        fsync_directory(ancestor)
                 complete()
                 return
             if destination.exists() or completed is not None:
@@ -947,13 +938,12 @@ class ArtifactStore:
                         )
                         for item in paths:
                             item.chmod(0o555 if item.is_dir() else 0o444)
-                        from .metadata import _fsync_directory
 
                         for item in sorted(
                             paths, key=lambda item: len(item.parts), reverse=True
                         ):
                             if item.is_dir():
-                                _fsync_directory(item)
+                                fsync_directory(item)
                             else:
                                 with item.open("rb") as stream:
                                     os.fsync(stream.fileno())
@@ -965,12 +955,10 @@ class ArtifactStore:
                     finally:
                         os.close(fd)
                     if descriptor.get("storage_layout") == "cache-v1":
-                        from .metadata import _fsync_directory
-
                         for ancestor in parent.parents:
                             if not ancestor.is_relative_to(self.managed_root):
                                 break
-                            _fsync_directory(ancestor)
+                            fsync_directory(ancestor)
                 complete()
             finally:
                 if temporary.is_dir():

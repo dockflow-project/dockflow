@@ -1,14 +1,14 @@
 name: dockflow-pipelines
-version: 11.0.0
-versioned_at: 2026-10-24 23:38
+version: 12.0.0
+versioned_at: 2026-10-25 00:13
 description: Dockflow Pipelines product, execution, artifact, persistence, interface and deployment contracts.
 entrypoint: README.md
 dependencies:
   - name: dockflow
-    version: 1.0.0
+    version: 2.0.0
     constraint: at_least
   - name: dockflow-cli
-    version: 0.2.0
+    version: 0.3.0
     constraint: at_least
   - name: docker-1
     version: 3.0.0

@@ -59,11 +59,15 @@ PostgreSQL direct submissions reserve their own Run during atomic admission. No 
 
 ## Persistence and artifacts
 
-`packages/database` now owns the common SQLite/PostgreSQL drivers, physical schema,
-maintenance gates and immutable artifact-record repository. Pipelines and standalone
-Artifacts use that package. Publication claims/manifests and recovery descriptors
-are SQL-only; artifact storage retains payloads and `.dockflow/storage.json`.
-The physical schema is version 4; no existing-data migration is supplied.
+`packages/core` owns domain-independent database adapters, schema coordination,
+generic locks, JSON encoding, common errors and filesystem primitives. It knows
+no consuming package, domain schema or persistence policy. Artifacts owns
+publication claims/manifests; Pipelines owns execution history, cache, queries
+and project export selection. Each supplies an independent versioned schema to
+Core under the [Core boundary](../specs/051_dockflow/007_core.md).
+The [Core validation](validation/generic-core.md) records current qualification. Standalone Artifacts creates no Pipelines tables; either initialization
+order uses one database. Artifact storage retains payloads and
+`.dockflow/storage.json`. This fresh format requires no existing-data migration.
 Standalone filesystem publication defaults to a SQLite file beside its root;
 remote stores require explicit database configuration. Project backups preserve
 these records and the managed root, verify completed publications and refuse
@@ -91,7 +95,7 @@ coverage and deployment limits. PostgreSQL environments retain
 full shared history without a local durable state directory. SQLite retains its
 single owner; PostgreSQL executes different Runs concurrently across coordinators.
 
-`canonical.py` owns typed canonical JSON hashing; `reuse.py` owns equivalent
+`dockflow_core.canonical` owns portable typed JSON encoding and hashing; `reuse.py` owns equivalent
 signature selection and integrity checks. `artifacts.py` provides filesystem and
 S3-compatible managed stores, external references/imports, inventory checking and
 explicit pins. Ordinary managed outputs use pipeline/run/task/attempt-UUID/output paths below the
@@ -112,9 +116,12 @@ records no longer describe the current implementation.
 
 ## Coordinated artifact cache
 
-`dockflow_database.database` supplies common SQLite/PostgreSQL connections, dialect, durability,
+`dockflow_core.database` supplies common SQLite/PostgreSQL connections, dialect, durability,
 schema initialization, clock, row locks and driver failure classification.
-`dockflow_database.database_schema` defines the shared versioned physical schema.
+`dockflow_pipelines.database_schema` supplies execution/cache definitions and
+query indexes; `dockflow_artifacts.persistence` supplies publication records.
+`dockflow_core.schema` describes caller-defined schemas, initialized atomically
+with independent entries in `dockflow_schema_components`.
 `cache_registry.py` implements coordination in the same configured database as
 execution history. Entry locking serializes reuse, idempotent
 claims, database-clock leases, monotonic fences, complete publication and durable
@@ -354,8 +361,7 @@ The candidate workflow builds and verifies package artifacts, supplies those
 wheels to the service Dockerfile through a named build context, smoke-tests the
 result, and saves that exact image with a SHA-256 manifest. The publishing
 workflow checks successful canonical-main candidate provenance and the manually
-reviewed manifest hash before protected OIDC jobs. CLI and Database publish
-before Artifacts and Pipelines, with a distinct environment per distribution for
+reviewed manifest hash before protected OIDC jobs. Core publishes before its CLI, Artifacts and Pipelines consumers, with a distinct environment per distribution for
 pending PyPI project creation. Image/release publication follows all package uploads.
 
 `tools/release.py` verifies bundle inventories, hashes, exact source/baseline tags
@@ -405,8 +411,8 @@ transitions complete recovery Tasks while preserving committed output sets.
 
 Selective repositories push resource paging/filtering, queue eligibility,
 idempotency/catalog/signature lookups and log ranges into SQL on both backends.
-Physical schema 5 retains canonical JSON text, normalized input/log projections
-and query indexes. Portable backups identify `dockflow-sql-v4`. Checks compare
+The Pipelines schema retains canonical JSON text, normalized input/log projections
+and query indexes. Portable backups identify `dockflow-sql-v5`. Checks compare
 all derived projections and the authoritative counter; rebuild preserves aliases,
 publication records and cache fences. Fresh state is required; no migration is
 provided. Compiled-source capture and filesystem publication now enforce their

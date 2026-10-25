@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "dockflow-project/dockflow"
 IMAGE = "ghcr.io/dockflow-project/dockflow-pipelines"
-PACKAGES = ("cli", "pipelines", "artifacts", "database")
+PACKAGES = ("cli", "pipelines", "artifacts", "core")
 
 
 def command(*args: str) -> str:

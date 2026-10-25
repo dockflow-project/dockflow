@@ -1,8 +1,9 @@
 # General Dockflow requirements
 
 This project-owned package defines shared identity, licensing, monorepo
-boundaries, Python/platform support, dependency/build policy, and application
-releases for Dockflow. It applies across the repository. Implementation and
+boundaries, the domain-independent Core library, Python/platform support,
+dependency/build policy, and application releases for Dockflow. It applies across
+the repository. Implementation and
 qualification evidence are maintained separately from these requirements.
 
 ## Reading order
@@ -13,6 +14,7 @@ qualification evidence are maintained separately from these requirements.
 4. [Shared application releases](004_releases.md)
 5. [Publication scope and qualification gates](005_open-decisions.md)
 6. [Documentation boundaries and maintenance](006_documentation.md)
+7. [Shared Core boundary](007_core.md)
 
 ## Tool packages
 

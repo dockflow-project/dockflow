@@ -179,7 +179,7 @@ def submit(runtime, document=None, *, on_log=None, **overrides):
         "task_ids": [],
         **overrides,
     }
-    from dockflow_pipelines.canonical import loads
+    from dockflow_core.canonical import loads
 
     policies = (
         loads(settings.policies["file"].read_text()).get("tasks", {})

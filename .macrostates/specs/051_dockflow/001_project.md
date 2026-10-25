@@ -11,7 +11,7 @@ the full terms and uses the attribution "Copyright (c) 2026 Dockflow
 contributors". Preserve upstream specification license notices and attribution.
 
 Deliver the shared CLI, Dockflow Pipelines, Dockflow Artifacts and their shared
-Dockflow Database persistence library. Pipelines executes
+Dockflow Core library. Pipelines executes
 supported KFP-compatible workflows with Docker, without Kubernetes. Serving is a
 possible future module with no current package or implementation deliverable.
 
@@ -21,7 +21,7 @@ Use one repository with separate installable distributions:
 
 | Directory | Distribution | Import package | Responsibility |
 | --- | --- | --- | --- |
-| `packages/database/` | `dockflow-database` | `dockflow_database` | Shared SQLite/PostgreSQL drivers, schema and immutable publication records. |
+| `packages/core/` | `dockflow-core` | `dockflow_core` | Domain-independent shared primitives under the [Core boundary](007_core.md). |
 | `packages/cli/` | `dockflow-cli` | `dockflow_cli` | Executable ownership and module discovery. |
 | `packages/pipelines/` | `dockflow-pipelines` | `dockflow_pipelines` | Pipeline commands, application logic, and execution integration. |
 | `packages/artifacts/` | `dockflow-artifacts` | `dockflow_artifacts` | Reusable artifact publication, integrity and optional KFP authoring integration. |

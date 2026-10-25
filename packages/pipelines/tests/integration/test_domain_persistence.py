@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 import pytest
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.records import new_id
 
 
@@ -137,11 +137,11 @@ with store.owner():
             if not release.wait(5): os._exit(4)
         return original(kind,payload)
     store.append=append
-    gate=store.database.adapter.project_transaction
-    def transaction(connection,project):
+    gate=store.database.scope.serialize
+    def transaction(connection):
         if threading.current_thread().name=='resource': entered.set()
-        return gate(connection,project)
-    store.database.adapter.project_transaction=transaction
+        return gate(connection)
+    store.database.scope.serialize=transaction
     errors=[]
     def write_log():
         try: store.log(run_id,'retained output')

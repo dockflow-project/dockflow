@@ -1,6 +1,6 @@
 name: dockflow
-version: 1.0.0
-versioned_at: 2026-10-24 22:15
+version: 2.0.0
+versioned_at: 2026-10-25 00:13
 description: Shared Dockflow identity, compatibility, dependencies, builds, and releases.
 entrypoint: README.md
 dependencies:

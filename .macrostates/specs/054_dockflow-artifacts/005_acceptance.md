@@ -48,3 +48,10 @@ including identity creation, concurrent creation and identical retries. Inject
 file/directory flush failures and verify no SQL completion is acknowledged until
 durability succeeds. Keep measured power-loss/platform qualification separate
 from syscall-order assertions.
+
+Verify the [Core boundary](../051_dockflow/007_core.md) and prove standalone
+publication creates only Artifacts-owned tables and Core's generic version
+registry. Adding Pipelines later must preserve those publications. Schema version
+mismatch, incomplete objects and initialization failure must fail closed without
+repairing state during verification. Preserve publication identity golden bytes
+when sharing deterministic encoding and filesystem primitives through Core.

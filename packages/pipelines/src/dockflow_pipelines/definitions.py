@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dockflow_core.canonical import MAX_INTEGER, validate_json
 
-from .canonical import MAX_INTEGER, validate_json
 from .compiled_source import read_compiled_source
 
 PROFILE = "dockflow-kfp-2.17-v1"

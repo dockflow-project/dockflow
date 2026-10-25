@@ -11,12 +11,12 @@ import time
 from collections.abc import AsyncIterator
 from urllib.parse import urlsplit
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.canonical import loads
+from dockflow_core.errors import DockflowError
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from .canonical import loads
 from .core import Core, capabilities, only_fields
 from .operations import operate
 from .records import TERMINAL
@@ -146,7 +146,7 @@ class Scheduler:
 
     def reconcile(self) -> None:
         """Recover only claimable abandoned Runs; never touch a live remote Run."""
-        if not self.core.store.database.adapter.concurrent_runs:
+        if not self.core.store.database.adapter.supports_shared_owners:
             self._reconcile()
             return
         for run in self.core.store.database.queries.recovery_runs():
@@ -163,8 +163,7 @@ class Scheduler:
         """Confirm recorded handles stopped on their original Docker daemon."""
         import docker
         from docker.errors import NotFound
-
-        from .records import utc_now
+        from dockflow_core.time import utc_now
 
         client = docker.from_env()
         try:
@@ -356,7 +355,7 @@ class Scheduler:
     def _dispatch_loop(self):
         while not self.stopping.is_set():
             if (
-                self.core.store.database.adapter.concurrent_runs
+                self.core.store.database.adapter.supports_shared_owners
                 and time.monotonic() - self.last_recovery >= 2
             ):
                 self.reconcile()

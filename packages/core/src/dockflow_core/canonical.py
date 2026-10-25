@@ -1,4 +1,4 @@
-"""The versioned, typed JSON digest format used by durable Dockflow records."""
+"""Portable JSON validation, serialization and deterministic typed encoding."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ import struct
 from typing import Any
 
 MAX_INTEGER = 2**53 - 1
-FORMAT = "dockflow-json-v1"
 
 
 def _string(value: str) -> str:
@@ -20,30 +19,45 @@ def _string(value: str) -> str:
     return value
 
 
-def canonical_tree(value: Any) -> list[Any]:
+def canonical_tree(
+    value: Any, *, typed_keys: bool = False, strict_types: bool = False
+) -> list[Any]:
     """Encode a portable JSON value without losing its numeric type or -0.0."""
+
+    def is_kind(kind):
+        return type(value) is kind if strict_types else isinstance(value, kind)
+
+    def encode(item):
+        return canonical_tree(item, typed_keys=typed_keys, strict_types=strict_types)
+
     if value is None:
         return ["null"]
-    if isinstance(value, bool):
+    if is_kind(bool):
         return ["bool", value]
-    if isinstance(value, int):
+    if is_kind(int):
         if abs(value) > MAX_INTEGER:
             raise ValueError("JSON integer exceeds the portable 53-bit range")
         return ["int", str(value)]
-    if isinstance(value, float):
+    if is_kind(float):
         if not math.isfinite(value):
             raise ValueError("JSON numbers must be finite")
         return ["float64", struct.pack(">d", value).hex()]
-    if isinstance(value, str):
+    if is_kind(str):
         return ["string", _string(value)]
-    if isinstance(value, list):
-        return ["array", [canonical_tree(item) for item in value]]
-    if isinstance(value, dict):
-        if any(not isinstance(key, str) for key in value):
+    if is_kind(list):
+        return ["array", [encode(item) for item in value]]
+    if is_kind(dict):
+        if any(
+            (type(key) is not str if strict_types else not isinstance(key, str))
+            for key in value
+        ):
             raise ValueError("JSON object keys must be strings")
         return [
             "object",
-            [[_string(key), canonical_tree(value[key])] for key in sorted(value)],
+            [
+                [encode(key) if typed_keys else _string(key), encode(value[key])]
+                for key in sorted(value)
+            ],
         ]
     raise ValueError(f"Unsupported JSON value type: {type(value).__name__}")
 
@@ -93,5 +107,8 @@ def loads(source: str | bytes) -> Any:
     return result
 
 
-canonical_json = canonical_bytes
-sha256 = digest
+def stable_json_bytes(value: Any) -> bytes:
+    """Sorted finite JSON with ASCII escaping, without a typed identity envelope."""
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()

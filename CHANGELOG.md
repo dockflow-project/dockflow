@@ -6,10 +6,11 @@
 
 This pre-1.0 release introduces incompatible persisted-state and backup formats.
 Use fresh state; no migration from earlier formats is provided. All four packages
-share this version, including the new `dockflow-database` library. Artifacts use
+share this version, including the new `dockflow-core` library. Artifacts use
 separate filesystem/S3 payload storage and one database for durable bookkeeping.
 
-
+- Establish domain-independent `dockflow-core`; consumers own and version their
+  schemas and persistence logic. Preserve one database for Pipelines and Artifacts.
 - Supervise scheduler failures and revoke readiness/admission; resolve named
   definitions through the catalog's current pointer, including source rollback.
 - Preserve immutable execution choices across coordinators and share terminal
@@ -31,7 +32,8 @@ separate filesystem/S3 payload storage and one database for durable bookkeeping.
 - Store artifact publication claims, completion manifests and recovery descriptors
   in the same SQLite/PostgreSQL database as state and cache. Artifact storage
   retains payloads and `.dockflow/storage.json`; no bookkeeping sidecars remain.
-- Share database drivers and schema through the new `dockflow-database` library.
+- Share generic database adapters and schema coordination through `dockflow-core`;
+  each consumer owns its schema and persistence logic.
   Standalone Artifacts accepts explicit database/project configuration; remote
   roots require it. Publication JSON configuration uses schema 2, and receipt
   manifest addresses now identify SQL records. Existing state needs a fresh start.

@@ -6,8 +6,10 @@ from importlib.resources import files
 from urllib.parse import urljoin
 
 import pytest
+from dockflow_core.time import utc_now
 from dockflow_pipelines.config import load_settings
-from dockflow_pipelines.records import new_id, utc_now
+from dockflow_pipelines.database_schema import project_rows
+from dockflow_pipelines.records import new_id
 from dockflow_pipelines.service import create_app
 from dockflow_pipelines.web import ASSETS
 from fastapi.testclient import TestClient
@@ -46,8 +48,8 @@ def accepted_snapshot(core):
     with adapter.snapshot() as connection:
         return {
             table: sorted((tuple(row) for row in rows), key=repr)
-            for table, _, rows in adapter.project_rows(
-                connection, core.store.project_id
+            for table, _, rows in project_rows(
+                adapter, connection, core.store.project_id
             )
         }
 

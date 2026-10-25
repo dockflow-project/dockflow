@@ -7,7 +7,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any
 
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 
 
 def ownership_lost():
@@ -63,7 +63,7 @@ class RunClaim:
                 raise ownership_lost()
             connection = db.adapter.connect()
             db.adapter.begin(connection)
-            db.adapter.transaction_gate(connection, db.project_id)
+            db.scope.gate(connection)
             row = db.adapter.execute(
                 connection,
                 f"UPDATE dockflow_run_owners SET lease_expires_at={db.adapter.clock_expression}+? WHERE project_id=? AND run_id=? AND owner_id=? AND fence=? AND active=1 AND lease_expires_at>{db.adapter.clock_expression} RETURNING lease_expires_at",
@@ -158,7 +158,7 @@ def acquire(store, run_id, lease_seconds, heartbeat_seconds, recovering=False):
 def reserve(store, run_id, lease_seconds=120.0):
     """Reserve a direct submission inside its admission transaction."""
     db = store.database
-    if not db.adapter.concurrent_runs:
+    if not db.adapter.supports_shared_owners:
         return
     with db.transaction() as connection:
         db.execute(
@@ -173,7 +173,7 @@ def owned_run(
     store, run_id, lease_seconds=120.0, heartbeat_seconds=30.0, *, recovering=False
 ):
     db = store.database
-    if not db.adapter.concurrent_runs:
+    if not db.adapter.supports_shared_owners:
         db.require_owner()
         yield None
         return

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .canonical import canonical_bytes, digest
+from dockflow_core.canonical import canonical_bytes, digest
+
 from .definitions import DefinitionError
 
 SIGNATURE_FORMAT = "dockflow-task-signature-v2"

@@ -1,7 +1,7 @@
 [project]
-name = "dockflow-database"
+name = "dockflow-core"
 version = "0.2.0"
-description = "Shared SQLite and PostgreSQL persistence for Dockflow"
+description = "Domain-independent shared primitives for Dockflow"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

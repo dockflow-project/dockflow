@@ -25,7 +25,7 @@ def test_host_and_bind_mounted_container_share_owner_lock(tmp_path):
     script = """
 import json
 from pathlib import Path
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 from dockflow_pipelines.metadata import ControlStore
 store = ControlStore(Path('/shared-state'), 'bind-mount-owner-test')
 try:
@@ -44,13 +44,17 @@ except DockflowError as error:
                 "python:3.13-slim",
                 ["python", "-c", script],
                 environment={
-                    "PYTHONPATH": "/opt/dockflow:/opt/dockflow-database",
+                    "PYTHONPATH": "/opt/dockflow:/opt/dockflow-core:/opt/dockflow-artifacts",
                     "PYTHONDONTWRITEBYTECODE": "1",
                 },
                 volumes={
                     str(source): {"bind": "/opt/dockflow", "mode": "ro"},
-                    str(source.parents[1] / "database/src"): {
-                        "bind": "/opt/dockflow-database",
+                    str(source.parents[1] / "core/src"): {
+                        "bind": "/opt/dockflow-core",
+                        "mode": "ro",
+                    },
+                    str(source.parents[1] / "artifacts/src"): {
+                        "bind": "/opt/dockflow-artifacts",
                         "mode": "ro",
                     },
                     str(state): {"bind": "/shared-state", "mode": "rw"},

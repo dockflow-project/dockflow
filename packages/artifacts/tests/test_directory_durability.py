@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from dockflow_artifacts import ArtifactError, Publisher
 from dockflow_artifacts._storage import FileStore
-from dockflow_database.errors import DockflowError
+from dockflow_core.errors import DockflowError
 
 
 @pytest.mark.parametrize("retry", [False, True])
@@ -57,7 +57,7 @@ def test_failed_directory_sync_never_completes_and_retry_repairs(
     publisher = Publisher(root)
     if boundary != "identity":
         publisher._records(create=True)
-    original = storage._sync_ancestors
+    original = storage.fsync_ancestors
     observed = []
 
     def fail(path):
@@ -79,7 +79,7 @@ def test_failed_directory_sync_never_completes_and_retry_repairs(
         return original(path)
 
     with monkeypatch.context() as patch:
-        patch.setattr(storage, "_sync_ancestors", fail)
+        patch.setattr(storage, "fsync_ancestors", fail)
         with pytest.raises(ArtifactError, match="durability"):
             publisher.publish(source, "nested/deep/content")
     assert observed
@@ -95,7 +95,7 @@ def test_failed_directory_sync_never_completes_and_retry_repairs(
         repaired.append(path)
         return original(path)
 
-    monkeypatch.setattr(storage, "_sync_ancestors", record)
+    monkeypatch.setattr(storage, "fsync_ancestors", record)
     receipt = publisher.publish(source, "nested/deep/content")
     assert root / ".dockflow" in repaired
     assert root / "nested" / "deep" in repaired

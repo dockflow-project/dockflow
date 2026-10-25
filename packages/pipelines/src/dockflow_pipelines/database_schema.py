@@ -1,9 +1,13 @@
-"""One versioned schema for domain state, artifact publication and cache coordination."""
+"""Pipelines-owned execution/cache schema, query expressions and export selection."""
 
-SCHEMA_VERSION = 5
-SCHEMA_LOCK = 0x444F434B44415441
+from dockflow_artifacts.persistence import ARTIFACT_SCHEMA, ARTIFACT_TABLE
+from dockflow_artifacts.persistence import initialize_schema as initialize_artifacts
+from dockflow_artifacts.persistence import project_rows as artifact_rows
+from dockflow_core import Database, Schema
+from dockflow_core.errors import DockflowError
+
+SCHEMA_VERSION = 1
 STATE_SCHEMA = [
-    "CREATE TABLE dockflow_artifact_records (project_id TEXT NOT NULL, storage_id TEXT NOT NULL, namespace TEXT NOT NULL, record_key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY(project_id,storage_id,namespace,record_key))",
     "CREATE TABLE dockflow_project_counters (project_id TEXT PRIMARY KEY, sequence BIGINT NOT NULL CHECK(sequence>=0))",
     "CREATE TABLE dockflow_run_owners (project_id TEXT NOT NULL, run_id TEXT NOT NULL, owner_id TEXT NOT NULL, fence BIGINT NOT NULL CHECK(fence>0), lease_expires_at DOUBLE PRECISION NOT NULL, active INTEGER NOT NULL CHECK(active IN (0,1)), PRIMARY KEY(project_id,run_id))",
     "CREATE INDEX dockflow_run_expiry ON dockflow_run_owners(project_id,active,lease_expires_at)",
@@ -24,7 +28,7 @@ STATE_SCHEMA = [
     "CREATE TABLE dockflow_state_owners (project_id TEXT PRIMARY KEY, value {binary} NOT NULL)",
 ]
 PROJECT_TABLES = (
-    "dockflow_artifact_records",
+    ARTIFACT_TABLE,
     "dockflow_project_counters",
     "dockflow_project_metadata",
     "dockflow_events",
@@ -45,7 +49,6 @@ REQUIRED_TABLES = {
     *PROJECT_TABLES,
     "dockflow_state_owners",
     "dockflow_run_owners",
-    "dockflow_schema",
 }
 REQUIRED_INDEXES = {
     "df_cache_active",
@@ -129,3 +132,103 @@ REQUIRED_INDEXES.update(
 REQUIRED_INDEXES.update(
     "dockflow_query_" + field.replace(".", "_") for field in RESOURCE_QUERY_FIELDS
 )
+
+
+def resource_sort_name(adapter, column="value", collection="collection"):
+    version = adapter.json_text(column, "version_name")
+    name = adapter.json_text(column, "name")
+    display = adapter.json_text(column, "display_name")
+    return f"CASE WHEN {collection}='definitions' THEN COALESCE(NULLIF({version},''),{name},'') WHEN {collection}='pipelines' THEN COALESCE({name},'') ELSE COALESCE({display},'') END"
+
+
+def event_field(adapter, field):
+    paths = {
+        "kind": ("event_kind", "kind"),
+        "run_id": (
+            "payload.run_id",
+            "payload.marker.run_id",
+            "payload.manifest.producer.run_id",
+        ),
+        "attempt_id": (
+            "payload.attempt_id",
+            "payload.marker.attempt_id",
+            "payload.manifest.producer.attempt_id",
+        ),
+    }[field]
+    return (
+        "COALESCE(" + ",".join(adapter.json_text("value", path) for path in paths) + ")"
+    )
+
+
+def query_indexes(adapter, connection):
+    created = adapter.text_order(
+        f"COALESCE({adapter.json_text('value', 'created_at')},'')"
+    )
+    name = adapter.text_order(resource_sort_name(adapter))
+    connection.execute(
+        f"CREATE INDEX dockflow_resource_created ON dockflow_state_resources(project_id,collection,{created} DESC,public_id)"
+    )
+    connection.execute(
+        f"CREATE INDEX dockflow_resource_name_order ON dockflow_state_resources(project_id,collection,{name},public_id)"
+    )
+    for field in RESOURCE_QUERY_FIELDS:
+        identifier = "dockflow_query_" + field.replace(".", "_")
+        expression = adapter.json_text("value", field)
+        connection.execute(
+            f"CREATE INDEX {identifier} ON dockflow_state_resources(project_id,collection,{expression},{created} DESC,public_id)"
+        )
+    state = adapter.json_text("value", "state")
+    sequence = f"CAST({adapter.json_text('value', 'acceptance_sequence')} AS BIGINT)"
+    connection.execute(
+        f"CREATE INDEX dockflow_queue ON dockflow_state_resources(project_id,collection,{state},{sequence},public_id)"
+    )
+    event = event_field(adapter, "kind")
+    run = event_field(adapter, "run_id")
+    attempt = event_field(adapter, "attempt_id")
+    connection.execute(
+        f"CREATE INDEX dockflow_event_lookup ON dockflow_events(project_id,{event},{run},{attempt},sequence)"
+    )
+
+    connection.execute(
+        f"CREATE INDEX dockflow_event_attempt ON dockflow_events(project_id,{event},{attempt},sequence)"
+    )
+
+
+def project_rows(adapter, connection, project_id: str):
+    """Portable project export including all cache namespaces, excluding owners."""
+    yield from artifact_rows(adapter, connection, project_id)
+    for table in PROJECT_TABLES:
+        if table == ARTIFACT_TABLE:
+            continue
+        predicate = (
+            "project_id=?"
+            if table.startswith("dockflow_") or table == "df_cache_scopes"
+            else "scope_id IN (SELECT scope_id FROM df_cache_scopes WHERE project_id=?)"
+        )
+        cursor = adapter.execute(
+            connection, f"SELECT * FROM {table} WHERE {predicate}", (project_id,)
+        )
+        columns = [column[0] for column in cursor.description]
+        yield table, columns, cursor
+
+
+PIPELINE_SCHEMA = Schema(
+    name="pipelines",
+    version=SCHEMA_VERSION,
+    statements=tuple(STATE_SCHEMA + CACHE_SCHEMA),
+    tables=frozenset(REQUIRED_TABLES - {ARTIFACT_TABLE}),
+    indexes=frozenset(REQUIRED_INDEXES),
+    initialize=query_indexes,
+)
+
+
+def validate_schema(adapter: Database, connection) -> None:
+    adapter.validate_schema(connection, ARTIFACT_SCHEMA)
+    adapter.validate_schema(connection, PIPELINE_SCHEMA)
+
+
+def initialize_schema(adapter: Database, connection) -> None:
+    if {"dockflow_schema", "df_cache_schema"} & adapter.tables(connection):
+        raise DockflowError("Legacy database requires fresh state", "CONFLICT", 409)
+    initialize_artifacts(adapter, connection)
+    adapter.initialize_schema(connection, PIPELINE_SCHEMA)

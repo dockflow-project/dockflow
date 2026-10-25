@@ -324,7 +324,7 @@ class KFPAdapter:
         task_root = self.pipeline_root / attempt_id / task_name.replace("/", "--")
         output_contracts = component.get("outputDefinitions", {})
         output_file = task_root / "executor_output.json"
-        from .canonical import loads
+        from dockflow_core.canonical import loads
 
         wire = loads(output_file.read_text()) if output_file.exists() else {}
         wire_parameters = wire.get("parameterValues", {})

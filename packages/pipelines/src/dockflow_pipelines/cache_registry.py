@@ -19,10 +19,12 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Any, TypeVar
 
-from dockflow_database.database import database
-from dockflow_database.errors import DockflowError
+from dockflow_artifacts.persistence import publication_scope
+from dockflow_core.canonical import digest, json_bytes, loads
+from dockflow_core.database import database
+from dockflow_core.errors import DockflowError
 
-from .canonical import digest, json_bytes, loads
+from .database_schema import initialize_schema
 
 LOGGER = logging.getLogger(__name__)
 KEY_FORMAT = "dockflow-task-signature-v2"
@@ -159,6 +161,7 @@ class Registry:
         )
         self.project_id = project_id
         self.database = database(self.options["database"])
+        self.scope = publication_scope(self.database, project_id)
         self.postgres = self.database.backend == "postgresql"
         self.policy = {
             key: self.options[key]
@@ -185,7 +188,7 @@ class Registry:
         )
         try:
             self.database.begin(conn)
-            self.database.transaction_gate(conn, self.project_id)
+            self.scope.gate(conn)
             return conn
         except BaseException:
             conn.close()
@@ -270,7 +273,7 @@ class Registry:
             raise cache_error("CACHE_REGISTRY_UNAVAILABLE") from None
 
         def migrate(conn):
-            self.database.initialize_schema(conn)
+            initialize_schema(self.database, conn)
             configuration = json_bytes(self.policy).decode()
             self._sql(
                 conn,
