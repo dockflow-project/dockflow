@@ -1,14 +1,41 @@
 schema_version: 1
 status: candidate
-target_commit: 4f1297645105eceb33a55720e878d6fd575d04b0
-target_tree: a8a11e79a5712d7d514da8b5a5ee961693f8d468
+target_commit: b1db7289dc23139a8d6a45bf0ecb682a4df90396
+target_tree: 41c5c5237272216198a7d3cc4646407302a88efd
 integration_ref: origin/main
-integration_target: 4c7e35cca44b90f59fef93cb3da5ea71e1258c65
+integration_target: 72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4
 baselines:
-  specification: specs-0.1.0
-  implementation: imp-0.1.1
-  implementation_specification: specs-0.1.0
+  specification: specs-1.0.0
+  implementation: imp-1.0.0
+  implementation_specification: specs-1.0.0
 records:
+- id: artifact-contents
+  sha256: 2574c84cb32109e19e1f4c1b48a242adca106c9e0ada8b1917bf9ccf3af1c9b3
+- id: artifact-upload
+  sha256: c740eaebfa4c61f55d1fa0fe689c851fc17b9fefc5718aa93235f0d0396ef530
+- id: deletion-and-storage-cleanup
+  sha256: ff5ac72618688dfab547eb546638f6eea4e56155cc0022eccfe81300bb0d62bc
+- id: element-detail-layout
+  sha256: 6136397c1298a5fc7312cfbcfa726ac96cd0987164dfe9140c6fff69336a9061
+- id: filter-autocomplete
+  sha256: 5cce49cbd6a3ffb8d924233b96d776e0766c9eede2e6bed4bfa91fadbbd628ec
+- id: fixed-list-layout
+  sha256: b340292880dced044bc1d8098bd1622de88b65ef6cd633708dedb233b488ea5a
+- id: graph-background-pan
+  sha256: 988a8864670c25c7677d53610cdbeca86a6980e835040dd33e90f35e382a450d
+- id: graph-workspace
+  sha256: f59c6935a851808d857ccbbe5c9539bce64775729c86cb857d9f2697d27a6759
+- id: grouped-sidebar
+  sha256: b75b1a27a46db2c25c9b7c6ac23caa201188edb01f93389982aba38fb78659ea
+- id: human-readable-references
+  sha256: 5e327fe7b2a98944bbc59cd57f8683d4cb67cee5b43cbd4010526ce7ba535807
+- id: release-0.3.0
+  sha256: 40a0c347270657af21fc27d44b4e20b42338e4f25ab26e3ff2242a47198e8a61
+- id: sidebar-project-context
+  sha256: 30c567959c01f61648106ba2931af2635dfebe497d0e31f97624fd6eeb98ef41
+- id: top-to-bottom-graphs
+  sha256: c5219ef1ede97f4df3fa478654c710a6d607b5c10d32eb8fa7d50c59a38c9b14
+history_records:
 - id: collapsed-pipeline-graphs
   sha256: 05da46d3d6a1c89d12eb736e19bcdb6641a5be1e0c50ab63998e3395ca391385
 - id: concurrent-postgresql-runs
@@ -25,38 +52,36 @@ records:
   sha256: ea3979420429aecc3440c8a772f20a89fe9022f18533c76a0e25d2b28cfe4cef
 - id: domain-persistence-cleanup
   sha256: 0fa5beb514ef2ddb694e657c8c840734a67a2c84f4faa700ed28f3a9552e6952
+- id: emsign-ca-remediation
+  sha256: 1361e4337338330b5f843748179c1bfbe7f4a5dc79619ee27d492e80839f3c9f
 - id: generic-core
   sha256: cc7522be39d12ea8462e515ce50f0293434a1682d5b28c4759f9fd2124f4bd33
+- id: release-0.1.1
+  sha256: bd3c9927ba3a47756f3a3d6885643226dcd4b7ad39278c42888c0b590a47fb74
 - id: release-0.2.0
   sha256: d18395a1871c0b1ddce474abc41de1401ee81233a696ee04ab1102f88580fb04
 - id: release-input-order
   sha256: 2fc81e2a0d02d2947a3778a48e2053230459e75ec0eac7b157aa6b887680d223
+- id: source-publication-ci
+  sha256: af506bac660e499df417cdb1c8bcdbd7d8a216c122d4f2b7db5ff2d50ea87c94
 - id: state-cache-integration
   sha256: cbd484ac25b621f33396e06b9b52faf516ff3c83aaad423bb44f3be470b9df82
 - id: unified-database
   sha256: 15e77354bf7733449b8a4c95605cec9718afb50a8ce63ec1d8e49988d5624241
-history_records:
-- id: emsign-ca-remediation
-  sha256: 1361e4337338330b5f843748179c1bfbe7f4a5dc79619ee27d492e80839f3c9f
-- id: release-0.1.1
-  sha256: bd3c9927ba3a47756f3a3d6885643226dcd4b7ad39278c42888c0b590a47fb74
-- id: source-publication-ci
-  sha256: af506bac660e499df417cdb1c8bcdbd7d8a216c122d4f2b7db5ff2d50ea87c94
 declarations:
-  composition_sha256: 14a474e96a58da0026716d26953b149a64450adf107e5589b219343dd93cf59f
-  release_sha256: 9746dde919eb105dba63ee34bd68827b3604651f0085a17c21c2003d83100a0c
+  composition_sha256: 67bc34590b49eda63e9d3e693e504ac2c34d2e4fea8818c9f2b302360108fdab
+  release_sha256: 69e913d89f028477f6f09689c7c38f4b19221e0b5b0ef2a178dc5bbc54453974
 candidate:
-  specification: specs-1.0.0
-  implementation: imp-1.0.0
-  implementation_specification: specs-1.0.0
+  specification: specs-2.0.0
+  implementation: imp-2.0.0
+  implementation_specification: specs-2.0.0
 impact:
   specification: major
-  implementation: major
+  implementation: minor
 deliverables:
 - dockflow-artifacts
 - dockflow-cli
 - dockflow-core
-- dockflow-database
 - dockflow-pipelines
 - dockflow-pipelines-image
-release_date: '2026-10-25'
+release_date: '2026-10-26'
