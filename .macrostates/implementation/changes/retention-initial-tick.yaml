@@ -1,0 +1,21 @@
+schema_version: 1
+id: retention-initial-tick
+summary: Remove host-uptime dependence from the initial retention scheduler check.
+origin:
+  commit: 72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4
+  specification: specs-1.0.0
+  implementation: imp-1.0.0
+impact:
+  specification: none
+  implementation: patch
+deliverables:
+- dockflow-pipelines
+- dockflow-pipelines-image
+requirements:
+- requirement: Existing deployment retention polling and visible provider-failure reporting.
+  implementation: Use an explicit unset last-check timestamp so the first idle check is independent of host uptime; retain the configured interval between subsequent checks.
+  verification: Controlled zero-origin clock tests cover first provider failure, continued scheduler readiness, suppression before the interval and execution at the interval boundary.
+evidence:
+- workflows/history/2026-10-26__retention-initial-tick.md
+gaps: []
+work: retention-initial-tick

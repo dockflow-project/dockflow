@@ -132,7 +132,7 @@ class Scheduler:
         self.error = None
         self.last_recovery = 0.0
         self.execution_enabled = True
-        self.last_retention = 0.0
+        self.last_retention: float | None = None
 
     def available(self) -> bool:
         return (
@@ -397,7 +397,8 @@ class Scheduler:
         interval = self.core.settings.artifacts.get("retention_interval_seconds", 3600)
         if (
             self.core.settings.artifacts.get("retention_days", -1) < 0
-            or time.monotonic() - self.last_retention < interval
+            or self.last_retention is not None
+            and time.monotonic() - self.last_retention < interval
         ):
             return
         self.last_retention = time.monotonic()

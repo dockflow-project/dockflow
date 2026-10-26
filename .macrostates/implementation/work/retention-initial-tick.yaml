@@ -1,0 +1,6 @@
+schema_version: 1
+id: retention-initial-tick
+origin:
+  commit: 72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4
+  specification: specs-1.0.0
+  implementation: imp-1.0.0

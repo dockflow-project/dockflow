@@ -108,3 +108,16 @@ A successful local check or closed workflow is not an upload claim. Publication
 uses the preserved artifact bundle and accounts for partial publication without
 replacing immutable bytes. Disposable QA services/credentials are removed after
 local checks; the user preview remains available.
+
+## Hosted-CI correction before integration
+
+The first hosted runtime matrix exposed an uptime-dependent initial retention
+check: a zero last-check timestamp could defer the first poll on newly booted
+hosts. An explicit unset timestamp removes that dependency. Controlled-clock
+regressions verify provider-failure reporting at time zero and subsequent interval
+boundaries. All 62 deletion tests passed against SQLite and disposable PostgreSQL;
+Ruff lint/format and Pyright passed. See the closed
+[correction workflow](../workflows/history/2026-10-26__retention-initial-tick.md).
+The preceding prepared plan was invalidated before integration. Its original
+records are preserved unchanged and included in the recalculated exact-input
+plan alongside the correction. Hosted checks must pass on that corrected source.

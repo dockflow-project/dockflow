@@ -609,10 +609,33 @@ def test_retention_provider_failure_does_not_stop_execution_scheduler(
     monkeypatch.setattr(Deletions, "retention", unavailable)
     scheduler = Scheduler(core)
     scheduler.ready = True
+    monkeypatch.setattr("dockflow_pipelines.service.time.monotonic", lambda: 0.0)
     scheduler.retention_tick()
     assert not scheduler.stopping.is_set()
     assert scheduler.ready
     assert "error" in core.store.project_metadata("retention_status")
+
+
+def test_retention_poll_interval_starts_after_first_check(core, monkeypatch):
+    from dockflow_pipelines.service import Scheduler
+
+    core.settings.artifacts["retention_days"] = 1
+    core.settings.artifacts["retention_interval_seconds"] = 60
+    checks = []
+    monkeypatch.setattr(
+        Deletions, "retention", lambda *args, **kwargs: checks.append(True)
+    )
+    clock = [0.0]
+    monkeypatch.setattr("dockflow_pipelines.service.time.monotonic", lambda: clock[0])
+    scheduler = Scheduler(core)
+    scheduler.retention_tick()
+    assert len(checks) == 1
+    clock[0] = 59.0
+    scheduler.retention_tick()
+    assert len(checks) == 1
+    clock[0] = 60.0
+    scheduler.retention_tick()
+    assert len(checks) == 2
 
 
 def test_cli_artifact_file_deletion_requires_explicit_confirmation(settings):
