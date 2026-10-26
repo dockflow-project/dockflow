@@ -6,7 +6,7 @@ generic locks, common errors, portable JSON encoding, stream hashing and durable
 filesystem operations. Core imports no consuming package and owns no domain
 schema, models, queries or persistence policy.
 
-Install `dockflow-core==0.2.0`, or `dockflow-core[postgresql]==0.2.0` for
+Install `dockflow-core==0.3.0`, or `dockflow-core[postgresql]==0.3.0` for
 PostgreSQL support. The SQLite implementation uses the Python standard library.
 Optional drivers and connections are initialized only by explicit operations.
 

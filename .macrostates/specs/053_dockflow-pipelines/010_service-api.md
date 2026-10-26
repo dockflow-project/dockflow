@@ -1,5 +1,74 @@
 # Service and HTTP API
 
+Explicit resource deletion, storage cleanup and deployment retention are governed
+by [Deletion and storage cleanup](015_deletion-and-storage-cleanup.md), which
+specializes the original preservation/disabled-cleanup defaults below.
+
+## Resource reference names
+
+`POST /dockflow/v1/ui/reference-names` is a read-only native presentation lookup.
+Accept exactly `{references: [{collection, id}, ...]}` with 1–200 references.
+Collections are runs, tasks, attempts, pipelines, definitions, components and
+experiments; IDs must match the selected collection's public ID form. Reject
+unknown/duplicate fields and query arguments; deduplicate identical references.
+Return `{items: [{collection, id, name, available}, ...]}` in first-request order.
+Names follow the [web reference contract](013_web-interface.md#human-readable-resource-references).
+Missing/deleted targets or missing related definitions/components yield null name
+and available=false; do not expose retired record contents or fail other items.
+Authentication, same-origin and request limits apply. This operation remains
+available during execution and never changes metadata, lifecycle or provenance.
+Resolve only requested IDs and their direct name-bearing dependencies, with
+per-request deduplication; it is independent of list cursors and filters.
+
+## Filter suggestions and resource search
+
+`GET /dockflow/v1/ui/filter-options` requires `collection` from pipelines,
+definitions, components, experiments, runs, tasks, attempts or artifacts. Optional
+`search` defaults to empty and accepts at most 256 characters. Return
+`{items: [{id, name, value, recent_at}, ...], remaining_count: integer}`, at most ten live project-scoped
+records matching literal ID/name substrings, newest first with ID ascending for
+ties. Match case-insensitively using the database's LOWER behavior (ASCII case
+folding on SQLite). Include direct pipeline/component context and invocation
+names as specified by the web contract. Execution start with creation fallback
+orders workloads; creation/definition registration orders other resources.
+Empty search returns recent options. Selected resource values are exact IDs.
+Optional `field=type` is valid only for artifacts and returns distinct schema
+titles as IDs/values, ordered by the newest artifact of each type.
+`remaining_count` is the exact number of additional matching records (distinct
+types for `field=type`), never an estimate, and is zero for an uncapped/empty list.
+
+Optional exact parent scopes are: `definition_id` for components; `definition_id`
+and/or `experiment_id` for runs; `experiment_id` for definitions; `run_id` for
+tasks; `run_id` and/or `task_id` for attempts. Definitions scoped by experiment
+are distinct immutable definitions referenced by that experiment's live Runs,
+regardless of execution state. Reject unsupported scope/collection combinations,
+malformed parent IDs and scopes combined with `field=type`. Missing/retired parent
+records yield an empty list. Apply all scopes before limiting/counting, within
+the same project-scoped snapshot as the returned options.
+
+Native collection lists also accept `search` with the same bounded literal
+ID/name matching, combined with existing exact filters. Existing pagination,
+ordering and filter-bound cursor semantics remain unchanged. Suggestions are
+independent of list cursors. Reject unknown/duplicate query arguments and invalid
+collections/fields. Apply authentication, project isolation and no-store response
+rules. Keep this read-only operation available during execution and exclude
+retired target/context records without reading payload storage.
+
+## Artifact file upload
+
+`POST /dockflow/v1/artifacts/upload` accepts `multipart/form-data` with exactly one
+`uploadfile` file and one `options` text field containing a UTF-8 JSON object:
+`{type: {schema_title, schema_version}, metadata?: {}, version?: string,
+archive_mode?: "keep"|"extract"}`. Reject unknown/duplicate fields and query
+arguments. Return 201 and the Artifact descriptor only after successful managed
+publication and registration. This native extension is separate from KFP compiled
+pipeline uploads. Enforce existing authentication, same-origin mutation admission,
+readiness, idle-owner and request-byte limits. Invalid input uses the native error
+envelope. The [upload contract](006_artifacts.md#upload-and-register) owns payload,
+ZIP and failure semantics. The Python Client exposes `upload_artifact(path, type,
+metadata=None, version=None, archive_mode="keep")`, sending local bytes through
+this route with the configured TLS/authentication and redirect refusal.
+
 ## Service boundary
 
 The service exposes the same application core as direct CLI execution. One
@@ -117,8 +186,8 @@ raw diagnostic contents.
 Statuses:
 400 `INVALID_ARGUMENT`, 401 `UNAUTHENTICATED`, 403 `PERMISSION_DENIED`, 404
 `NOT_FOUND`, 409 `CONFLICT`/`OFFLINE_REQUIRED`, 410 `LOGS_UNAVAILABLE`,
-413 `REQUEST_TOO_LARGE`, 422
-`UNSUPPORTED_CAPABILITY`, 429 `QUEUE_FULL`, 500 `INTERNAL`, 503 `UNAVAILABLE`.
+413 `REQUEST_TOO_LARGE`/`PREVIEW_LIMIT`, 422
+`UNSUPPORTED_CAPABILITY`/`INVALID_CONTENT`, 429 `QUEUE_FULL`, 500 `INTERNAL`, 503 `UNAVAILABLE`.
 Do not return stack traces, secret values or an ordinary success body on errors.
 Use 405 for an unsupported HTTP method on an existing resource and 501
 `UNIMPLEMENTED` for known deliberately unsupported compatibility operations.
@@ -244,6 +313,7 @@ delete-history route.
 | `POST /artifacts` | `ArtifactCreate`; complete validation/fingerprinting or managed copy, then return Artifact. |
 | `GET /artifacts/{artifact_id}` | Artifact and current availability observation. |
 | `GET /artifacts/{artifact_id}/lineage` | `ArtifactLineage`: original producer plus paginated actual consumer Tasks; normal `page_size`/`page_token`, 404 for an unknown artifact. |
+| `GET /artifacts/{artifact_id}/contents` | `ArtifactContents`: bounded registered file/directory preview; optional `path`, `format`, `page_size`, `page_token`. Formats, limits, identity-bound cursors and safe rendering follow [Contents](013_web-interface.md#artifact-contents). |
 | `POST /artifacts/{artifact_id}/pin` / `/unpin` | Empty object; idempotent explicit retention pin update. |
 | `GET /experiments` | Page; optional exact `name` filter. |
 | `POST /experiments` | `ExperimentCreate`; duplicate display name returns 409. |

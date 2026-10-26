@@ -30,6 +30,8 @@ function dialogForm(title, content, action, label = 'Create') {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     submit.disabled = true;
+    submit.textContent = 'Working…';
+    form.setAttribute('aria-busy', 'true');
     clear(errors);
     try {
       await action();
@@ -38,6 +40,8 @@ function dialogForm(title, content, action, label = 'Create') {
       if (error.name !== 'AbortError') clear(errors, errorBox(error));
     } finally {
       submit.disabled = false;
+      submit.textContent = label;
+      form.removeAttribute('aria-busy');
     }
   });
   return dialog;
@@ -151,6 +155,65 @@ export function createArtifact(done) {
       toast('Artifact accepted');
       done(result);
     },
+  );
+}
+export function uploadArtifact(done) {
+  const file = el('input', { type: 'file', required: true });
+  const mode = el(
+    'select',
+    {},
+    el('option', { value: 'keep' }, 'Keep ZIP file as an artifact'),
+    el('option', { value: 'extract' }, 'Extract into a directory artifact'),
+  );
+  const archive = el('div', { hidden: true }, labeled('ZIP handling', mode));
+  file.addEventListener('change', () => {
+    archive.hidden = !file.files[0]?.name.toLowerCase().endsWith('.zip');
+    if (archive.hidden) mode.value = 'keep';
+  });
+  const type = el('input', { required: true, value: 'system.Artifact' }),
+    version = el('input', { required: true, value: '0.0.1' }),
+    revision = el('input', { placeholder: 'Optional data revision' }),
+    metadata = el('textarea', {}, '{}');
+  dialogForm(
+    'Upload artifact',
+    el(
+      'div',
+      {},
+      notice(
+        'Upload and register a manually added artifact in managed storage. No run is needed. Manually added artifacts are deleted only explicitly.',
+      ),
+      labeled('File', file),
+      archive,
+      el(
+        'div',
+        { class: 'form-grid' },
+        labeled('Type schema', type),
+        labeled('Type schema version', version),
+      ),
+      labeled('Data revision', revision),
+      labeled('Metadata (JSON object)', metadata),
+      notice(
+        'The deployment upload limit applies (16 MiB by default, including request overhead). ZIP extraction allows up to 256 MiB and 10,000 entries. Existing artifacts are never overwritten.',
+      ),
+    ),
+    async () => {
+      const options = {
+        type: { schema_title: type.value, schema_version: version.value },
+        metadata: parseObject(metadata.value, 'Metadata'),
+        archive_mode: mode.value,
+      };
+      if (revision.value) options.version = revision.value;
+      const body = new FormData();
+      body.append('options', JSON.stringify(options));
+      body.append('uploadfile', file.files[0]);
+      const result = await request('/dockflow/v1/artifacts/upload', {
+        method: 'POST',
+        body,
+      });
+      toast('Artifact uploaded and registered');
+      done(result);
+    },
+    'Upload and register',
   );
 }
 export function confirmAction(title, message, action, done) {
@@ -285,7 +348,7 @@ export async function runForm(container, query, navigate) {
   ]);
   const definitionInput = el('input', {
     required: true,
-    placeholder: 'Choose a version or paste its definition ID',
+    placeholder: 'Choose a version or paste its Pipeline ID',
     list: 'definition-options',
   });
   const initial = query.get('definition') || source?.definition_id || '';

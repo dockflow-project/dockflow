@@ -194,3 +194,10 @@ This format replaces the earlier file-shaped SQL records. Use fresh state;
 no data migration is included. Backup snapshots use the current SQL format and
 retain all domain records. Supported bootstrap configuration and artifact payload
 locations keep their existing meaning.
+
+## Resource deletion and storage cleanup
+
+See [Deletion and storage cleanup](cleanup.md) for dependency-protected Run,
+execution and artifact deletion, file inventories, explicit manual-artifact
+protection, DANGER confirmation and optional deployment retention. Legacy `clean`
+continues to remove only disposable workspaces.

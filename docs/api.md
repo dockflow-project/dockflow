@@ -117,6 +117,77 @@ Task output is persisted while the container runs, so polling retrieves new
 logs before completion. Component-side buffering can delay output until flushed.
 Raw text retains ANSI color sequences if emitted; display clients can strip them.
 
+## Resource reference names
+
+The browser uses `POST /dockflow/v1/ui/reference-names` to resolve up to 200
+referenced IDs per read-only request, without scanning catalog pages. Each item
+in `references` supplies `collection` and `id`. Supported collections are runs,
+tasks, attempts, pipelines, definitions, components and experiments. The response
+returns deduplicated `items` with the collection, ID, human context `name` and
+`available` flag. Missing/retired targets or context return null/unavailable.
+Execution/Task names describe their components; Run names describe their compiled
+pipelines. Authentication, same-origin admission and normal request limits apply;
+the lookup is available during execution and changes no records. See the
+[generated schema](reference/openapi.json) for exact models.
+
+## Filter autocomplete
+
+`GET /dockflow/v1/ui/filter-options?collection=runs&search=training` returns up to
+ten recent matches across names and IDs. Omit `search` for the latest records.
+Use `collection=attempts` for executions. Workloads sort by execution start with
+creation fallback; other resources use creation/definition registration dates.
+Each item contains `id`, human-readable `name`, exact filter `value` and
+`recent_at`; the response also has the exact `remaining_count` beyond the ten
+returned options. `collection=artifacts&field=type` suggests distinct artifact types.
+For dependent options, pass `definition_id` with components, `experiment_id`
+with definitions, `experiment_id`/`definition_id` with runs, `run_id` with tasks,
+or `run_id`/`task_id` with attempts. Definitions scoped to an experiment are only
+versions used by its live Runs. Counts respect these scopes and distinct types.
+
+Native collection lists accept `search` for the same literal ID/name substring
+matching, combined with existing exact filters and cursor pagination. `%` and
+`_` are literal characters. Search is limited to 256 characters; database LOWER
+semantics provide case-insensitive ASCII matching on SQLite. Suggestion requests
+require the same project authentication as other data reads and do not access
+artifact files. See the [generated schema](reference/openapi.json).
+
+## Upload and register client files
+
+`POST /dockflow/v1/artifacts/upload` accepts multipart form data with one
+`uploadfile` file and one `options` JSON text field. On success it returns 201 and
+the committed manual managed artifact descriptor. For example:
+
+```bash
+curl --fail-with-body SERVICE_URL/dockflow/v1/artifacts/upload \
+  -F 'uploadfile=@./dataset.zip' \
+  -F 'options={"type":{"schema_title":"system.Dataset","schema_version":"0.0.1"},"archive_mode":"extract","version":"dataset-v1"}'
+```
+
+Use the deployment's bearer authentication when enabled. `archive_mode` defaults
+to `keep`; `extract` requires a valid `.zip` and creates a directory artifact.
+Optional `metadata` is a JSON object. The service chooses the destination and
+rejects query arguments, unknown fields or extra/duplicate multipart parts.
+
+The standard-library Python client sends local file bytes using the same API:
+
+```python
+from pathlib import Path
+from dockflow_pipelines.client import Client
+
+artifact = Client("https://service.example").upload_artifact(
+    Path("dataset.zip"),
+    type={"schema_title": "system.Dataset", "schema_version": "0.0.1"},
+    archive_mode="extract",
+    metadata={"description": "Manually supplied dataset"},
+)
+```
+
+Configure client TLS/token options as for other native requests. There are no
+automatic upload retries; after an uncertain response, inspect the artifact list
+before submitting again. [Upload usage](artifacts.md#upload-and-register-a-new-artifact)
+explains request/ZIP limits and manual retention. This native endpoint is separate
+from KFP compiled-pipeline uploads.
+
 ## Register data and group Runs
 
 Create a managed copy from a server-visible allowed source:
@@ -134,6 +205,12 @@ Create a managed copy from a server-visible allowed source:
 Send that object to `POST /dockflow/v1/artifacts`; use `operation: "register"`
 for a reference. This is not a client file upload. `GET /artifacts/ID` returns
 metadata/location; it does not provide a general binary download route.
+`GET /artifacts/{artifact_id}/contents` provides bounded CSV/JSON/raster-image/text
+previews and directory inventory using optional `path`, `format`, `page_size` and
+opaque `page_token`. It accepts artifact-relative paths rather than arbitrary URIs.
+CSV/directory responses expose continuation tokens; changed/expired cursors require
+restarting from the beginning. See [Contents usage](ui.md#artifacts-and-lineage)
+and the generated schema for response fields and limits.
 
 `POST /dockflow/v1/experiments` accepts `display_name` and optional `description`.
 Use the resulting experiment ID in a Run request. Names are unique within the
@@ -237,3 +314,10 @@ investigating a server error.
 
 Use the actual error code/message to distinguish cases sharing an HTTP status.
 An HTTP success from a submission does not imply the pipeline eventually succeeds.
+
+## Resource deletion and storage cleanup
+
+See [Deletion and storage cleanup](cleanup.md) for dependency-protected Run,
+execution and artifact deletion, file inventories, explicit manual-artifact
+protection, DANGER confirmation and optional deployment retention. Legacy `clean`
+continues to remove only disposable workspaces.

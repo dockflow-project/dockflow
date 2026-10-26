@@ -50,7 +50,19 @@ class ResourceQueries:
         db = self.database
         clauses = ["r.project_id=?", "r.collection=?"]
         values = [db.project_id, collection]
+        # Deletion is journal-backed. Keep tombstones available to replay while
+        # excluding retired resources from every public and scheduling query.
+        deleted = db.adapter.json_text("r.value", "deleted_at")
+        retiring = db.adapter.json_text("r.value", "retiring_plan_id")
+        clauses.extend([deleted + " IS NULL", retiring + " IS NULL"])
         for field, value in (filters or {}).items():
+            if field == "search":
+                from .filter_options import search_predicate
+
+                predicate, parameters = search_predicate(db, collection, value)
+                clauses.append(predicate)
+                values.extend(parameters)
+                continue
             if field == "input_artifact_id":
                 clauses.append(
                     "EXISTS (SELECT 1 FROM dockflow_resource_inputs i WHERE i.project_id=r.project_id AND i.collection=r.collection AND i.public_id=r.public_id AND i.artifact_id=?)"

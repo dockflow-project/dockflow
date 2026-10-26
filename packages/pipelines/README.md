@@ -23,7 +23,7 @@ and [compatibility](https://github.com/dockflow-project/dockflow/blob/main/docs/
 Install the remote client with Python 3.12 or newer:
 
 ```bash
-pip install dockflow-pipelines==0.2.0
+pip install dockflow-pipelines==0.3.0
 ```
 
 This also installs the matching `dockflow-cli`. For local execution and serving,

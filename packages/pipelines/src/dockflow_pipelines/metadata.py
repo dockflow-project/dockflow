@@ -204,6 +204,8 @@ class ControlStore:
             self.database.local.control_run = previous
 
     def _guard_execution(self, kind, payload):
+        if self.database.maintenance_depth:
+            return
         if not self.database.adapter.supports_shared_owners:
             return
         resource = payload.get("resource", {})
@@ -261,6 +263,10 @@ class ControlStore:
         }
         project = self.project_metadata("project")
         if project is not None:
+            # First accepted retirement raises the domain mapping so older
+            # runtimes cannot replay history while ignoring deletion events.
+            if project.get("mapping_version") == 2:
+                expected["mapping_version"] = 2
             if any(project.get(key) != value for key, value in expected.items()):
                 raise DockflowError(
                     "Incompatible state schema or project identity",
@@ -304,7 +310,7 @@ class ControlStore:
                 attempt = self.get("attempts", marker["attempt_id"])
                 task = self.get("tasks", marker["task_id"])
             except DockflowError as exc:
-                if exc.code == "NOT_FOUND":
+                if exc.code in {"NOT_FOUND", "GONE"}:
                     continue
                 raise
             if attempt.get("state") != "succeeded":
@@ -743,6 +749,11 @@ class ControlStore:
                         raise ValueError(
                             "Registered component contract/executor differs from compiled source"
                         )
+            elif record.get("event_kind") == "resource_retirement":
+                if not isinstance(payload.get("resources"), list):
+                    raise ValueError("Retirement resources are missing")
+                for mutation in self._registration_records(record):
+                    self._validate_record(mutation)
         except (KeyError, TypeError, ValueError) as exc:
             raise DockflowError(
                 f"Invalid accepted mutation {record['sequence']}: {exc}",
@@ -752,6 +763,10 @@ class ControlStore:
 
     def append(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         self.require_owner()
+        if kind == "resource_retirement" and not self.database.maintenance_depth:
+            raise DockflowError(
+                "Resource retirement requires exclusive maintenance", "CONFLICT", 409
+            )
         validate_json(payload)
         with self._mutex, self.database.transaction():
             self._guard_execution(kind, payload)
@@ -879,6 +894,16 @@ class ControlStore:
     @staticmethod
     def _registration_records(record: dict[str, Any]) -> list[dict[str, Any]]:
         """Expand one accepted registration for projection and integrity checks."""
+        if record.get("event_kind") == "resource_retirement":
+            return [
+                {
+                    **record,
+                    "kind": "resource_put",
+                    "event_kind": "resource_put",
+                    "payload": item,
+                }
+                for item in record["payload"]["resources"]
+            ]
         if record.get("event_kind") == "cache_observation":
             return [
                 {
@@ -992,6 +1017,12 @@ class ControlStore:
             raise DockflowError(
                 f"{kind.capitalize()} not found: {public_id}", "NOT_FOUND", 404
             )
+        if resource.get("deleted_at") or resource.get("retiring_plan_id"):
+            raise DockflowError(
+                f"{kind.capitalize()} has been deleted or is pending deletion: {public_id}",
+                "GONE",
+                410,
+            )
         if self._validate_resource(collection, resource) != public_id:
             raise DockflowError(
                 "Resource identity differs from its SQL key", "CONFLICT", 409
@@ -1004,7 +1035,7 @@ class ControlStore:
     def list(self, collection: str) -> list[dict[str, Any]]:
         if collection not in COLLECTIONS:
             raise DockflowError(f"Unknown resource collection: {collection}")
-        return self.database.resources(collection)
+        return self.database.queries.select(collection)
 
     def _validate_attempt_identity(
         self, run_id: str, task_id: str, attempt_id: str
@@ -1490,7 +1521,11 @@ class ControlStore:
         availability = []
         if artifacts:
             for collection, public_id in resources:
-                if collection == "artifacts":
+                if (
+                    collection == "artifacts"
+                    and not resources[(collection, public_id)].get("deleted_at")
+                    and not resources[(collection, public_id)].get("retiring_plan_id")
+                ):
                     try:
                         availability.append(
                             artifacts.verify(public_id, verify_contents=verify_contents)

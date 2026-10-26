@@ -1,0 +1,23 @@
+schema_version: 1
+id: artifact-contents
+summary: First/default artifact Contents with bounded CSV, JSON, raster-image, directory and text previews.
+origin:
+  commit: "72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4"
+  specification: "specs-1.0.0"
+  implementation: "imp-1.0.0"
+impact:
+  specification: minor
+  implementation: minor
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Pipelines 013 Contents, with artifact/API references in 006 and 010.
+    implementation: Authenticated bounded preview API, stable CSV cursors, scoped storage reads, precision-preserving JSON, raster data URLs and recorded-directory browsing.
+    verification: 148 focused tests passed (30 optional skips), two real MinIO versioning cases, six Contents browser groups with/without bearer auth and final preview, fourteen established journeys, eight graph groups, eleven list groups and 34 JavaScript checks passed; static/reference/specification checks passed.
+evidence:
+  - workflows/history/2026-10-25__272GXP__artifact-contents-specification.md
+  - workflows/history/2026-10-25__272GXP__artifact-contents-implementation.md
+  - validation/artifact-contents.md
+gaps: []
+delivery_limits:
+  - Feature acceptance, all-workflow closure and release authorized; actual publication remains an external gate.

@@ -1,13 +1,17 @@
-"""Packaged, same-origin browser shell and read-only artifact lineage projection."""
+"""Packaged browser shell and scoped read-only artifact Contents/lineage."""
 
 from importlib.resources import files
 
 from dockflow_core.errors import DockflowError
 from fastapi import Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 ASSETS = {
     "app.js": "text/javascript",
+    "cleanup.js": "text/javascript",
+    "contents.js": "text/javascript",
+    "references.js": "text/javascript",
+    "autocomplete.js": "text/javascript",
     "json.js": "text/javascript",
     "logs.js": "text/javascript",
     "api.js": "text/javascript",
@@ -39,6 +43,62 @@ def is_public_shell(method: str, path: str) -> bool:
 
 
 def mount_web(app, core) -> None:
+    from .contents import ArtifactContents
+
+    previews = ArtifactContents(core.artifacts)
+
+    @app.get("/dockflow/v1/ui/filter-options")
+    def options(request: Request):
+        """Ten recent ID/name matches for resource filter autocomplete."""
+        from .filter_options import filter_options
+
+        allowed = {
+            "collection",
+            "search",
+            "field",
+            "definition_id",
+            "experiment_id",
+            "run_id",
+            "task_id",
+        }
+        if set(request.query_params) - allowed or any(
+            len(request.query_params.getlist(key)) != 1 for key in request.query_params
+        ):
+            raise DockflowError("Unknown or duplicate filter option arguments")
+        values = dict(request.query_params)
+        if "collection" not in values:
+            raise DockflowError("Provide a collection")
+        return JSONResponse(filter_options(core, **values), headers=HEADERS)
+
+    @app.post("/dockflow/v1/ui/reference-names")
+    def names(request: Request):
+        """Resolve a bounded set of human-readable resource contexts without mutation."""
+        from .reference_names import reference_names
+
+        if request.query_params:
+            raise DockflowError("Reference names do not accept query arguments")
+        return JSONResponse(reference_names(core, request.state.body), headers=HEADERS)
+
+    @app.get("/dockflow/v1/artifacts/{artifact_id}/contents")
+    def contents(artifact_id: str, request: Request):
+        """Bounded CSV/JSON/image previews and registered directory inventory."""
+        allowed = {"path", "format", "page_size", "page_token"}
+        if set(request.query_params) - allowed or any(
+            len(request.query_params.getlist(key)) != 1 for key in request.query_params
+        ):
+            raise DockflowError("Unknown or duplicate contents query arguments")
+        values = dict(request.query_params)
+        try:
+            size = int(values.pop("page_size", "50"))
+        except ValueError as exc:
+            raise DockflowError("page_size must be an integer") from exc
+        # Detached metadata and bounded reads hold no SQL transaction or execution
+        # mutex across filesystem/object transfers. Retirement wins before response.
+        result = previews.show(artifact_id, page_size=size, **values)
+        with core.mutex:
+            core.store.get("artifacts", artifact_id)
+        return JSONResponse(result, headers=HEADERS)
+
     def resource(name: str, media_type: str) -> Response:
         return Response(
             files("dockflow_pipelines").joinpath("static", name).read_bytes(),
@@ -89,9 +149,21 @@ def mount_web(app, core) -> None:
                 page_token=request.query_params.get("page_token"),
                 filters={"input_artifact_id": artifact_id},
             )
+            deleted = [
+                identity
+                for kind, field in (
+                    ("runs", "run_id"),
+                    ("tasks", "task_id"),
+                    ("attempts", "attempt_id"),
+                )
+                if (identity := (artifact.get("producer") or {}).get(field))
+                and (value := core.store.database.resource(kind, identity))
+                and (value.get("deleted_at") or value.get("retiring_plan_id"))
+            ]
             return {
                 "artifact_id": artifact_id,
                 "producer": artifact.get("producer"),
+                **({"deleted_producer_ids": deleted} if deleted else {}),
                 "items": consumers["items"],
                 "next_page_token": consumers["next_page_token"],
             }

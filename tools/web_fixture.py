@@ -10,13 +10,102 @@ Stop it with Ctrl+C or SIGTERM. Its disposable state remains for inspection.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import socket
+import struct
 import tempfile
 import uuid
+import zlib
 from pathlib import Path
 
 IMAGE = "python:3.13-slim"
+
+
+def contents_samples(directory: Path) -> list[tuple[Path, str]]:
+    """Portable, generated data for preview qualification and manual inspection."""
+    root = directory / "inputs" / "contents"
+    root.mkdir(parents=True, exist_ok=False)
+    dataset = root / "large.csv"
+    with dataset.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["id", "label", "value", "notes"])
+        for index in range(250000):
+            writer.writerow(
+                [
+                    index,
+                    f"Sample {index}",
+                    index / 10,
+                    'Quoted "text", café' if index % 2 else "Two\nlines",
+                ]
+            )
+    data = root / "data.json"
+    data.write_text(
+        json.dumps(
+            {
+                "info": {
+                    "title": "Example contents",
+                    "large_number": 9007199254740993,
+                    "literal_text": "<img src=x onerror=alert(1)>",
+                },
+                "items": [
+                    {"id": i, "active": i % 2 == 0, "value": None} for i in range(250)
+                ],
+            },
+            indent=2,
+        )
+    )
+    width, height = 320, 160
+
+    def chunk(name, payload):
+        return (
+            struct.pack(">I", len(payload))
+            + name
+            + payload
+            + struct.pack(">I", zlib.crc32(name + payload))
+        )
+
+    pixels = b"".join(
+        b"\0"
+        + bytes(
+            component
+            for x in range(width)
+            for component in (x * 255 // width, y * 255 // height, 160)
+        )
+        for y in range(height)
+    )
+    image = root / "image.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(pixels))
+        + chunk(b"IEND", b"")
+    )
+    text = root / "notes.txt"
+    text.write_text("Example UTF-8 text: café.\n" * 5000)
+    directory_root = root / "directory"
+    (directory_root / "empty").mkdir(parents=True)
+    nested = directory_root / "nested"
+    (nested / "tables").mkdir(parents=True)
+    (nested / "data.json").write_bytes(data.read_bytes())
+    (nested / "broken.json").write_text('{"incomplete":')
+    (directory_root / "image.png").write_bytes(image.read_bytes())
+    (directory_root / "README.txt").write_text(
+        "A registered directory with nested preview examples.\n"
+    )
+    (directory_root / "unknown.bin").write_bytes(b"binary\0example")
+    with (nested / "tables" / "example.csv").open("w", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["id", "label"])
+        writer.writerows([i, f"Nested sample {i}"] for i in range(350))
+    return [
+        (dataset, "Preview CSV"),
+        (data, "Preview JSON"),
+        (image, "Preview image"),
+        (directory_root, "Preview directory"),
+        (text, "Preview text"),
+    ]
+
 
 PREPARE = """import json,pathlib,sys,time
 request=json.loads(sys.argv[1])
@@ -183,6 +272,16 @@ def main() -> int:
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--token-file", type=Path)
+    parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="Seed disposable manual artifacts and orphan files for cleanup testing",
+    )
+    parser.add_argument(
+        "--contents",
+        action="store_true",
+        help="Seed generated CSV, JSON, image, directory and text previews",
+    )
     arguments = parser.parse_args()
     directory = arguments.directory.resolve()
     allowed = (
@@ -243,6 +342,47 @@ def main() -> int:
             )
         config.write_text(text)
         app = create_app(load_settings(config), execute=True)
+        if arguments.cleanup:
+            import sqlite3
+
+            database = directory / "inputs" / "manual-database.sqlite"
+            with sqlite3.connect(database) as connection:
+                connection.execute("CREATE TABLE example (value TEXT)")
+                connection.execute(
+                    "INSERT INTO example VALUES ('disposable test data')"
+                )
+            core = app.state.core
+            with core.store.owner():
+                core.initialize()
+                core.upload_pipeline(json.dumps(document), "Cleanup test pipeline")
+                typ = {"schema_title": "system.Dataset", "schema_version": "0.0.1"}
+                core.artifacts.register(
+                    database.as_uri(),
+                    typ,
+                    managed=True,
+                    version="Manual database snapshot",
+                )
+                pinned = core.artifacts.register(
+                    (directory / "inputs/external.csv").as_uri(),
+                    typ,
+                    managed=True,
+                    version="Pinned manual dataset",
+                )
+                core.artifacts.pin(pinned["artifact_id"], True)
+                (core.artifacts.managed_root / "cleanup-orphan.bin").write_bytes(
+                    b"disposable orphan\n" * 64
+                )
+        if arguments.contents:
+            core = app.state.core
+            with core.store.owner():
+                core.initialize()
+                for source, label in contents_samples(directory):
+                    core.artifacts.register(
+                        source.as_uri(),
+                        {"schema_title": "system.Dataset", "schema_version": "0.0.1"},
+                        managed=True,
+                        version=label,
+                    )
         print(
             json.dumps(
                 {

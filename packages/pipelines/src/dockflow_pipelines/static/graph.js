@@ -1,5 +1,76 @@
 /** KFP compiled graph projection; never evaluates component code or conditions. */
 import { el, button, badge, notice, empty, clear } from './dom.js';
+
+function backgroundPan(viewport) {
+  let pan = null;
+  function finish(event) {
+    if (!pan || (event?.pointerId !== undefined && event.pointerId !== pan.id))
+      return;
+    const id = pan.id;
+    pan = null;
+    viewport.classList.remove('is-panning');
+    window.removeEventListener('blur', finish);
+    if (viewport.hasPointerCapture(id)) viewport.releasePointerCapture(id);
+  }
+  viewport.addEventListener('pointerdown', (event) => {
+    if (
+      pan ||
+      !event.isPrimary ||
+      event.button !== 0 ||
+      event.pointerType === 'touch' ||
+      event.target.closest(
+        '.graph-node,button,a,input,select,textarea,summary,[contenteditable]',
+      )
+    )
+      return;
+    const bounds = viewport.getBoundingClientRect();
+    // Leave native scrollbar gutters to the browser.
+    if (
+      event.clientX < bounds.left + viewport.clientLeft ||
+      event.clientY < bounds.top + viewport.clientTop ||
+      event.clientX >=
+        bounds.left + viewport.clientLeft + viewport.clientWidth ||
+      event.clientY >= bounds.top + viewport.clientTop + viewport.clientHeight
+    )
+      return;
+    pan = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      left: viewport.scrollLeft,
+      top: viewport.scrollTop,
+      moved: false,
+    };
+    viewport.setPointerCapture(event.pointerId);
+    viewport.focus({ preventScroll: true });
+    window.addEventListener('blur', finish, { once: true });
+    event.preventDefault();
+  });
+  viewport.addEventListener('pointermove', (event) => {
+    if (!pan || event.pointerId !== pan.id) return;
+    if (!(event.buttons & 1)) return finish(event);
+    const dx = event.clientX - pan.x,
+      dy = event.clientY - pan.y;
+    if (!pan.moved && Math.hypot(dx, dy) < 4) return;
+    pan.moved = true;
+    viewport.classList.add('is-panning');
+    viewport.scrollLeft = pan.left - dx;
+    viewport.scrollTop = pan.top - dy;
+    event.preventDefault();
+  });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
+    viewport.addEventListener(type, finish);
+  viewport.addEventListener('wheel', finish, { passive: true });
+}
+
+/** Selection and inspector tabs do not change the mounted graph's identity. */
+export function graphQueryKey(query) {
+  return JSON.stringify(
+    [...query]
+      .filter(([key]) => !['node', 'stepTab'].includes(key))
+      .sort(([a, av], [b, bv]) => a.localeCompare(b) || av.localeCompare(bv)),
+  );
+}
 export function graphModel(spec) {
   const document = spec.pipelineSpec || spec;
   const nodes = [];
@@ -81,6 +152,16 @@ export function graph(
   const model = graphModel(spec);
   if (!model.nodes.length) return empty('No tasks in this definition.');
   const host = el('div', { class: 'graph' });
+  host.selectNode = (name) => {
+    selected = name;
+    for (const node of host.querySelectorAll('.graph-node')) {
+      const active = node.dataset.node === name;
+      node.classList.toggle('selected', active);
+      node
+        .querySelector('.graph-node-select')
+        .setAttribute('aria-pressed', String(active));
+    }
+  };
   function render(path = options.path, all = options.all) {
     const view = graphView(model, { path, selected, all });
     const nodes = view.nodes.slice(0, 1000);
@@ -112,16 +193,16 @@ export function graph(
         break;
       }
     }
-    const rows = new Map();
+    const columns = new Map();
     const positions = new Map();
     for (const node of nodes) {
       const level = levels.get(node.name),
-        row = rows.get(level) || 0;
-      rows.set(level, row + 1);
-      positions.set(node.name, { x: 32 + level * 280, y: 32 + row * 144 });
+        column = columns.get(level) || 0;
+      columns.set(level, column + 1);
+      positions.set(node.name, { x: 32 + column * 280, y: 32 + level * 176 });
     }
-    const width = 70 + (Math.max(0, ...levels.values()) + 1) * 280,
-      height = Math.max(260, 60 + Math.max(0, ...rows.values()) * 144);
+    const width = 64 + 230 + (Math.max(1, ...columns.values()) - 1) * 280,
+      height = Math.max(280, 64 + 112 + Math.max(0, ...levels.values()) * 176);
     const surface = el('div', { class: 'graph-surface' });
     surface.style.width = width + 'px';
     surface.style.height = height + 'px';
@@ -132,11 +213,12 @@ export function graph(
     svg.classList.add('graph-edges');
     for (const edge of edges) {
       const start = positions.get(edge.from),
-        end = positions.get(edge.to);
+        end = positions.get(edge.to),
+        middleY = (start.y + 112 + end.y) / 2;
       const path = document.createElementNS(svg.namespaceURI, 'path');
       path.setAttribute(
         'd',
-        `M ${start.x + 230} ${start.y + 48} C ${start.x + 255} ${start.y + 48}, ${end.x - 25} ${end.y + 48}, ${end.x} ${end.y + 48}`,
+        `M ${start.x + 115} ${start.y + 112} C ${start.x + 115} ${middleY}, ${end.x + 115} ${middleY}, ${end.x + 115} ${end.y}`,
       );
       path.setAttribute('class', edge.kind);
       svg.append(path);
@@ -184,7 +266,9 @@ export function graph(
         el(
           'small',
           { class: 'subtle' },
-          node.parent ? node.name : node.componentKey,
+          node.parent
+            ? node.componentKey + ' · ' + node.name
+            : node.componentKey,
         ),
         record
           ? badge(state)
@@ -222,10 +306,11 @@ export function graph(
         {
           class: 'graph-viewport',
           tabindex: '0',
-          'aria-label': 'Pipeline graph. Scroll to pan.',
+          'aria-label': 'Pipeline graph. Drag the background or scroll to pan.',
         },
         canvas,
       );
+    backgroundPan(viewport);
     let zoom = 1;
     const zoomText = el('span', { class: 'subtle' }, '100%');
     function scale(value) {
@@ -236,36 +321,60 @@ export function graph(
       zoomText.textContent = Math.round(zoom * 100) + '%';
     }
     scale(1);
-    const breadcrumb = el(
-      'nav',
-      { class: 'graph-breadcrumb', 'aria-label': 'Graph location' },
-      button('Pipeline', () => navigate(''), 'quiet', {
-        'aria-current': !view.path && !view.all ? 'location' : null,
-      }),
-      view.all
-        ? el('span', { 'aria-current': 'location' }, ' / All tasks')
-        : view.ancestors.map((ancestor, index) => [
-            el('span', { 'aria-hidden': 'true' }, ' / '),
-            button(ancestor.label, () => navigate(ancestor.name), 'quiet', {
-              title: ancestor.name,
-              'aria-current':
-                index === view.ancestors.length - 1 ? 'location' : null,
-            }),
-          ]),
-    );
+    const scope = JSON.stringify([view.path, view.all]);
+    const identity = options.identity || JSON.stringify(spec);
+    host.captureViewport = () => ({
+      scope,
+      identity,
+      zoom,
+      left: viewport.scrollLeft,
+      top: viewport.scrollTop,
+    });
+    host.restoreViewport = (saved) => {
+      if (!saved || saved.scope !== scope || saved.identity !== identity)
+        return;
+      scale(saved.zoom);
+      // Retain pan when an inspector closes and the viewport becomes wider.
+      canvas.style.width =
+        Math.max(width * zoom, saved.left + viewport.clientWidth) + 'px';
+      canvas.style.height =
+        Math.max(height * zoom, saved.top + viewport.clientHeight) + 'px';
+      viewport.scrollLeft = saved.left;
+      viewport.scrollTop = saved.top;
+    };
+    const breadcrumb =
+      view.path && !view.all
+        ? el(
+            'nav',
+            { class: 'graph-breadcrumb', 'aria-label': 'Graph location' },
+            button('Pipeline', () => navigate(''), 'quiet'),
+            view.ancestors.map((ancestor, index) => [
+              el('span', { 'aria-hidden': 'true' }, ' / '),
+              button(ancestor.label, () => navigate(ancestor.name), 'quiet', {
+                title: ancestor.name,
+                'aria-current':
+                  index === view.ancestors.length - 1 ? 'location' : null,
+              }),
+            ]),
+          )
+        : null;
     clear(
       host,
-      breadcrumb,
       el(
         'div',
         { class: 'graph-toolbar' },
         el(
-          'span',
-          { class: 'subtle' },
-          `${nodes.length} visible nodes · ${model.nodes.length} total tasks` +
-            (view.all
-              ? ' · solid: dependency · dotted: containment'
-              : ' · subpipelines collapsed'),
+          'div',
+          { class: 'graph-context' },
+          breadcrumb,
+          el(
+            'span',
+            { class: 'subtle' },
+            `${nodes.length} visible nodes · ${model.nodes.length} total tasks` +
+              (view.all
+                ? ' · solid: dependency · dotted: containment'
+                : ' · subpipelines collapsed'),
+          ),
         ),
         el(
           'div',

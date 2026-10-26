@@ -125,3 +125,12 @@ rule. Flush failures fail publication before its SQL completion record; identica
 retry must establish the durability boundary even when payload files already
 exist. Qualify the supported POSIX filesystem behavior; instrumentation does not
 claim that actual power-loss recovery has been tested.
+
+## Coordinated deletion
+
+Completed standalone publications remain explicit owned data even when no Run or
+Pipelines artifact references them. Administrative storage inventory must inspect
+publication reservations/manifests and never infer orphanhood from a missing Run.
+Pipelines-managed retirement uses the shared project maintenance scope, preserves
+publication/fence history and never deletes original external sources. See the
+[Pipelines deletion contract](../053_dockflow-pipelines/015_deletion-and-storage-cleanup.md).

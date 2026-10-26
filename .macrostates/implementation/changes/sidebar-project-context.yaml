@@ -1,0 +1,23 @@
+schema_version: 1
+id: sidebar-project-context
+summary: Place plain project identity beneath the brand; put utility links between dividers and service/connection controls at the sidebar bottom; reclaim workspace height.
+origin:
+  commit: "72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4"
+  specification: "specs-1.0.0"
+  implementation: "imp-1.0.0"
+impact:
+  specification: minor
+  implementation: minor
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Pipelines 013 persistent sidebar context and full-height list/detail/graph workspace.
+    implementation: Relocated project identity beneath the brand without a visible label or box and status/authentication hooks at the bottom of the fixed footer beneath utility links and a divider; removed global top bar; bounded project identity and independently scrolling grouped navigation preserve narrow and keyboard access.
+    verification: 45 web tests, 38 JavaScript checks, seven dedicated sidebar browser groups across authentication modes, fifteen established authenticated browser groups, eight graph groups and six Contents groups passed; visual, static, generated-reference and composition checks passed.
+evidence:
+  - workflows/history/2026-10-26__122DY1__sidebar-project-context-specification.md
+  - workflows/history/2026-10-26__122DY1__sidebar-project-context-implementation.md
+  - validation/sidebar-project-context.md
+gaps: []
+delivery_limits:
+  - Feature acceptance, all-workflow closure and release authorized; actual publication remains an external gate.

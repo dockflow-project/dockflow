@@ -1,0 +1,23 @@
+schema_version: 1
+id: human-readable-references
+summary: Human-readable component, pipeline and experiment names before web resource IDs.
+origin:
+  commit: "72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4"
+  specification: "specs-1.0.0"
+  implementation: "imp-1.0.0"
+impact:
+  specification: minor
+  implementation: minor
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Pipelines 013 human-readable references, with API and acceptance contracts in 010 and 011.
+    implementation: Bounded read-only name resolution and shared in-place browser decoration of links, identity labels and selector hints, preserving exact IDs, provenance and graph state.
+    verification: 245 backend tests passed (30 optional skips), 38 JavaScript checks, eight dedicated browser groups with/without bearer auth, fourteen established browser journeys and final preview; static/reference/specification checks passed. Name-first refinement passed all seven JavaScript files and read-only browser checks for lists, execution headings and unchanged ID inputs.
+evidence:
+  - workflows/history/2026-10-26__102NMP__human-readable-references-specification.md
+  - workflows/history/2026-10-26__102NMP__human-readable-references-implementation.md
+  - validation/human-readable-references.md
+gaps: []
+delivery_limits:
+  - Feature acceptance, all-workflow closure and release authorized; actual publication remains an external gate.

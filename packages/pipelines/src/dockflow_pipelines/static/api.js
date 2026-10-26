@@ -47,7 +47,7 @@ export async function request(path, options = {}) {
     throw new Error(
       'Cannot reach the service. Check the connection and retry. ' +
         (options.method === 'POST'
-          ? 'The request may have been accepted; keep this form open to retry safely.'
+          ? 'The request may have been accepted; check the result before retrying.'
           : ''),
     );
   }

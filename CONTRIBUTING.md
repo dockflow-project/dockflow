@@ -154,6 +154,111 @@ dedicated fixture, never an existing user service. For the authenticated journey
 start a separate fresh fixture with `--token-file PATH` and pass the same option
 to the probe. Do not commit the token, fixture data or screenshots.
 
+With at least one pipeline and Run present in the disposable fixture, verify
+workspace sizing, background drag/cancellation, independent scroll regions and
+preserved graph state using:
+
+```bash
+uv run --all-packages --all-extras --with playwright==1.55.0 python tools/graph_workspace_browser_smoke.py --url FIXTURE_URL
+```
+
+This probe performs read-only API requests. It projects long/nested graphs and a
+running status only inside the browser to exercise layout and live refresh; it
+does not modify stored definitions or execution records.
+
+To check fixed list headers/footers, sticky columns, cursor/local pagination,
+empty/error states and narrow layouts, use a disposable fixture containing all
+catalog types and two Runs, one with more than 50 tasks. Register and run the
+[scrolling example](examples/scrolling/README.md) alongside the ordinary fixture
+Run, then run:
+
+```bash
+uv run --all-packages --all-extras --with playwright==1.55.0 python tools/list_workspace_browser_smoke.py --url FIXTURE_URL
+```
+
+This probe reads fixture records and projects additional cursor pages, consumer
+rows and cleanup inventory only in the browser. It does not delete records/files,
+submit executions or create a persistent storage scan.
+
+For non-graph detail headers/tabs, independent body scrolling, long records,
+keyboard/narrow layouts and refresh recovery, run the read-only detail probe
+against a fixture containing component, artifact, Run, task and attempt records:
+
+```bash
+uv run --all-packages --all-extras --with playwright==1.55.0 python tools/detail_workspace_browser_smoke.py --url FIXTURE_URL
+```
+
+Long replies are projected only inside the browser. The probe opens and dismisses
+the initial deletion dialog without planning/applying deletion, and verifies the
+execution action that returns to the selected task in the graph.
+
+For artifact Contents, start a fresh fixture with `--contents` to generate a
+250,000-row CSV, JSON, PNG image, nested directory and text samples, then run:
+
+```bash
+uv run --all-packages --all-extras --with playwright==1.55.0 python tools/contents_browser_smoke.py --url FIXTURE_URL --output tmp/contents-browser
+```
+
+This probe reads real previews without changing records/files. It checks CSV
+continuity/bounded responses, JSON precision/lazy batches, raster fit controls,
+directory/history/empty/error states and narrow layouts. For an authenticated
+fixture, pass the same `--token-file PATH` to fixture and probe. The S3 preview
+integration tests use `DOCKFLOW_TEST_CONTENTS_S3_ENDPOINT` and standard test AWS
+credentials, creating/removing only uniquely named disposable buckets.
+
+For client-file upload and both ZIP modes, run the mutation probe only against a
+disposable fixture (it registers four manual artifacts and leaves existing data):
+
+```bash
+uv run --all-packages --all-extras --with playwright==1.55.0 python tools/upload_browser_smoke.py --url FIXTURE_URL --output tmp/upload-browser
+```
+
+Pass the fixture's `--token-file PATH` when authentication is enabled. This checks
+default Contents, nested directory/empty-folder previews, busy submission, invalid
+ZIP recovery, file-type switching and desktop/narrow form layouts. Review and
+discard optional captures; retain only anonymized receipts. Backend/API/CLI ZIP
+and admission cases live in `test_artifact_uploads.py`; the opt-in S3 integration
+also checks managed file/archive/directory uploads on versioned/unversioned buckets.
+
+For human-readable references, use a disposable fixture and its compiled pipeline:
+
+```bash
+uv run --all-packages --all-extras --with playwright==1.55.0 python tools/reference_names_browser_smoke.py --url FIXTURE_URL --definition FIXTURE_PIPELINE --output tmp/reference-browser
+```
+
+The probe registers a catalog/experiment and executes two Runs with a unique
+reuse key. It checks names and exact identity through lists, details, graph
+inspectors, provenance, comparison, selectors and deletion context, plus bounded
+batches, lookup failures, stale replies and narrow layouts. Pass `--token-file`
+for authenticated/sign-out coverage. Captures project anonymous example text in
+the browser only; inspect and discard captures before retaining neutral receipts.
+
+For the sidebar project/status/connection context and reclaimed workspace height:
+
+```bash
+uv run --all-packages --all-extras --with playwright==1.55.0 python tools/sidebar_context_browser_smoke.py --url FIXTURE_URL --token-file TOKEN_FILE --output tmp/sidebar-context-browser
+```
+
+The read-only probe checks desktop/narrow/short layouts, long project identity,
+keyboard and independent menu scrolling, readiness recovery and sign-out/connect.
+Omit `--token-file` for a no-token fixture. Captures use anonymous project text
+and redact runtime IDs; review/discard them before retaining neutral receipts.
+The graph workspace probe also accepts `--token-file` and permits read-only name
+lookups during selection while still rejecting graph/page refetches.
+
+For filter autocomplete, use a disposable fixture populated by the general
+browser journey so Runs/executions and related selectors have real records:
+
+```bash
+uv run --all-packages --all-extras --with playwright==1.55.0 python tools/filter_autocomplete_browser_smoke.py --url FIXTURE_URL --token-file TOKEN_FILE --output tmp/filter-autocomplete-browser
+```
+
+The probe adds anonymous experiments, checks recent/ID/name suggestions, exact
+values and inline captions, exact omitted counts, dependent scopes/order, equal
+control heights, mouse/keyboard input, delayed/failing responses, every
+list/reference/type filter, sign-out and viewport bounds. Optional captures redact resource/project
+identities; inspect and discard them before retaining neutral receipts.
+
 Stop the fixture with Ctrl+C. Its data remains for inspection; choose a new
 absent directory for another independent probe rather than resetting existing
 history. Record the actual browser/OS and execution results. Automated headless
@@ -219,7 +324,7 @@ Publication uses four separate PyPI publishers. Each has owner
 
 | PyPI project | GitHub environment |
 | --- | --- |
-| `dockflow-database` | `pypi-database` |
+| `dockflow-core` | `pypi-core` |
 | `dockflow-cli` | `pypi-cli` |
 | `dockflow-pipelines` | `pypi-pipelines` |
 | `dockflow-artifacts` | `pypi-artifacts` |
@@ -241,14 +346,15 @@ After reviewed integration and successful CI on that exact main commit:
 2. Inspect the candidate, receipts and manifest SHA-256 in the run summary.
    Obtain approval for those exact bytes and the release scope. Create the
    authorized annotated application and implementation tags on the reviewed
-   release commit; publish new related refs atomically. For 0.1.1 these are
-   `v0.1.1` and `imp-0.1.1`. Reuse `specs-0.1.0` at its original commit: the
-   verifier requires ancestry and byte-identical specification trees. All
+   release commit; publish new related refs atomically. For 0.3.0 these are
+   `v0.3.0`, `imp-2.0.0` and `specs-2.0.0`. For a later unchanged specification
+   baseline, reuse its original tag only after verifying ancestry and byte-identical
+   specification trees. All
    existing application and baseline tags remain immutable.
 3. Manually run **Publish approved release** on the same main commit, supplying
    the candidate run ID and reviewed manifest SHA-256. Approve the protected
    environments for that candidate. The workflow checks provenance, annotated
-   tags and every file hash, publishes Database and CLI before Artifacts, then Pipelines, loads and
+   tags and every file hash, publishes Core and CLI before Artifacts, then Pipelines, loads and
    pushes the preserved service image, and creates the shared GitHub release
    with verification assets. No package or image is rebuilt during publication.
 4. Verify all PyPI file hashes and public installation, the GHCR image digest

@@ -52,6 +52,25 @@
             ],
             "type": "object"
           },
+          "upload": {
+            "additionalProperties": false,
+            "properties": {
+              "archive_mode": {
+                "enum": [
+                  "keep",
+                  "extract"
+                ]
+              },
+              "filename": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "filename",
+              "archive_mode"
+            ],
+            "type": "object"
+          },
           "uri": {
             "type": "string"
           },
@@ -75,6 +94,150 @@
           "producer",
           "created_at",
           "pinned"
+        ],
+        "type": "object"
+      },
+      "ArtifactContents": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "base64": {
+            "contentEncoding": "base64",
+            "type": "string"
+          },
+          "checksum_verified": {
+            "type": "boolean"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "delimiter": {
+            "type": "string"
+          },
+          "first_row": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "format": {
+            "enum": [
+              "directory",
+              "csv",
+              "json",
+              "image",
+              "text",
+              "unsupported"
+            ]
+          },
+          "height": {
+            "maximum": 16384,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "directory"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "path",
+                "kind",
+                "size_bytes"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "last_row": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "mime_type": {
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "image/gif",
+              "image/webp"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "next_page_token": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "size_bytes": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "text": {
+            "type": "string"
+          },
+          "total_entries": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "tree": {
+            "$ref": "#/components/schemas/JsonPreviewNode"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "width": {
+            "maximum": 16384,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "path",
+          "format",
+          "size_bytes",
+          "next_page_token",
+          "checksum_verified",
+          "message"
         ],
         "type": "object"
       },
@@ -128,6 +291,12 @@
           "artifact_id": {
             "type": "string"
           },
+          "deleted_producer_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/Task"
@@ -152,6 +321,47 @@
           "producer",
           "items",
           "next_page_token"
+        ],
+        "type": "object"
+      },
+      "ArtifactUploadOptions": {
+        "additionalProperties": false,
+        "properties": {
+          "archive_mode": {
+            "default": "keep",
+            "enum": [
+              "keep",
+              "extract"
+            ]
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": {
+            "additionalProperties": false,
+            "properties": {
+              "schema_title": {
+                "type": "string"
+              },
+              "schema_version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "schema_title",
+              "schema_version"
+            ],
+            "type": "object"
+          },
+          "version": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
         ],
         "type": "object"
       },
@@ -343,6 +553,150 @@
         ],
         "type": "object"
       },
+      "DeletionApply": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation": {
+            "description": "Exact DANGER is mandatory for manual storage deletion.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "plan_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id"
+        ],
+        "type": "object"
+      },
+      "DeletionPlan": {
+        "additionalProperties": true,
+        "properties": {
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "completed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "delete_files": {
+            "type": "boolean"
+          },
+          "estimated_bytes": {
+            "type": "integer"
+          },
+          "failures": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "plan_id": {
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/StorageRow"
+            },
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "planned",
+              "deleting",
+              "partial",
+              "completed"
+            ]
+          },
+          "targets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "plan_id",
+          "state",
+          "targets",
+          "rows",
+          "delete_files",
+          "estimated_bytes",
+          "blockers",
+          "completed",
+          "failures"
+        ],
+        "type": "object"
+      },
+      "DeletionPlanRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "delete_files": {
+            "default": false,
+            "type": "boolean"
+          },
+          "orphans": {
+            "type": "boolean"
+          },
+          "scan_id": {
+            "type": "string"
+          },
+          "selected": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "targets": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "collection": {
+                  "enum": [
+                    "runs",
+                    "attempts",
+                    "artifacts"
+                  ]
+                },
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "collection",
+                "id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "DeletionQuery": {
+        "additionalProperties": false,
+        "properties": {
+          "plan_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id"
+        ],
+        "type": "object"
+      },
       "Empty": {
         "additionalProperties": false,
         "properties": {},
@@ -496,6 +850,48 @@
         ],
         "type": "object"
       },
+      "FilterOptions": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "recent_at": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "value",
+                "recent_at"
+              ],
+              "type": "object"
+            },
+            "maxItems": 10,
+            "type": "array"
+          },
+          "remaining_count": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "remaining_count"
+        ],
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -507,6 +903,52 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "JsonPreviewNode": {
+        "additionalProperties": false,
+        "properties": {
+          "children": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "node": {
+                  "$ref": "#/components/schemas/JsonPreviewNode"
+                }
+              },
+              "required": [
+                "key",
+                "node"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "object",
+              "array",
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          },
+          "value": {
+            "description": "Strings/keys are JSON-escaped display literals; numbers retain exact lexical spelling.",
+            "type": [
+              "string",
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ],
         "type": "object"
       },
       "LogPage": {
@@ -647,6 +1089,100 @@
           "available",
           "created_at"
         ],
+        "type": "object"
+      },
+      "ReferenceNames": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "available": {
+                  "type": "boolean"
+                },
+                "collection": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "collection",
+                "id",
+                "name",
+                "available"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "ReferenceNamesRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "references": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "collection": {
+                  "enum": [
+                    "runs",
+                    "tasks",
+                    "attempts",
+                    "pipelines",
+                    "definitions",
+                    "components",
+                    "experiments"
+                  ]
+                },
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "collection",
+                "id"
+              ],
+              "type": "object"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "references"
+        ],
+        "type": "object"
+      },
+      "RetentionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "apply": {
+            "default": false,
+            "type": "boolean"
+          },
+          "confirmation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [],
         "type": "object"
       },
       "Run": {
@@ -1001,6 +1537,178 @@
         "required": [],
         "type": "object"
       },
+      "StorageRow": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "classification": {
+            "enum": [
+              "execution_artifact",
+              "manual_artifact",
+              "publication",
+              "retained_file",
+              "orphan",
+              "protected",
+              "unknown"
+            ]
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "identity": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "pending_plan_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "size_bytes",
+          "identity",
+          "classification",
+          "artifact_ids",
+          "blockers",
+          "eligible"
+        ],
+        "type": "object"
+      },
+      "StorageScanPage": {
+        "additionalProperties": true,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StorageRow"
+            },
+            "type": "array"
+          },
+          "next_page_token": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "retention": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "scan_id": {
+            "type": "string"
+          },
+          "selected_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "scanning",
+              "complete",
+              "failed"
+            ]
+          },
+          "totals": {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "scan_id",
+          "state",
+          "items",
+          "next_page_token",
+          "totals",
+          "selected_ids",
+          "retention"
+        ],
+        "type": "object"
+      },
+      "StorageScanQuery": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "classification": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "orphans": {
+            "type": "boolean"
+          },
+          "page_size": {
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_token": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scan_id": {
+            "type": "string"
+          },
+          "selected": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "scan_id"
+        ],
+        "type": "object"
+      },
+      "StorageScanRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "prefix": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
       "Task": {
         "additionalProperties": true,
         "properties": {
@@ -1166,7 +1874,7 @@
   },
   "info": {
     "title": "Dockflow Pipelines",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1720,6 +2428,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Case-insensitive literal ID/name substring (maximum 256 characters).",
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2021,6 +2737,357 @@
           }
         ],
         "summary": "Artifacts.Create"
+      }
+    },
+    "/dockflow/v1/artifacts/upload": {
+      "post": {
+        "description": "Upload and register one manual managed artifact. Exactly one uploadfile file and one options text field containing an ArtifactUploadOptions JSON object. No query arguments. The service request byte limit includes multipart overhead. ZIP keep preserves bytes; extract creates a directory (256 MiB expanded, 10,000 entries, 32 path levels). No automatic retries.",
+        "operationId": "upload_artifact_dockflow_v1_artifacts_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "options": {
+                    "contentMediaType": "application/json",
+                    "contentSchema": {
+                      "$ref": "#/components/schemas/ArtifactUploadOptions"
+                    },
+                    "description": "JSON text conforming to ArtifactUploadOptions (maximum 64 KiB).",
+                    "type": "string"
+                  },
+                  "uploadfile": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "uploadfile",
+                  "options"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Artifact"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Upload Artifact"
+      }
+    },
+    "/dockflow/v1/artifacts/{artifact_id}/contents": {
+      "get": {
+        "description": "Bounded CSV/JSON/image previews and registered directory inventory.",
+        "operationId": "contents_dockflow_v1_artifacts__artifact_id__contents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "default": "",
+              "maxLength": 4096,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "default": "auto",
+              "enum": [
+                "auto",
+                "csv",
+                "json",
+                "image",
+                "text"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_token",
+            "schema": {
+              "maxLength": 4096,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactContents"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Contents"
       }
     },
     "/dockflow/v1/artifacts/{artifact_id}/lineage": {
@@ -2686,6 +3753,14 @@
             "description": "Exact equality filter.",
             "in": "query",
             "name": "task_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Case-insensitive literal ID/name substring (maximum 256 characters).",
+            "in": "query",
+            "name": "search",
             "schema": {
               "type": "string"
             }
@@ -3753,6 +4828,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Case-insensitive literal ID/name substring (maximum 256 characters).",
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -4093,6 +5176,14 @@
             "description": "Exact equality filter.",
             "in": "query",
             "name": "kind",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Case-insensitive literal ID/name substring (maximum 256 characters).",
+            "in": "query",
+            "name": "search",
             "schema": {
               "type": "string"
             }
@@ -4680,6 +5771,441 @@
         "summary": "Get Definitions"
       }
     },
+    "/dockflow/v1/deletions/apply": {
+      "post": {
+        "description": "Uses the service's configured bearer token when authentication is enabled.",
+        "operationId": "deletions_apply_dockflow_v1_deletions_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletionApply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionPlan"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Deletions.Apply"
+      }
+    },
+    "/dockflow/v1/deletions/plan": {
+      "post": {
+        "description": "Uses the service's configured bearer token when authentication is enabled.",
+        "operationId": "deletions_plan_dockflow_v1_deletions_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletionPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionPlan"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Deletions.Plan"
+      }
+    },
+    "/dockflow/v1/deletions/show": {
+      "post": {
+        "description": "Uses the service's configured bearer token when authentication is enabled.",
+        "operationId": "deletions_show_dockflow_v1_deletions_show_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletionQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionPlan"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Deletions.Show"
+      }
+    },
     "/dockflow/v1/experiments": {
       "get": {
         "description": "Uses the service's configured bearer token when authentication is enabled.",
@@ -4706,6 +6232,14 @@
             "description": "Exact equality filter.",
             "in": "query",
             "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Case-insensitive literal ID/name substring (maximum 256 characters).",
+            "in": "query",
+            "name": "search",
             "schema": {
               "type": "string"
             }
@@ -5473,6 +7007,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Case-insensitive literal ID/name substring (maximum 256 characters).",
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5771,6 +7313,152 @@
         "summary": "Get Pipelines"
       }
     },
+    "/dockflow/v1/retention": {
+      "post": {
+        "description": "Uses the service's configured bearer token when authentication is enabled.",
+        "operationId": "retention_dockflow_v1_retention_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Retention"
+      }
+    },
     "/dockflow/v1/runs": {
       "get": {
         "description": "Uses the service's configured bearer token when authentication is enabled.",
@@ -5813,6 +7501,14 @@
             "description": "Exact equality filter.",
             "in": "query",
             "name": "definition_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Case-insensitive literal ID/name substring (maximum 256 characters).",
+            "in": "query",
+            "name": "search",
             "schema": {
               "type": "string"
             }
@@ -6612,6 +8308,296 @@
         "summary": "Logs"
       }
     },
+    "/dockflow/v1/storage/scan": {
+      "post": {
+        "description": "Uses the service's configured bearer token when authentication is enabled.",
+        "operationId": "storage_scan_dockflow_v1_storage_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageScanPage"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Storage.Scan"
+      }
+    },
+    "/dockflow/v1/storage/scan/show": {
+      "post": {
+        "description": "Uses the service's configured bearer token when authentication is enabled.",
+        "operationId": "storage_show_dockflow_v1_storage_scan_show_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageScanQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageScanPage"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Storage.Show"
+      }
+    },
     "/dockflow/v1/tasks": {
       "get": {
         "description": "Uses the service's configured bearer token when authentication is enabled.",
@@ -6654,6 +8640,14 @@
             "description": "Exact equality filter.",
             "in": "query",
             "name": "input_artifact_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Case-insensitive literal ID/name substring (maximum 256 characters).",
+            "in": "query",
+            "name": "search",
             "schema": {
               "type": "string"
             }
@@ -6953,6 +8947,356 @@
           }
         ],
         "summary": "Get Tasks"
+      }
+    },
+    "/dockflow/v1/ui/filter-options": {
+      "get": {
+        "description": "Read-only project-scoped ID/name substring suggestions, at most ten, with exact remaining_count. Newest first (execution start with creation fallback for workloads; definition/creation date otherwise). Empty search returns recent options. Parent scopes: components by definition_id; runs by definition_id/experiment_id; definitions used by live runs in experiment_id; tasks by run_id; attempts by run_id/task_id. Optional field=type returns distinct artifact types. No payload storage reads.",
+        "operationId": "options_dockflow_v1_ui_filter_options_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collection",
+            "required": true,
+            "schema": {
+              "enum": [
+                "pipelines",
+                "definitions",
+                "components",
+                "experiments",
+                "runs",
+                "tasks",
+                "attempts",
+                "artifacts"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "default": "",
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Distinct artifact type suggestions; only valid with collection=artifacts.",
+            "in": "query",
+            "name": "field",
+            "schema": {
+              "enum": [
+                "type"
+              ]
+            }
+          },
+          {
+            "description": "Exact selected parent ID. Supported only for dependent resource collections.",
+            "in": "query",
+            "name": "definition_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exact selected parent ID. Supported only for dependent resource collections.",
+            "in": "query",
+            "name": "experiment_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exact selected parent ID. Supported only for dependent resource collections.",
+            "in": "query",
+            "name": "run_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exact selected parent ID. Supported only for dependent resource collections.",
+            "in": "query",
+            "name": "task_id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterOptions"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Options"
+      }
+    },
+    "/dockflow/v1/ui/reference-names": {
+      "post": {
+        "description": "Read-only project-scoped name lookup for 1\u2013200 requested references; unavailable/retired context returns null without disclosing retired records. Available during execution.",
+        "operationId": "names_dockflow_v1_ui_reference_names_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferenceNamesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferenceNames"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Dockflow error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Names"
       }
     },
     "/health/live": {

@@ -73,6 +73,7 @@ Only `schema_version = 1` and `project.id` are required.
 | `execution` | `cpu_limit` | Omitted; finite positive number of CPU cores. |
 | `execution` | `memory_limit_bytes` | Omitted; positive integer bytes. |
 | `images` | `pull_policy` | `"if-missing"`, `"always"`, or `"never"`. |
+| `artifacts` | `retention_days`, `retention_interval_seconds` | `-1` (disabled), `3600`; see [retention](cleanup.md#optional-retention). |
 | `artifacts` | `backend` | `"filesystem"` or `"s3"`. |
 | `artifacts` | `root` | Legacy filesystem base; managed contents go below its `managed/` child. Defaults to `"artifacts"` if neither directory option is set; forbidden for S3. |
 | `artifacts` | `managed_root` | Exact filesystem managed directory; no extra child appended. Alternative to `root`; forbidden for S3. |

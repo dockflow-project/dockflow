@@ -3,7 +3,35 @@ import test from 'node:test';
 import {
   graphModel,
   graphView,
+  graphQueryKey,
 } from '../../src/dockflow_pipelines/static/graph.js';
+
+test('selection and inspector tabs preserve graph identity regardless of query ordering', () => {
+  assert.equal(
+    graphQueryKey(
+      new URLSearchParams('version=v1&node=prepare&stepTab=Logs&graph=group'),
+    ),
+    graphQueryKey(
+      new URLSearchParams('graph=group&node=fit&version=v1&stepTab=Overview'),
+    ),
+  );
+});
+
+test('definition, graph scope, graph mode and resource tabs require full navigation', () => {
+  const base = new URLSearchParams(
+    'version=v1&graph=group&graph-view=all&tab=Graph',
+  );
+  for (const [key, value] of [
+    ['version', 'v2'],
+    ['graph', 'other'],
+    ['graph-view', 'grouped'],
+    ['tab', 'Summary'],
+  ]) {
+    const changed = new URLSearchParams(base);
+    changed.set(key, value);
+    assert.notEqual(graphQueryKey(base), graphQueryKey(changed));
+  }
+});
 
 function fixture() {
   return {

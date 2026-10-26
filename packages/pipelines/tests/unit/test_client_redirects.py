@@ -46,7 +46,7 @@ def http_server(respond):
 
 
 @pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
-@pytest.mark.parametrize("method", ["GET", "POST"])
+@pytest.mark.parametrize("method", ["GET", "POST", "UPLOAD"])
 @pytest.mark.parametrize("same_origin", [False, True])
 def test_redirects_do_not_forward_credentials_or_replay_requests(
     tmp_path, status, method, same_origin
@@ -76,11 +76,19 @@ def test_redirects_do_not_forward_credentials_or_replay_requests(
         with http_server(origin) as endpoint:
             client = Client(endpoint, {"token_file": token})
             with pytest.raises(DockflowError, match="redirect") as error:
-                client.request(
-                    method,
-                    "/dockflow/v1/experiments",
-                    {"display_name": "test"} if method == "POST" else None,
-                )
+                if method == "UPLOAD":
+                    source = tmp_path / "dataset.csv"
+                    source.write_text("id,value\n1,example\n")
+                    client.upload_artifact(
+                        source,
+                        {"schema_title": "system.Dataset", "schema_version": "0.0.1"},
+                    )
+                else:
+                    client.request(
+                        method,
+                        "/dockflow/v1/experiments",
+                        {"display_name": "test"} if method == "POST" else None,
+                    )
             assert error.value.code == "UNAVAILABLE"
             assert token.read_text() not in str(error.value)
     assert received == []
@@ -102,6 +110,37 @@ def test_direct_requests_still_send_configured_authentication(tmp_path):
             "ok": True
         }
     assert received == ["Bearer synthetic-direct-test-token"]
+
+
+def test_upload_preserves_endpoint_prefix_and_authentication(tmp_path):
+    token = tmp_path / "token"
+    token.write_text("synthetic-upload-test-token")
+    source = tmp_path / "data.csv"
+    source.write_text("id,value\n1,test\n")
+    received = []
+
+    def origin(request):
+        received.append(
+            (
+                request.path,
+                request.headers.get("Authorization"),
+                request.headers.get("Content-Type"),
+            )
+        )
+        request.send_response(201)
+        request.end_headers()
+        request.wfile.write(b'{"artifact_id":"test"}')
+
+    with http_server(origin) as endpoint:
+        result = Client(endpoint + "/proxy", {"token_file": token}).upload_artifact(
+            source, {"schema_title": "system.Dataset", "schema_version": "0.0.1"}
+        )
+    assert result == {"artifact_id": "test"}
+    assert received[0][:2] == (
+        "/proxy/dockflow/v1/artifacts/upload",
+        "Bearer synthetic-upload-test-token",
+    )
+    assert received[0][2].startswith("multipart/form-data; boundary=")
 
 
 def test_https_redirect_cannot_downgrade_to_http(tmp_path, monkeypatch):

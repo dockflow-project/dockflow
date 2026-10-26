@@ -79,8 +79,8 @@ dockflow pipelines --config PROJECT_CONFIG clean --apply
 The first returns a plan; the second revalidates it under idle ownership and
 removes only eligible disposable work. You can use the endpoint for this operation
 when the service is idle. It preserves committed artifacts, definitions, logs,
-history, pins and external sources. There is no automatic published-artifact
-expiry in this profile.
+history, pins and external sources. Published-artifact expiry is disabled by default; optional
+[Dockflow retention](cleanup.md#optional-retention) uses dependency checks.
 
 ## Backup, restore and rebuild
 
@@ -174,3 +174,10 @@ access errors. Confirmed missing/corrupt bytes invalidate only the selected outp
 set and open one new retry episode. Validated cache publication remains reusable
 if a later producing-journal projection fails; reconcile execution history before
 admitting another Run to that state root.
+
+## Resource deletion and storage cleanup
+
+See [Deletion and storage cleanup](cleanup.md) for dependency-protected Run,
+execution and artifact deletion, file inventories, explicit manual-artifact
+protection, DANGER confirmation and optional deployment retention. Legacy `clean`
+continues to remove only disposable workspaces.

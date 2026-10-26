@@ -242,8 +242,8 @@ A remote CLI sends compiled IR or registered version references and execution
 arguments. Server configuration owns daemon, storage, state, limits and paths.
 A client path operand is read by the client and transmitted as compiled content;
 it is not treated as a server path. Artifact reference registration is interpreted
-in the executor's namespace; arbitrary artifact-byte client uploads remain
-deferred. The bounded KFP multipart definition-upload API transports compiled
+in the executor's namespace. Native [artifact uploads](006_artifacts.md#upload-and-register)
+send client file bytes to a fresh managed destination. The bounded KFP multipart definition-upload API transports compiled
 YAML/JSON only; it provides no dataset, component-image or source-tree transfer.
 
 A service command never routes execution to client.endpoint. A mutating direct
@@ -394,3 +394,9 @@ after expiry another coordinator may claim accepted unstarted work.
 Configured CPU and byte-memory caps must remain positive when converted to
 Docker nanocores/bytes and fit signed 64-bit limits. Reject underflow and
 unrepresentable quotas during configuration loading.
+
+## Deletion and retention settings
+
+[015](015_deletion-and-storage-cleanup.md#deployment-retention) owns
+`artifacts.retention_days`, `artifacts.retention_interval_seconds`, deployment
+overrides and eligibility; these specialize the original disabled-expiry profile.

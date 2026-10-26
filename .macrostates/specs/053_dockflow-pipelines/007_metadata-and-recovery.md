@@ -1,5 +1,9 @@
 # Metadata, durable records and recovery
 
+Explicit resource deletion, storage cleanup and deployment retention are governed
+by [Deletion and storage cleanup](015_deletion-and-storage-cleanup.md), which
+specializes the original preservation/disabled-cleanup defaults below.
+
 ## Persistence authority
 
 The authoritative execution journal, query projections, exact compiled source

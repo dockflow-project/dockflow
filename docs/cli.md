@@ -121,6 +121,7 @@ is unaffected by either switch.
 | `artifacts show ARTIFACT_ID` | Fingerprint, URI, type, provenance, availability and pin. |
 | `artifacts register --uri URI --type TITLE` | Keep an external reference. |
 | `artifacts import --uri URI --type TITLE` | Create a managed immutable copy. |
+| `artifacts upload PATH [--archive-mode keep\|extract] [--type TITLE]` | Upload client-local bytes and register a manual managed file/directory artifact. |
 | `artifacts pin ID` / `artifacts unpin ID` | Set/remove an explicit retention pin. |
 | `experiments create NAME [--description TEXT]` | Create a project-unique grouping. |
 | `experiments list [--name NAME]` / `experiments show ID` | Inspect groupings. |
@@ -191,3 +192,10 @@ Retained logs can also be retrieved separately.
 Ctrl+C during direct execution requests interruption and container termination.
 Ctrl+C in a remote waiting client detaches the client and leaves the Run owned by
 the service. Use `runs cancel` to request actual service-side cancellation.
+
+## Resource deletion and storage cleanup
+
+See [Deletion and storage cleanup](cleanup.md) for dependency-protected Run,
+execution and artifact deletion, file inventories, explicit manual-artifact
+protection, DANGER confirmation and optional deployment retention. Legacy `clean`
+continues to remove only disposable workspaces.
