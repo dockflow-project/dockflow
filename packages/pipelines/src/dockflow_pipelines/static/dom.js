@@ -6,6 +6,8 @@ export function el(tag, attrs = {}, ...children) {
       node.addEventListener(key.slice(2).toLowerCase(), value);
     else if (key === 'class') node.className = value;
     else if (key === 'dataset') Object.assign(node.dataset, value);
+    else if (key.startsWith('aria-') && typeof value === 'boolean')
+      node.setAttribute(key, String(value));
     else if (value !== undefined && value !== null && value !== false) {
       if (
         ['checked', 'disabled', 'required', 'multiple', 'selected'].includes(
@@ -36,6 +38,20 @@ export function button(label, action, style = 'secondary', attrs = {}) {
 }
 export function link(text, path, attrs = {}) {
   return el('a', { href: '#/' + path, ...attrs }, text);
+}
+export function referenceLabel(collection, id, compact = false) {
+  return el(
+    'span',
+    {
+      class: 'resource-reference',
+      title: id,
+      dataset: {
+        referenceCollection: collection,
+        referenceId: id,
+      },
+    },
+    compact ? short(id) : id,
+  );
 }
 export function json(value) {
   return el('pre', { class: 'code' }, JSON.stringify(value ?? null, null, 2));
@@ -99,8 +115,6 @@ export function errorBox(error, retry) {
   );
 }
 export function table(headers, rows, message = 'No records found.') {
-  if (!rows.length)
-    return empty(message, 'Records appear here after they are created.');
   return el(
     'div',
     { class: 'table-scroll' },
@@ -119,16 +133,106 @@ export function table(headers, rows, message = 'No records found.') {
       el(
         'tbody',
         {},
-        rows.map((row) =>
-          el(
-            'tr',
-            {},
-            row.map((cell) => el('td', {}, cell ?? '—')),
-          ),
-        ),
+        rows.length
+          ? rows.map((row) =>
+              el(
+                'tr',
+                {},
+                row.map((cell) => el('td', {}, cell ?? '—')),
+              ),
+            )
+          : el(
+              'tr',
+              { class: 'empty-row' },
+              el(
+                'td',
+                { colspan: headers.length },
+                empty(message, 'Records appear here after they are created.'),
+              ),
+            ),
       ),
     ),
   );
+}
+
+export function listScreen(header, content, footer, label = 'Records') {
+  return el(
+    'section',
+    { class: 'list-screen' },
+    el('header', { class: 'list-header' }, header),
+    el(
+      'div',
+      {
+        class: 'list-content',
+        role: 'region',
+        tabindex: '0',
+        'aria-label': label,
+      },
+      content,
+    ),
+    el('footer', { class: 'list-footer' }, footer),
+  );
+}
+
+/** Bounded, already-loaded detail/comparison rows; never claims a server total. */
+export function localList(
+  headers,
+  rows,
+  { title = 'Records', header, limited = false } = {},
+) {
+  const content = el('div'),
+    footer = el('div', { class: 'pager' });
+  const screen = listScreen(
+    header || el('h2', {}, title),
+    content,
+    footer,
+    title,
+  );
+  let page = 0;
+  function render() {
+    const start = page * 50,
+      visible = rows.slice(start, start + 50);
+    clear(content, table(headers, visible));
+    clear(
+      footer,
+      el(
+        'span',
+        {},
+        `${visible.length} rows on page ${page + 1} · ${rows.length} loaded${limited ? ' · truncated subset' : ''}`,
+      ),
+      el(
+        'div',
+        { class: 'actions' },
+        button(
+          'Previous',
+          () => {
+            page--;
+            render();
+          },
+          'secondary',
+          { disabled: page === 0 },
+        ),
+        button(
+          'Next',
+          () => {
+            page++;
+            render();
+          },
+          'secondary',
+          { disabled: start + 50 >= rows.length },
+        ),
+      ),
+    );
+    screen.querySelector('.list-content').scrollTop = 0;
+  }
+  screen.capturePage = () => page;
+  screen.restorePage = (saved) => {
+    if (!Number.isInteger(saved)) return;
+    page = Math.max(0, Math.min(saved, Math.ceil(rows.length / 50) - 1));
+    render();
+  };
+  render();
+  return screen;
 }
 export function fields(items) {
   return el(
@@ -162,7 +266,7 @@ export function pageHeader(title, subtitle, actions = []) {
     el(
       'div',
       {},
-      el('h1', {}, title),
+      el('h1', { title }, title),
       subtitle ? el('p', { class: 'subtle' }, subtitle) : null,
     ),
     el('div', { class: 'actions' }, actions),

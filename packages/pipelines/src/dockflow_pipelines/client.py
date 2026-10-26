@@ -1,7 +1,10 @@
 """Standard-library remote client; no execution or server imports."""
 
 import json
+import os
 import ssl
+import uuid
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
@@ -66,11 +69,11 @@ class Client:
             headers["Content-Type"] = "application/json; charset=utf-8"
         if key:
             headers["Idempotency-Key"] = key
+        return self._send(Request(url, data=data, headers=headers, method=method))
+
+    def _send(self, request: Request, *, timeout: int = 30):
         try:
-            with self.opener.open(
-                Request(url, data=data, headers=headers, method=method),
-                timeout=30,
-            ) as response:
+            with self.opener.open(request, timeout=timeout) as response:
                 return loads(response.read())
         except HTTPError as exc:
             try:
@@ -93,8 +96,85 @@ class Client:
                 503,
             ) from None
 
+    def upload_artifact(
+        self,
+        path: Path,
+        type: dict,
+        metadata: dict | None = None,
+        version: str | None = None,
+        archive_mode: str = "keep",
+    ) -> dict:
+        """Upload local bytes and receive one registered manual managed artifact.
+
+        No transport retries: inspect the artifact list after an uncertain response.
+        """
+        from .uploads import filename, open_source, validate_options
+
+        path = Path(path)
+        name = filename(path.name)
+        options = {
+            "type": type,
+            "metadata": metadata if metadata is not None else {},
+            "archive_mode": archive_mode,
+        }
+        if version is not None:
+            options["version"] = version
+        validate_options(options)
+        boundary = "dockflow-" + uuid.uuid4().hex
+        prefix = (
+            f'--{boundary}\r\nContent-Disposition: form-data; name="options"\r\n'
+            "Content-Type: application/json; charset=utf-8\r\n\r\n"
+            + json.dumps(options, ensure_ascii=False, allow_nan=False)
+            + f"\r\n--{boundary}\r\nContent-Disposition: form-data; "
+            f'name="uploadfile"; filename="{name}"\r\n'
+            "Content-Type: application/octet-stream\r\n\r\n"
+        ).encode("utf-8")
+        suffix = f"\r\n--{boundary}--\r\n".encode()
+        with open_source(path) as stream:
+            size = os.fstat(stream.fileno()).st_size
+
+            def chunks():
+                yield prefix
+                remaining = size
+                while remaining:
+                    block = stream.read(min(1024 * 1024, remaining))
+                    if not block:
+                        raise DockflowError("Upload source changed while reading")
+                    remaining -= len(block)
+                    yield block
+                if stream.read(1):
+                    raise DockflowError("Upload source changed while reading")
+                yield suffix
+
+            headers = {
+                **self.headers,
+                "Content-Type": "multipart/form-data; boundary=" + boundary,
+                "Content-Length": str(len(prefix) + size + len(suffix)),
+            }
+            return self._send(
+                Request(
+                    self.endpoint + "/dockflow/v1/artifacts/upload",
+                    data=chunks(),
+                    headers=headers,
+                    method="POST",
+                ),
+                timeout=300,
+            )
+
     def operate(self, action: str, values: dict):
+        if action == "artifacts.upload":
+            return self.upload_artifact(**values)
         prefix = "/dockflow/v1"
+        maintenance = {
+            "storage.scan": "/storage/scan",
+            "storage.show": "/storage/scan/show",
+            "deletions.plan": "/deletions/plan",
+            "deletions.show": "/deletions/show",
+            "deletions.apply": "/deletions/apply",
+            "retention": "/retention",
+        }
+        if action in maintenance:
+            return self.request("POST", prefix + maintenance[action], values)
         if action in {"cache.invalidate", "cache.reset"}:
             operation = action.split(".")[1]
             return self.request(
@@ -157,6 +237,12 @@ class Client:
                 "POST", prefix + f"/{collection}/{values['id']}/{operation}", {}
             )
         path = {
+            "storage.scan": "/storage/scan",
+            "storage.show": "/storage/scan/show",
+            "deletions.plan": "/deletions/plan",
+            "deletions.show": "/deletions/show",
+            "deletions.apply": "/deletions/apply",
+            "retention": "/retention",
             "definitions.validate": "/definitions/validate",
             "definitions.refresh": "/definitions/refresh",
             "artifacts.create": "/artifacts",

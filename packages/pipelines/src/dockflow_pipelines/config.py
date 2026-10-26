@@ -39,6 +39,8 @@ DEFAULTS = {
         "prefix": "",
         "tls_verify": True,
         "allow_insecure_http": False,
+        "retention_days": -1,
+        "retention_interval_seconds": 3600,
     },
     "reuse": {"scope": "global"},
     "cache": dict(DEFAULT_CACHE),
@@ -78,6 +80,8 @@ FIELDS = {
         "prefix",
         "tls_verify",
         "allow_insecure_http",
+        "retention_days",
+        "retention_interval_seconds",
     },
     "reuse": {"scope", "scope_key"},
     "cache": CACHE_FIELDS,
@@ -107,6 +111,8 @@ ENV = {
     "ARTIFACTS_BACKEND": "artifacts.backend",
     "ARTIFACTS_ROOT": "artifacts.root",
     "ARTIFACTS_MANAGED_ROOT": "artifacts.managed_root",
+    "ARTIFACT_RETENTION_DAYS": "artifacts.retention_days",
+    "ARTIFACT_RETENTION_INTERVAL_SECONDS": "artifacts.retention_interval_seconds",
     "S3_ENDPOINT": "artifacts.endpoint",
     "S3_BUCKET": "artifacts.bucket",
     "S3_PREFIX": "artifacts.prefix",
@@ -141,6 +147,7 @@ INTS = {
     "port",
     "queue_capacity",
     "request_max_bytes",
+    "retention_interval_seconds",
 }
 FLOATS = {
     "run_lease_seconds",
@@ -277,6 +284,16 @@ def load_settings(
         raise DockflowError(
             "Cache connection overrides are unsupported; configure the single database in state"
         )
+    if "ARTIFACT_RETENTION_DAYS" in os.environ:
+        try:
+            data["artifacts"]["retention_days"] = int(
+                os.environ["ARTIFACT_RETENTION_DAYS"]
+            )
+        except ValueError:
+            raise DockflowError(
+                "ARTIFACT_RETENTION_DAYS must be -1 or a positive integer"
+            ) from None
+        sources["artifacts.retention_days"] = "environment"
     for suffix, key in ENV.items():
         variable = f"DOCKFLOW_PIPELINES_{suffix}"
         if variable not in os.environ:
@@ -290,6 +307,10 @@ def load_settings(
                 if value.lower() not in {"true", "false"}:
                     raise ValueError("expected true or false")
                 value = value.lower() == "true"
+            elif field == "retention_days":
+                if not re.fullmatch(r"-1|[1-9][0-9]*", value):
+                    raise ValueError("expected -1 or a positive integer")
+                value = int(value)
             elif field in INTS:
                 if not re.fullmatch(r"[0-9]+", value):
                     raise ValueError("expected nonnegative decimal integer")
@@ -430,6 +451,17 @@ def load_settings(
     if data["reuse"]["scope"] == "keyed" and not data["reuse"].get("scope_key"):
         raise DockflowError("reuse.scope_key is required for keyed scope")
     artifacts = data["artifacts"]
+    if (
+        type(artifacts["retention_days"]) is not int
+        or artifacts["retention_days"] == 0
+        or artifacts["retention_days"] < -1
+    ):
+        raise DockflowError("artifacts.retention_days must be -1 or a positive integer")
+    if (
+        type(artifacts["retention_interval_seconds"]) is not int
+        or artifacts["retention_interval_seconds"] <= 0
+    ):
+        raise DockflowError("artifacts.retention_interval_seconds must be positive")
     if artifacts["backend"] not in {"filesystem", "s3"}:
         raise DockflowError("Unsupported artifact backend")
     if artifacts["backend"] == "filesystem":

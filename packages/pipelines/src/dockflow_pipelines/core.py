@@ -110,9 +110,14 @@ def capabilities(settings: Settings | None = None) -> dict:
             "partial_selection",
             "pipeline_uploads",
             "web_interface",
+            "artifact_contents",
+            "artifact_uploads",
             "coordinated_artifact_cache",
             "database_execution_state",
             "concurrent_postgresql_runs",
+            "resource_deletion",
+            "storage_inventory_cleanup",
+            "artifact_retention",
         ],
         "backends": {
             "execution": "KFP DockerRunner",
@@ -133,7 +138,7 @@ def capabilities(settings: Settings | None = None) -> dict:
             "qualification": "documented client subset",
         },
         "limitations": [
-            "No loops, accelerators, Kubernetes platform plugins, managed-output URI overrides or artifact payload uploads",
+            "No loops, accelerators, Kubernetes platform plugins or managed-output URI overrides",
             "Execution qualification is limited to Linux x86-64; no full KFP parity claim",
         ],
     }

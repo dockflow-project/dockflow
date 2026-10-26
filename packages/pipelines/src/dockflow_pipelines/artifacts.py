@@ -668,6 +668,7 @@ class ArtifactStore:
                 version,
             )
             descriptor.update(
+                creation_origin="manual",
                 source_uri=uri,
                 source_provider_version=provider_version,
                 publication_state="committed",
@@ -724,6 +725,7 @@ class ArtifactStore:
             "artifact_id": artifact_id,
             "type": dict(artifact_type),
             "origin": origin,
+            "creation_origin": "execution" if origin == "produced" else "manual",
             "ownership": ownership,
             "storage_backend": self.backend if ownership == "managed" else "external",
             "descriptor_uri": descriptor_uri,

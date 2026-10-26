@@ -2,6 +2,38 @@
 
 [Documentation index](README.md)
 
+## Upload and register a new artifact
+
+In the web interface choose **Artifacts → Upload artifact**, select a file and
+choose its type and optional data revision/JSON metadata. **Upload and register**
+saves a managed copy and opens its Contents tab. No Run is created. Uploaded
+artifacts are manually added and are excluded from automatic retention.
+
+For a `.zip` file choose **Keep ZIP file as an artifact** (default), or **Extract
+into a directory artifact**. Extraction preserves nested files and empty folders;
+it does not recursively unpack archives inside the ZIP. Dockflow assigns a fresh
+managed destination on the configured filesystem/S3 backend. Existing artifacts
+are never overwritten.
+
+The same operation is available directly or through a selected service:
+
+```bash
+dockflow pipelines --config PROJECT_CONFIG artifacts upload ./dataset.csv \
+  --type system.Dataset --version dataset-v1
+dockflow pipelines --endpoint SERVICE_URL artifacts upload ./dataset.zip \
+  --archive-mode extract --type system.Dataset
+```
+
+The upload request limit is configured with `service.request_max_bytes` or
+`DOCKFLOW_PIPELINES_REQUEST_MAX_BYTES` (16 MiB by default, including multipart
+overhead over HTTP). Direct uploads apply the limit to file bytes. Extracted ZIPs
+are limited to 256 MiB, 10,000 entries and 32 path levels. Unsafe/conflicting
+paths, links, encrypted/unsupported or corrupt entries are rejected before
+publication. Keep mode stores arbitrary bytes unchanged. Temporary staging is
+removed after success or failure. If a connection fails after submission, check
+the artifact list before retrying: a repeated successful submission creates a new
+artifact. See the [API guide](api.md#upload-and-register-client-files).
+
 ## Register a reference or import a copy
 
 An external dataset already exists before a computation. Dockflow can register
@@ -117,6 +149,14 @@ own IDs, descriptors, commit markers and execution staging.
 
 ## Inspect lineage and integrity
 
+The browser opens artifacts on [Contents](ui.md#artifacts-and-lineage), with
+paged CSV, collapsible highlighted JSON, raster images and registered-directory
+browsing. Previews read through the service using artifact identity and current
+source allowlists. They do not materialize whole large datasets or change files.
+Partial CSV/text previews check identity/size and do not replace a full integrity
+check; the footer distinguishes this from a verified complete-file read.
+Overview and Lineage remain available for missing, unsupported or excessive files.
+
 ```bash
 dockflow pipelines --config PROJECT_CONFIG artifacts show ARTIFACT_ID
 dockflow pipelines --config PROJECT_CONFIG tasks show TASK_ID
@@ -205,3 +245,10 @@ PostgreSQL state database. Their stable `dockflow://PROJECT_ID/artifacts/ARTIFAC
 URI identifies the metadata record through Dockflow; it is not a payload download
 URL. `content_uri` continues to locate the filesystem/S3 contents. A fresh
 environment connected to the same project/database can resolve those records.
+
+## Resource deletion and storage cleanup
+
+See [Deletion and storage cleanup](cleanup.md) for dependency-protected Run,
+execution and artifact deletion, file inventories, explicit manual-artifact
+protection, DANGER confirmation and optional deployment retention. Legacy `clean`
+continues to remove only disposable workspaces.

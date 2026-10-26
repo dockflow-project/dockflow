@@ -2,7 +2,7 @@ schema_version: 1
 project:
   name: dockflow
   entrypoint: main.md
-  version: specs-1.0.0
+  version: specs-2.0.0
 packages:
 - name: meta
   version: 3.0.0
@@ -65,13 +65,13 @@ packages:
   source:
     type: local
 - name: dockflow-pipelines
-  version: 12.0.0
+  version: 13.17.0
   path: 053_dockflow-pipelines
   entrypoint: README.md
   source:
     type: local
 - name: dockflow-artifacts
-  version: 4.0.0
+  version: 4.1.0
   path: 054_dockflow-artifacts
   entrypoint: README.md
   source:

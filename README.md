@@ -4,7 +4,7 @@ Dockflow runs compiled Kubeflow Pipelines definitions through Docker, without
 Kubernetes. It adds persistent run history, typed artifacts and lineage,
 verified task reuse, a CLI, a REST API and a browser interface.
 
-**Dockflow 0.2.0** supports a bounded KFP 2.17 profile with serial tasks within
+**Dockflow 0.3.0** supports a bounded KFP 2.17 profile with serial tasks within
 each Run. SQLite uses one local coordinator; PostgreSQL supports concurrent Runs
 across isolated coordinators. It is
 intended for trusted components. See [compatibility](docs/compatibility.md) for
@@ -12,7 +12,7 @@ features, limits and qualification boundaries.
 
 ## Get started
 
-Install `dockflow-pipelines==0.2.0` from PyPI; it includes
+Install `dockflow-pipelines==0.3.0` from PyPI; it includes
 the shared CLI. For local execution, use the [installation guide](docs/installation.md)
 to apply the required KFP dependency override, or follow the locked source setup
 below. Release changes and limits are in the [changelog](CHANGELOG.md).

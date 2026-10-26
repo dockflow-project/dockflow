@@ -1,0 +1,23 @@
+schema_version: 1
+id: graph-workspace
+summary: Add viewport-filling pipeline and Run workspaces with fixed compact headers, independent inspectors and stable graph selection.
+origin:
+  commit: "72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4"
+  specification: "specs-1.0.0"
+  implementation: "imp-1.0.0"
+impact:
+  specification: minor
+  implementation: minor
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Pipelines 013 pipeline and Run workspace layout.
+    implementation: Fixed shell, compact resource headers and graph toolbar with inline nested navigation, graph/inspector scroll regions and in-place query selection with viewport restoration on refresh.
+    verification: 45 web/API tests, six JavaScript files, 14 existing browser journeys and eight workspace journeys passed; desktop/narrow/wide visual, keyboard, refresh, version and independent-scroll checks plus static/composition checks passed.
+evidence:
+  - workflows/history/2026-10-25__1BE9E3__graph-workspace-specification.md
+  - workflows/history/2026-10-25__1BE9E3__graph-workspace-implementation.md
+  - validation/graph-workspace.md
+gaps: []
+delivery_limits:
+  - Feature acceptance, all-workflow closure and release authorized; actual publication remains an external gate.

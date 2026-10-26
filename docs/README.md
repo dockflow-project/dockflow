@@ -36,6 +36,7 @@ choose direct execution or a persistent service for your project.
 | Guide | What it covers |
 | --- | --- |
 | [Deployment](deployment.md) | A Python service, container topology, image stores and mounts. |
+| [Deletion and storage cleanup](cleanup.md) | Dependency protections, manual artifacts, reviewed file deletion and optional retention. |
 | [Operations](operations.md) | Start, stop, inspect, cancel and maintain a project. |
 | [Persistence and recovery](persistence.md) | Ownership, data layout, backup, restore and crash recovery. |
 | [Troubleshooting](troubleshooting.md) | Common failures and targeted diagnostics. |

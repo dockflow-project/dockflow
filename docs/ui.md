@@ -7,44 +7,138 @@ there. The interface is included in the service package and uses the same API,
 history and permissions as the CLI. No frontend build service or CDN is needed.
 JavaScript is required; the CLI/API remain available without a browser.
 
-The project name and service readiness appear in the top bar. For a token-enabled
+The project name appears directly beneath the Dockflow logo as plain text.
+Service readiness and **Connect/Sign out** sit at the very bottom of the left
+sidebar. A divider separates them from the documentation links and runtime text
+above, with another divider above that group. The selected screen uses the full height;
+there is no global top bar. On short screens the menu scrolls while these controls
+remain available. For a token-enabled
 service, choose **Connect** and enter its bearer token. The page keeps it in
 memory, not browser storage; **Sign out**, reload or leaving the page clears it.
 The API reference is a separate page and may need its own connection.
 
 ## Navigation
 
-| Menu | What you can do |
-| --- | --- |
-| **Pipelines** | Browse catalog entries, select versions, inspect graphs/source, upload compiled definitions and create Runs. |
-| **Experiments** | Create named groups, inspect their Runs and compare results. |
-| **Runs** | Filter history, create/clone Runs, inspect steps/results/logs, cancel active work and compare 2–5 Runs. |
-| **Artifacts** | Inspect datasets/models/results, register/import external sources, pin artifacts and follow lineage. |
-| **Executions** | Browse actual task attempts, including retries, and inspect their logs and image/result details. |
-| **Components** | Inspect embedded component interfaces and executor images/commands. |
-| **Service information** | See project identity, runtime versions, capabilities, queue size and limits. |
-| **API documentation** | Browse/search the live OpenAPI contract and download its JSON. |
+Resource references show names alongside IDs throughout lists, details, graph
+inspectors, lineage, comparisons, selectors and deletion dialogs. Executions and
+tasks show their component name; Runs show the pipeline name while retaining their
+invocation label; pipeline/version and experiment references show their own names.
+The name appears first, followed by any invocation/attempt label and then the ID.
+Filter fields show the selected name then ID inside the field without adding
+header height; they submit the exact ID. Other editable ID fields retain name hints.
+Shortened IDs have the complete ID in the link destination or tooltip. Identical
+names remain distinguishable by ID, and selectors keep their original ID values.
+If a name cannot be resolved, the ID remains visible with **Name unavailable**;
+refresh can retry the lookup. Raw records, source and artifact contents stay intact.
+
+| Section | Menu | What you can do |
+| --- | --- | --- |
+| Definitions | **Pipelines** | Browse catalog entries, select versions, inspect graphs/source, upload compiled definitions and create Runs. |
+| Definitions | **Components** | Inspect embedded component interfaces and executor images/commands. |
+| Workloads | **Experiments** | Create named groups, inspect their Runs and compare results. |
+| Workloads | **Runs** | Filter history, create/clone Runs, inspect steps/results/logs, cancel active work and compare 2–5 Runs. |
+| Workloads | **Executions** | Browse actual task attempts, including retries, and inspect their logs and image/result details. |
+| Storage | **Artifacts** | Inspect datasets/models/results, register/import external sources, pin artifacts and follow lineage. |
+| Storage | **Cleanup** | Open Storage cleanup to classify files, inspect byte estimates and review deletions. |
+
+Section labels remain visible on the narrow icon sidebar; each icon retains its
+accessible name and tooltip. **API documentation** and **Service information**
+remain in the footer for the live API reference and project/runtime details.
 
 Lists expose relevant filters, **Apply filters**, **Clear**, **Refresh** and
 **Previous/Next** pagination. A list shows one page rather than all historical
 records. Resource IDs, tabs and graph selections appear in navigation links,
 so a detail page can be bookmarked or shared with another authorized client.
 
+Click a search field to see up to ten recent options, even before typing. Search
+by name or ID; suggestions show names before exact IDs. Definitions/components
+use their registration date, and Runs/executions use their start time (creation
+time while not started). Choose an option with the mouse or Up/Down and Enter,
+then choose **Apply filters**. Escape dismisses suggestions. Primary **Search**
+also accepts partial names/IDs directly; related-resource filters select exact
+IDs. The Cleanup **Artifact** filter also searches by name/ID. **Type** suggests
+recent artifact types and keeps exact type filtering.
+Selected fields have an **×** button inside their right edge; long text fades
+before that button so it stays clear. Use it to clear
+that field and its dependent selections, then choose **Apply filters** when ready.
+When more than ten matches exist, the footer says **...and N more** with the exact
+remaining count. Components show **Pipeline ID** before **Component ID** and limit
+component options to that pipeline. Runs show **Search**, **Experiment ID**,
+**Pipeline ID**, then **State**; the pipeline choices come from Runs in the chosen
+experiment. Executions show **Search**, **Run ID**, **Task ID**, then **State**;
+the task choices belong to the chosen Run. Changing a parent clears its dependent
+selection. State always offers every valid state. Text fields and selects have
+matching heights. **Pipeline ID** labels the immutable definition/version ID in
+these filters; API fields and links keep their existing identities.
+
+List screens keep their title, filters and actions above the rows, with pagination
+and counts fixed at the bottom. Scroll within the list; column headings stay at
+its top and move with their columns when scrolling horizontally. Focus the list
+to scroll with the keyboard. This also applies to experiment Runs, artifact
+consumers, Run task results, comparisons and cleanup files. On narrow screens the
+top controls wrap or scroll within their section; cleanup options can collapse.
+Resource tabs remain above embedded lists.
+
+Catalog counts describe the current server page and indicate when more records
+exist. Task results and comparison fields page through already loaded rows and
+label loaded counts and any truncated subset. Changing filters/pages returns to
+the top of the list. Refreshing the same query preserves row position and local
+page; a failed refresh keeps the last displayed data with an error and **Try again**.
+
+Element detail screens keep a compact identity/status/action header above their
+information area. Tabs, where present, stay at the bottom of that header. Scroll
+the remaining area to inspect the record; navigation and its project/service context
+stay visible. Long JSON/source blocks scroll with that information area. Focus
+the area for keyboard scrolling. Refreshing the same element and tab keeps its
+position; changing tabs starts at the top. Tabs are retained in bookmarkable URLs
+and browser history. Long header context/actions have their own bounded overflow
+on narrow screens.
+
+Components use **Overview**, **Interface**, **Executor** and **Source** tabs.
+Task and execution details use **Overview**, **Inputs / outputs**, **Logs** and
+**Record**: Overview includes outcome, attempts/reuse and error details; inputs,
+parameters and outputs appear together; Record shows the complete retained data.
+Choose **Logs** to inspect retained execution output. Artifact **Contents/Overview/Lineage**
+and pipeline/Run tabs keep their existing information. Service information uses
+the same fixed-header layout without extra tabs; experiment Runs retain the list
+layout.
+
 ## Pipelines and versions
 
 Open a pipeline to select its immutable version. The current default is marked;
 selecting an older version does not change the default. Its tabs are:
 
-- **Graph**: dependencies and selectable component/subpipeline nodes at the
-  current pipeline level. Selecting a node shows its input/output contract and
+- **Graph**: top-to-bottom dependencies and selectable component/subpipeline nodes
+  at the current pipeline level. Selecting a node shows its input/output contract and
   task configuration. Use **Open subpipeline** to inspect its children, and the
-  breadcrumbs to return to a parent. **All tasks** shows the complete hierarchy
+  breadcrumbs in the graph toolbar to return to a parent. The top-level graph
+  omits the redundant Pipeline breadcrumb row. **All tasks** shows the complete hierarchy
   with dotted containment edges; **Grouped view** restores the focused level.
-  Use zoom controls and scroll to pan.
+  Pipeline and Run graphs use this orientation in every scope. Use zoom controls
+  and scroll or drag the background to pan.
 - **Summary**: version/pipeline IDs, content digest, profile, availability and
   root interface.
 - **Source**: retained compiled YAML/JSON with **Copy source** and
   **Download source**.
+
+Pipeline and Run detail screens keep a compact title/status bar and resource tabs
+at the top of the selected screen. The graph fills the remaining space: scroll or
+pan its contents while its toolbar and navigation stay in place. Selecting a
+step opens an independently scrolling inspector on the right; on narrow screens
+it opens as a right-hand drawer. Use **Close step details** to dismiss it.
+Selection, inspector tabs and browser back/forward retain the mounted graph,
+zoom and pan position. Live Run updates and **Refresh** preserve the viewport
+for the same definition and graph scope. Other resource tabs scroll below the
+fixed headers. Left navigation remains available throughout.
+
+To move around a graph, hold the primary mouse button on an empty area and drag.
+The graph follows the pointer, and the cursor changes from a grab hand to a
+grabbing hand. Release to stop, including outside the graph. Node clicks still
+select steps; scrollbars, mouse wheel, touch scrolling and keyboard panning are
+also available. Dragging changes position without changing zoom.
+
+Try the [98-step scrolling example](../examples/scrolling/README.md) for a graph
+with eight parallel branches and enough depth to scroll in both directions.
 
 **Upload pipeline** accepts a compiled `.yaml`, `.yml` or `.json` file plus an
 optional display name/description. For an API-owned pipeline, **Upload version**
@@ -131,16 +225,48 @@ task output parameters and finite numeric artifact metadata. Missing fields are
 shown as **Absent**, not zero. Metric values link back to their source artifacts.
 
 Comparison reads recorded results; it does not rerun a model or infer comparable
-units from unrelated metric names. Complex classification plots and arbitrary
-artifact file previews are outside the current interface.
+units from unrelated metric names. Complex classification plots remain outside
+the comparison interface; open an artifact's Contents tab to preview its files.
 
 ## Artifacts and lineage
+
+**Upload artifact** accepts a file from your computer and registers it in managed
+storage in one step. Set its type and optional data revision/JSON metadata, then
+choose **Upload and register**. ZIPs offer keeping the archive or extracting it
+into a directory artifact. Success opens Contents; errors keep the form available
+for correction. No Run is created. Manually added artifacts require explicit
+deletion and are excluded from automatic retention. See
+[upload usage and limits](artifacts.md#upload-and-register-a-new-artifact).
 
 **Register artifact** offers two operations: **Import · managed copy** and
 **Register · external reference**. Enter a service-visible allowed URI, type
 schema/version and optional data revision/JSON metadata. This form does not
 upload a file from your browser. See [artifacts](artifacts.md) for the storage
 and source-allowlist rules.
+
+An artifact opens on **Contents**, the first tab:
+
+- CSV files show a table with **Previous/Next** pages loaded from the service.
+  Large files stay on storage; the browser loads the current rows. The first
+  record supplies headings, and quoted/multiline UTF-8 values remain text.
+- JSON shows a highlighted tree. Click a branch to expand/collapse it; **Show next
+  100** reveals more children. Large numbers retain their exact spelling. Expansion
+  and scroll position survive refresh for the same registered file.
+- PNG, JPEG, GIF and WebP images display with **Actual size / Fit to width** controls.
+- Directories show their registered files/folders. Open a name, use the path
+  breadcrumbs to go up, or use browser Back/Forward. Newly added, unregistered
+  files do not appear in this snapshot browser.
+- UTF-8 text has a bounded text preview. Unsupported binary files show an
+  explanation. Metadata-only artifacts show their metadata tree.
+
+**View as** can select CSV, JSON, image or text when automatic detection is
+unsuitable. Previews have explicit limits: JSON is limited to 2 MiB/20,000 nodes/
+64 levels, images to 8 MiB/40 megapixels/16,384 pixels per side, and text to its
+first 64 KiB. CSV pages use bounded reads and reject records over 128 KiB or
+rows over 200 columns. Large/invalid files show an explanation and keep the
+other artifact tabs available. Changed files or expired page cursors require
+**Start from beginning**. A partial preview does not verify the full checksum;
+its footer states the verification limit.
 
 An artifact's **Overview** shows type, origin, ownership, availability,
 publication state, URIs, fingerprints, inventory and metadata. Numeric metadata
@@ -150,8 +276,8 @@ Dockflow computational producer.
 
 **Pin/Unpin** changes an explicit retention pin after confirmation. It does not
 make missing data available or change reuse equivalence. Payload URIs are shown
-as data; the browser does not automatically fetch remote URLs, download arbitrary
-artifact bytes or render artifact HTML.
+as data; Contents reads registered files through the authenticated service and
+does not fetch arbitrary URLs or render artifact HTML/SVG/scripts.
 
 ## Bounded views and errors
 
@@ -171,3 +297,10 @@ errors prevent progress.
 The API explorer at `/dockflow/v1/docs` is read-only: search operations/schemas,
 filter by HTTP method, expand parameter/request/response definitions and download
 the OpenAPI document. It does not submit mutations from its reference panels.
+
+## Resource deletion and storage cleanup
+
+See [Deletion and storage cleanup](cleanup.md) for dependency-protected Run,
+execution and artifact deletion, file inventories, explicit manual-artifact
+protection, DANGER confirmation and optional deployment retention. Legacy `clean`
+continues to remove only disposable workspaces.

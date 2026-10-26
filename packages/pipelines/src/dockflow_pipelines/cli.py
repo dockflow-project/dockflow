@@ -35,6 +35,13 @@ cache_app = typer.Typer(
     help="Inspect and manage coordinated artifact reuse.", no_args_is_help=True
 )
 metadata_app = typer.Typer(help="Check and rebuild metadata.", no_args_is_help=True)
+storage_app = typer.Typer(
+    help="Inventory managed storage and apply reviewed deletion plans.",
+    no_args_is_help=True,
+)
+executions_app = typer.Typer(
+    help="Inspect and retire execution attempts.", no_args_is_help=True
+)
 for name, group in [
     ("definitions", definitions),
     ("components", components),
@@ -44,6 +51,8 @@ for name, group in [
     ("experiments", experiments),
     ("metadata", metadata_app),
     ("cache", cache_app),
+    ("storage", storage_app),
+    ("executions", executions_app),
 ]:
     app.add_typer(group, name=name)
 
@@ -551,6 +560,43 @@ artifact_command("register")
 artifact_command("import")
 
 
+@artifacts.command("upload")
+@boundary
+def artifact_upload(
+    ctx: typer.Context,
+    path: Path,
+    archive_mode: str = typer.Option("keep", help="keep or extract (ZIP only)"),
+    type: str = typer.Option("system.Artifact", "--type"),
+    type_version: str | None = None,
+    version: str | None = None,
+    metadata: list[str] = typer.Option([]),
+):
+    from .artifacts import BUILTIN_TYPES
+
+    if type_version is None and type not in BUILTIN_TYPES:
+        raise DockflowError("Custom artifact types require --type-version")
+    if archive_mode not in {"keep", "extract"}:
+        raise DockflowError("--archive-mode must be keep or extract")
+    emit(
+        ctx,
+        invoke(
+            ctx,
+            "artifacts.upload",
+            {
+                "path": path,
+                "type": {
+                    "schema_title": type,
+                    "schema_version": type_version or "0.0.1",
+                },
+                "metadata": assignments(metadata, json_values=True),
+                "archive_mode": archive_mode,
+                **({"version": version} if version is not None else {}),
+            },
+            mutate=True,
+        ),
+    )
+
+
 def pin_command(operation: str):
     @artifacts.command(operation)
     @boundary
@@ -592,6 +638,154 @@ def rebuild(ctx: typer.Context, apply: bool = False):
 @boundary
 def clean(ctx: typer.Context, apply: bool = False):
     emit(ctx, invoke(ctx, "clean", {"apply": apply}, mutate=apply))
+
+
+def delete_resource(ctx, collection, identity, apply, delete_files=False, confirm=None):
+    if (
+        collection == "artifacts"
+        and apply
+        and not delete_files
+        and not ctx.obj.json
+        and sys.stdin.isatty()
+    ):
+        delete_files = typer.confirm(
+            "Also delete this artifact's managed storage files?", default=False
+        )
+    plan = invoke(
+        ctx,
+        "deletions.plan",
+        {
+            "targets": [{"collection": collection, "id": identity}],
+            "delete_files": delete_files,
+        },
+        mutate=True,
+    )
+    if apply:
+        if plan["delete_files"] and confirm is None and sys.stdin.isatty():
+            typer.echo(json.dumps(plan, indent=2))
+            confirm = typer.prompt("Type DANGER to delete the listed storage files")
+        plan = invoke(
+            ctx,
+            "deletions.apply",
+            {"plan_id": plan["plan_id"], "confirmation": confirm},
+            mutate=True,
+        )
+    emit(ctx, plan)
+
+
+@runs.command("delete")
+@boundary
+def run_delete(ctx: typer.Context, run_id: str, apply: bool = False):
+    delete_resource(ctx, "runs", run_id, apply)
+
+
+@executions_app.command("delete")
+@boundary
+def execution_delete(ctx: typer.Context, attempt_id: str, apply: bool = False):
+    delete_resource(ctx, "attempts", attempt_id, apply)
+
+
+@executions_app.command("show")
+@boundary
+def execution_show(ctx: typer.Context, attempt_id: str):
+    emit(ctx, invoke(ctx, "attempts.show", {"id": attempt_id}))
+
+
+@artifacts.command("delete")
+@boundary
+def artifact_delete(
+    ctx: typer.Context,
+    artifact_id: str,
+    apply: bool = False,
+    delete_files: bool = False,
+    confirm: str | None = None,
+):
+    delete_resource(ctx, "artifacts", artifact_id, apply, delete_files, confirm)
+
+
+@storage_app.command("scan")
+@boundary
+def storage_scan(ctx: typer.Context, prefix: str = ""):
+    emit(ctx, invoke(ctx, "storage.scan", {"prefix": prefix}, mutate=True))
+
+
+@storage_app.command("scan-show")
+@boundary
+def storage_scan_show(
+    ctx: typer.Context,
+    scan_id: str,
+    page_size: int = 50,
+    page_token: str | None = None,
+    classification: str | None = None,
+    artifact_id: str | None = None,
+):
+    emit(
+        ctx,
+        invoke(
+            ctx,
+            "storage.show",
+            {
+                "scan_id": scan_id,
+                "page_size": page_size,
+                "page_token": page_token,
+                "classification": classification,
+                "artifact_id": artifact_id,
+            },
+        ),
+    )
+
+
+@storage_app.command("plan")
+@boundary
+def storage_plan(
+    ctx: typer.Context,
+    scan_id: str,
+    select: list[str] = typer.Option(None),
+    orphans: bool = False,
+):
+    emit(
+        ctx,
+        invoke(
+            ctx,
+            "deletions.plan",
+            {"scan_id": scan_id, "selected": select or [], "orphans": orphans},
+            mutate=True,
+        ),
+    )
+
+
+@storage_app.command("show")
+@boundary
+def deletion_show(ctx: typer.Context, plan_id: str):
+    emit(ctx, invoke(ctx, "deletions.show", {"plan_id": plan_id}))
+
+
+@storage_app.command("apply")
+@boundary
+def deletion_apply(ctx: typer.Context, plan_id: str, confirm: str | None = None):
+    if confirm is None and sys.stdin.isatty():
+        emit(ctx, invoke(ctx, "deletions.show", {"plan_id": plan_id}))
+        confirm = typer.prompt("Type DANGER to delete the listed storage files")
+    emit(
+        ctx,
+        invoke(
+            ctx,
+            "deletions.apply",
+            {"plan_id": plan_id, "confirmation": confirm},
+            mutate=True,
+        ),
+    )
+
+
+@app.command("retention")
+@boundary
+def retention(ctx: typer.Context, apply: bool = False, confirm: str | None = None):
+    emit(
+        ctx,
+        invoke(
+            ctx, "retention", {"apply": apply, "confirmation": confirm}, mutate=True
+        ),
+    )
 
 
 @app.command()

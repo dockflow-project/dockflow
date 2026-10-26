@@ -34,8 +34,8 @@ and consult conditional annexes when the task makes them relevant.
 | 6 | python-project-1 | 3.0.0 | [030_python-project-1/README.md](030_python-project-1/README.md) | Application layout, tooling, testing, and packaging. |
 | 7 | dockflow | 2.0.0 | [051_dockflow/README.md](051_dockflow/README.md) | Shared identity, compatibility, dependencies, builds, and releases. |
 | 8 | dockflow-cli | 0.3.0 | [052_dockflow-cli/README.md](052_dockflow-cli/README.md) | Shared executable, discovery, and registration contract. |
-| 9 | dockflow-pipelines | 12.0.0 | [053_dockflow-pipelines/README.md](053_dockflow-pipelines/README.md) | Complete initial product, execution ownership, artifact, persistence, upload/version API, and deployment contracts. |
-| 10 | dockflow-artifacts | 4.0.0 | [054_dockflow-artifacts/README.md](054_dockflow-artifacts/README.md) | Reusable publication, integrity and KFP integration. |
+| 9 | dockflow-pipelines | 13.17.0 | [053_dockflow-pipelines/README.md](053_dockflow-pipelines/README.md) | Complete initial product, execution ownership, artifact, persistence, upload/version API, and deployment contracts. |
+| 10 | dockflow-artifacts | 4.1.0 | [054_dockflow-artifacts/README.md](054_dockflow-artifacts/README.md) | Reusable publication, integrity and KFP integration. |
 
 Python Project supplies the project conventions for applications, CLI, and
 service tooling; Python supplies the language conventions. Dockflow's local

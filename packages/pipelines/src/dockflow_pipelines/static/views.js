@@ -20,29 +20,164 @@ import {
   download,
   labeled,
   toast,
+  listScreen,
+  localList,
+  referenceLabel,
 } from './dom.js';
 import { get, post, collect, request } from './api.js';
-import { graph, graphModel } from './graph.js';
+import { graph, graphModel, graphQueryKey } from './graph.js';
 import { plainLogEntries } from './logs.js';
+import { deleteResource } from './cleanup.js';
+import { artifactContents } from './contents.js';
+import { autocomplete, filterValue } from './autocomplete.js';
 import {
   uploadPipeline,
   createExperiment,
   createArtifact,
+  uploadArtifact,
   confirmAction,
 } from './forms.js';
 
-function graphSettings(query, route, navigate) {
+function graphSettings(query, route, navigate, readQuery = () => query) {
   return {
     path: query.has('graph') ? query.get('graph') : undefined,
     all: query.get('graph-view') === 'all',
     onNavigate: ({ path, all }) => {
-      const next = new URLSearchParams(query);
+      const next = new URLSearchParams(readQuery());
       next.set('graph', path);
       if (all) next.set('graph-view', 'all');
       else next.delete('graph-view');
       next.delete('node');
       navigate(route, next);
     },
+  };
+}
+
+function detailLayout(container, body, tab) {
+  body.classList.add('detail-body');
+  body.classList.toggle('graph-body', tab === 'Graph');
+  const information = tab !== 'Graph';
+  if (information && !body.classList.contains('list-body')) {
+    body.setAttribute('role', 'region');
+    body.setAttribute('tabindex', '0');
+    body.setAttribute('aria-label', (tab || 'Element') + ' information');
+  }
+  const context = [...container.childNodes].filter((node) => node !== body);
+  const tabBar = context.find((node) => node.classList?.contains('tabs'));
+  const header = el(
+    'header',
+    { class: 'detail-header' },
+    information
+      ? [
+          el(
+            'div',
+            { class: 'detail-context' },
+            context.filter((node) => node !== tabBar),
+          ),
+          tabBar,
+        ]
+      : context,
+  );
+  const screen = el(
+    'section',
+    { class: 'detail-screen' + (information ? ' information-screen' : '') },
+    header,
+    body,
+  );
+  clear(container, screen);
+  return screen;
+}
+
+function resourceHeading(
+  back,
+  path,
+  title,
+  actions,
+  status = null,
+  description = '',
+) {
+  return el(
+    'div',
+    { class: 'detail-heading' },
+    el(
+      'div',
+      { class: 'detail-title' },
+      link(back, path, { class: 'detail-back' }),
+      el('span', { class: 'subtle', 'aria-hidden': 'true' }, '/'),
+      el('h1', { title: description || title }, title),
+      status,
+    ),
+    el('div', { class: 'actions detail-actions' }, actions),
+  );
+}
+
+function graphWorkspace(
+  body,
+  route,
+  query,
+  navigate,
+  graphNode,
+  renderPanel,
+  onQuery,
+) {
+  const key = graphQueryKey(query);
+  const layout = el('div', { class: 'graph-layout' }, graphNode);
+  body.append(layout);
+  function updateQuery(next) {
+    const viewport = graphNode.captureViewport?.();
+    const previous = query.get('node');
+    const oldPanel = layout.querySelector('.graph-inspector');
+    const inspectorFocused = oldPanel?.contains(document.activeElement);
+    query = next;
+    onQuery(next);
+    const selected = next.get('node');
+    graphNode.selectNode?.(selected);
+    oldPanel?.remove();
+    const panel = selected ? renderPanel(selected, next) : null;
+    layout.classList.toggle('has-inspector', Boolean(panel));
+    if (!panel) {
+      graphNode.restoreViewport?.(viewport);
+      if (inspectorFocused)
+        [...graphNode.querySelectorAll('.graph-node')]
+          .find((node) => node.dataset.node === previous)
+          ?.querySelector('.graph-node-select')
+          .focus({ preventScroll: true });
+      return;
+    }
+    panel.classList.add('graph-inspector', 'step-panel');
+    panel.setAttribute('aria-label', 'Selected step details');
+    panel.setAttribute('tabindex', '0');
+    const title = panel.querySelector('h2');
+    panel.prepend(
+      el(
+        'div',
+        { class: 'inspector-heading' },
+        title,
+        button(
+          '×',
+          () => {
+            const cleared = new URLSearchParams(query);
+            cleared.delete('node');
+            cleared.delete('stepTab');
+            navigate(route, cleared);
+          },
+          'icon-button',
+          { 'aria-label': 'Close step details' },
+        ),
+      ),
+    );
+    layout.append(panel);
+    graphNode.restoreViewport?.(viewport);
+    if (inspectorFocused)
+      panel
+        .querySelector('[role="tab"][aria-selected="true"]')
+        ?.focus({ preventScroll: true });
+  }
+  updateQuery(query);
+  return {
+    path: route,
+    accepts: (path, next) => path === route && graphQueryKey(next) === key,
+    updateQuery,
   };
 }
 
@@ -155,22 +290,95 @@ function filterForm(query, specs, navigate, route) {
         )
       : el('input', {
           type: 'text',
-          placeholder: 'Exact ' + label.toLowerCase(),
+          placeholder: key === 'type' ? 'Search types' : 'Search by name or ID',
         }),
   }));
   controls.forEach((item) => (item.control.value = query.get(item.key) || ''));
+  const related = {
+    definition_id: 'definitions',
+    experiment_id: 'experiments',
+    run_id: 'runs',
+    task_id: 'tasks',
+  };
+  const collection = route.startsWith('experiments/')
+    ? 'runs'
+    : route === 'executions'
+      ? 'attempts'
+      : route;
+  const controlFor = (key) =>
+    controls.find((item) => item.key === key)?.control;
+  const valueFor = (key) => {
+    const value = controlFor(key) ? filterValue(controlFor(key)) : '';
+    return /^(definition|experiment|run|task)_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
+      value,
+    )
+      ? value
+      : '';
+  };
+  const experiment = () =>
+    route.startsWith('experiments/')
+      ? route.split('/')[1]
+      : valueFor('experiment_id');
+  function scopeFor(key) {
+    if (collection === 'components' && key === 'search')
+      return { definition_id: valueFor('definition_id') };
+    if (collection === 'runs') {
+      if (key === 'definition_id') return { experiment_id: experiment() };
+      if (key === 'search')
+        return {
+          experiment_id: experiment(),
+          definition_id: valueFor('definition_id'),
+        };
+    }
+    if (collection === 'attempts') {
+      if (key === 'task_id') return { run_id: valueFor('run_id') };
+      if (key === 'search')
+        return { run_id: valueFor('run_id'), task_id: valueFor('task_id') };
+    }
+    return {};
+  }
+  const dependencies =
+    collection === 'components'
+      ? { definition_id: ['search'] }
+      : collection === 'runs'
+        ? {
+            experiment_id: ['definition_id', 'search'],
+            definition_id: ['search'],
+          }
+        : collection === 'attempts'
+          ? { run_id: ['task_id', 'search'], task_id: ['search'] }
+          : {};
   const form = el(
     'form',
     { class: 'toolbar' },
-    controls.map((item, i) => labeled(specs[i][1], item.control)),
+    controls.map((item, i) => {
+      const field = labeled(specs[i][1], item.control);
+      if (item.control.tagName === 'INPUT')
+        field.append(
+          autocomplete(
+            item.control,
+            related[item.key] || collection,
+            item.key === 'type' ? 'type' : null,
+            () => scopeFor(item.key),
+          ),
+        );
+      return field;
+    }),
     el('button', { type: 'submit' }, 'Apply filters'),
     button('Clear', () => navigate(route)),
   );
+  for (const [parent, children] of Object.entries(dependencies))
+    for (const event of ['input', 'change'])
+      controlFor(parent)?.addEventListener(event, () => {
+        for (const child of children)
+          controlFor(child)?.autocompleteControl?.clear();
+      });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     const next = new URLSearchParams();
     controls.forEach(({ key, control }) => {
-      if (control.value) next.set(key, control.value);
+      const value = filterValue(control);
+      if (value) next.set(key, value);
     });
     navigate(route, next);
   });
@@ -181,7 +389,7 @@ export async function collection(container, kind, query, navigate, state) {
     pipelines: {
       title: 'Pipelines',
       subtitle: 'Versioned definitions, ready to run on Docker.',
-      filters: [['name', 'Name']],
+      filters: [['search', 'Search']],
       headers: ['Name', 'Description', 'Origin', 'Default version', 'Created'],
       row: (p) => [
         nameCell(p.name, p.pipeline_id, 'pipelines/' + p.pipeline_id),
@@ -200,7 +408,7 @@ export async function collection(container, kind, query, navigate, state) {
     experiments: {
       title: 'Experiments',
       subtitle: 'Organize and compare related pipeline runs.',
-      filters: [['name', 'Name']],
+      filters: [['search', 'Search']],
       headers: ['Name', 'Description', 'Created', 'Latest run'],
       row: (e) => [
         nameCell(
@@ -220,6 +428,7 @@ export async function collection(container, kind, query, navigate, state) {
       title: 'Artifacts',
       subtitle: 'Datasets, models and outputs with durable provenance.',
       filters: [
+        ['search', 'Search'],
         ['type', 'Type'],
         [
           'availability',
@@ -245,29 +454,36 @@ export async function collection(container, kind, query, navigate, state) {
       ],
       row: (a) => [
         nameCell(
-          a.version || short(a.artifact_id),
+          a.version || a.upload?.filename || short(a.artifact_id),
           a.artifact_id,
           'artifacts/' + a.artifact_id,
         ),
         a.type?.schema_title,
-        a.origin,
+        a.creation_origin === 'manual' || !a.producer || a.origin === 'external'
+          ? 'Manually added · explicit deletion only'
+          : a.origin,
         badge(a.availability),
         badge(a.publication_state),
         a.pinned ? 'Yes' : 'No',
         date(a.created_at),
       ],
       action: () =>
-        createArtifact((a) => navigate('artifacts/' + a.artifact_id)),
-      actionLabel: 'Register artifact',
+        uploadArtifact((a) => navigate('artifacts/' + a.artifact_id)),
+      actionLabel: 'Upload artifact',
+      additionalActions: [
+        button('Register artifact', () =>
+          createArtifact((a) => navigate('artifacts/' + a.artifact_id)),
+        ),
+      ],
     },
     components: {
       title: 'Components',
       subtitle: 'Immutable component contracts and execution images.',
       filters: [
-        ['name', 'Name'],
-        ['definition_id', 'Definition ID'],
+        ['definition_id', 'Pipeline ID'],
+        ['search', 'Component ID'],
       ],
-      headers: ['Name', 'Definition', 'Executor image', 'Created'],
+      headers: ['Name', 'Pipeline ID', 'Executor image', 'Created'],
       row: (c) => [
         nameCell(c.name, c.component_id, 'components/' + c.component_id),
         link(short(c.definition_id), 'definitions/' + c.definition_id),
@@ -280,6 +496,9 @@ export async function collection(container, kind, query, navigate, state) {
       subtitle:
         'Actual attempts, including retries. Reused tasks link to their original attempt.',
       filters: [
+        ['search', 'Search'],
+        ['run_id', 'Run ID'],
+        ['task_id', 'Task ID'],
         [
           'state',
           'State',
@@ -292,8 +511,6 @@ export async function collection(container, kind, query, navigate, state) {
             'interrupted',
           ],
         ],
-        ['run_id', 'Run ID'],
-        ['task_id', 'Task ID'],
       ],
       headers: [
         'Attempt',
@@ -322,22 +539,24 @@ export async function collection(container, kind, query, navigate, state) {
   const stack = pageHistory(state, route, query);
   clear(
     container,
-    pageHeader(config.title, config.subtitle, [
-      ...(config.action
-        ? [button(config.actionLabel, config.action, 'primary')]
-        : []),
-      button('Refresh', () => navigate(route, query, true)),
-    ]),
-    el(
-      'div',
-      { class: 'panel' },
-      filterForm(query, config.filters, navigate, route),
+    listScreen(
+      [
+        pageHeader(config.title, config.subtitle, [
+          ...(config.action
+            ? [button(config.actionLabel, config.action, 'primary')]
+            : []),
+          ...(config.additionalActions || []),
+          button('Refresh', () => navigate(route, query, true)),
+        ]),
+        filterForm(query, config.filters, navigate, route),
+      ],
       table(
         config.headers,
         page.items.map(config.row),
         'No ' + config.title.toLowerCase() + ' yet.',
       ),
       pager(page, query, navigate, route, stack),
+      config.title,
     ),
   );
 }
@@ -383,65 +602,69 @@ export async function runsList(
   const route = experiment ? 'experiments/' + experiment.experiment_id : 'runs';
   clear(
     container,
-    experiment
-      ? el(
-          'div',
-          { class: 'breadcrumb' },
-          link('Experiments', 'experiments'),
-          ' / ',
-          experiment.display_name,
-        )
-      : null,
-    pageHeader(
-      experiment?.display_name || 'Runs',
-      experiment?.description || 'Inspect execution status, results and logs.',
+    listScreen(
       [
-        button(
-          'Create run',
-          () =>
-            navigate(
-              'runs/new',
-              new URLSearchParams(
-                experiment ? { experiment: experiment.experiment_id } : {},
-              ),
+        experiment
+          ? el(
+              'div',
+              { class: 'breadcrumb' },
+              link('Experiments', 'experiments'),
+              ' / ',
+              experiment.display_name,
+            )
+          : null,
+        pageHeader(
+          experiment?.display_name || 'Runs',
+          experiment?.description ||
+            'Inspect execution status, results and logs.',
+          [
+            button(
+              'Create run',
+              () =>
+                navigate(
+                  'runs/new',
+                  new URLSearchParams(
+                    experiment ? { experiment: experiment.experiment_id } : {},
+                  ),
+                ),
+              'primary',
             ),
-          'primary',
+            button('Refresh', () => navigate(route, query, true)),
+          ],
         ),
-        button('Refresh', () => navigate(route, query, true)),
-      ],
-    ),
-    experiment
-      ? section(
-          'Experiment',
-          fields([
-            ['ID', experiment.experiment_id],
-            ['Created', date(experiment.created_at)],
-          ]),
-        )
-      : null,
-    el(
-      'div',
-      { class: 'panel' },
-      filterForm(
-        query,
-        [
-          ['state', 'State', RUN_STATES],
-          ...(!experiment ? [['experiment_id', 'Experiment ID']] : []),
-          ['definition_id', 'Definition ID'],
-        ],
-        navigate,
-        route,
-      ),
-      el(
-        'div',
-        { class: 'toolbar' },
-        compare,
+        experiment
+          ? el(
+              'details',
+              {},
+              el('summary', {}, 'Experiment details'),
+              fields([
+                ['ID', referenceLabel('experiments', experiment.experiment_id)],
+                ['Created', date(experiment.created_at)],
+              ]),
+            )
+          : null,
+        filterForm(
+          query,
+          [
+            ['search', 'Search'],
+            ...(!experiment ? [['experiment_id', 'Experiment ID']] : []),
+            ['definition_id', 'Pipeline ID'],
+            ['state', 'State', RUN_STATES],
+          ],
+          navigate,
+          route,
+        ),
         el(
-          'span',
-          { class: 'subtle' },
-          'Select 2–5 runs on this page to compare.',
+          'div',
+          { class: 'toolbar' },
+          compare,
+          el(
+            'span',
+            { class: 'subtle' },
+            'Select 2–5 runs on this page to compare.',
+          ),
         ),
-      ),
+      ],
       table(
         [
           '',
@@ -450,12 +673,13 @@ export async function runsList(
           'Created',
           'Duration',
           'Experiment',
-          'Definition',
+          'Pipeline ID',
         ],
         runRows(page.items, controls),
         'No runs yet.',
       ),
       pager(page, query, navigate, route, pageHistory(state, route, query)),
+      'Runs',
     ),
   );
 }
@@ -524,33 +748,31 @@ export async function pipelineDetail(
     ),
   );
   const body = el('div');
+  let selectionView;
   clear(
     container,
-    el(
-      'div',
-      { class: 'breadcrumb' },
-      link('Pipelines', 'pipelines'),
-      ' / ',
-      catalog?.name || definition.name || 'Definition',
-    ),
-    pageHeader(
+    resourceHeading(
+      'Pipelines',
+      'pipelines',
       catalog?.name || definition.name || 'Pipeline definition',
+      actions,
+      null,
       catalog?.description ||
         definition.description ||
         'Immutable compiled definition',
-      actions,
     ),
     catalog
       ? el(
           'div',
-          { class: 'toolbar' },
+          { class: 'detail-meta' },
+          referenceLabel('pipelines', catalog.pipeline_id, true),
           labeled('Version', selector),
-          el('span', { class: 'id' }, versionId),
+          referenceLabel('definitions', versionId, true),
         )
-      : null,
+      : referenceLabel('definitions', definition.definition_id),
     versionTruncated
       ? notice(
-          'Version selector contains the first 2,000 versions. Open a definition ID directly for older history.',
+          'Version selector contains the first 2,000 versions. Open a Pipeline ID directly for older history.',
         )
       : null,
     catalog?.registration_origin === 'configuration'
@@ -563,21 +785,26 @@ export async function pipelineDetail(
   );
   if (tab === 'Graph') {
     const model = graphModel(definition.pipeline_spec),
-      node = model.nodes.find((n) => n.name === selected);
+      byName = new Map(model.nodes.map((n) => [n.name, n]));
     const graphNode = graph(
       definition.pipeline_spec,
       [],
       selected,
       (name) => setQuery('node', name),
-      graphSettings(query, route, navigate),
+      {
+        ...graphSettings(query, route, navigate, () => query),
+        identity: definition.definition_id,
+      },
     );
-    clear(
+    selectionView = graphWorkspace(
       body,
-      el(
-        'div',
-        { class: node ? 'split' : '' },
-        graphNode,
-        node
+      route,
+      query,
+      navigate,
+      graphNode,
+      (name) => {
+        const node = byName.get(name);
+        return node
           ? section(
               node.name,
               fields([
@@ -605,8 +832,11 @@ export async function pipelineDetail(
               el('h3', {}, 'Task configuration'),
               json(node.task),
             )
-          : null,
-      ),
+          : null;
+      },
+      (next) => {
+        query = next;
+      },
     );
   } else if (tab === 'Source') {
     clear(
@@ -653,7 +883,10 @@ export async function pipelineDetail(
       section(
         'Definition',
         fields([
-          ['Version ID', definition.definition_id],
+          [
+            'Version ID',
+            referenceLabel('definitions', definition.definition_id),
+          ],
           [
             'Pipeline ID',
             definition.pipeline_id
@@ -682,47 +915,82 @@ export async function pipelineDetail(
         }),
       ),
     );
+  const screen = detailLayout(container, body, tab);
+  screen.detailView = selectionView || { path: route, accepts: () => false };
 }
-export async function componentDetail(container, id) {
+export async function componentDetail(container, id, query, navigate) {
   const component = await get('/components/' + id);
+  const tab = query.get('tab') || 'Overview',
+    route = 'components/' + id;
+  const body = el('div');
   clear(
     container,
+    resourceHeading('Components', 'components', component.name || 'Component', [
+      button('Refresh', () => navigate(route, query, true)),
+    ]),
     el(
       'div',
-      { class: 'breadcrumb' },
-      link('Components', 'components'),
-      ' / ',
-      component.name,
+      { class: 'detail-meta' },
+      el('span', { class: 'id' }, component.component_id),
+      link(
+        'Pipeline ID ' + short(component.definition_id),
+        'definitions/' + component.definition_id,
+      ),
+      el(
+        'span',
+        {},
+        component.executor?.container?.image || 'Graph / importer',
+      ),
     ),
-    pageHeader(component.name || 'Component', component.component_id),
-    section(
-      'Component',
-      fields([
-        [
-          'Definition',
-          link(
-            component.definition_id,
-            'definitions/' + component.definition_id,
-          ),
-        ],
-        ['Created', date(component.created_at)],
-        ['Image', component.executor?.container?.image || 'Graph / importer'],
-      ]),
+    tabs(['Overview', 'Interface', 'Executor', 'Source'], tab, (name) =>
+      navigate(route, new URLSearchParams({ tab: name })),
     ),
-    section(
-      'Interface',
-      json({
-        inputs: component.compiled?.inputDefinitions || {},
-        outputs: component.compiled?.outputDefinitions || {},
-      }),
-    ),
-    section('Executor', json(component.executor)),
-    section('Compiled contract', json(component.compiled)),
+    body,
   );
+  if (tab === 'Interface')
+    clear(
+      body,
+      section(
+        'Interface',
+        json({
+          inputs: component.compiled?.inputDefinitions || {},
+          outputs: component.compiled?.outputDefinitions || {},
+        }),
+      ),
+    );
+  else if (tab === 'Executor')
+    clear(body, section('Executor', json(component.executor)));
+  else if (tab === 'Source')
+    clear(body, section('Compiled contract', json(component.compiled)));
+  else
+    clear(
+      body,
+      section(
+        'Component',
+        fields([
+          ['Name', component.name],
+          [
+            'Component ID',
+            referenceLabel('components', component.component_id),
+          ],
+          [
+            'Pipeline ID',
+            link(
+              component.definition_id,
+              'definitions/' + component.definition_id,
+            ),
+          ],
+          ['Created', date(component.created_at)],
+          ['Image', component.executor?.container?.image || 'Graph / importer'],
+        ]),
+      ),
+    );
+  const screen = detailLayout(container, body, tab);
+  screen.detailView = { path: route, accepts: () => false };
 }
 export async function artifactDetail(container, id, query, navigate, state) {
   const artifact = await get('/artifacts/' + id);
-  const tab = query.get('tab') || 'Overview',
+  const tab = query.get('tab') || 'Contents',
     route = 'artifacts/' + id;
   const pin = button(artifact.pinned ? 'Unpin' : 'Pin', () =>
     confirmAction(
@@ -738,61 +1006,82 @@ export async function artifactDetail(container, id, query, navigate, state) {
   const body = el('div');
   clear(
     container,
-    el(
-      'div',
-      { class: 'breadcrumb' },
-      link('Artifacts', 'artifacts'),
-      ' / ',
-      short(id),
-    ),
-    pageHeader(
-      artifact.version || short(id),
-      artifact.type.schema_title + ' · ' + id,
-      [pin, button('Refresh', () => navigate(route, query, true))],
-    ),
-    el(
-      'div',
-      { class: 'run-summary' },
+    resourceHeading(
+      'Artifacts',
+      'artifacts',
+      artifact.version || artifact.upload?.filename || short(id),
+      [
+        pin,
+        button(
+          'Delete artifact',
+          () => deleteResource('artifacts', id, () => navigate('artifacts')),
+          'danger',
+        ),
+        link('Storage cleanup', 'storage'),
+        button('Refresh', () => navigate(route, query, true)),
+      ],
       badge(artifact.availability),
+    ),
+    el(
+      'div',
+      { class: 'detail-meta' },
+      el('span', { class: 'id' }, id),
+      el('span', {}, artifact.type.schema_title),
       badge(artifact.publication_state),
       el('span', {}, artifact.pinned ? 'Pinned' : 'Not explicitly pinned'),
+      !artifact.producer ||
+        artifact.creation_origin === 'manual' ||
+        artifact.origin === 'external'
+        ? el('span', {}, 'Manually added · explicit deletion only')
+        : null,
     ),
-    tabs(['Overview', 'Lineage'], tab, (name) =>
+    tabs(['Contents', 'Overview', 'Lineage'], tab, (name) =>
       navigate(route, new URLSearchParams({ tab: name })),
     ),
     body,
   );
-  if (tab === 'Lineage') {
+  if (tab === 'Contents') {
+    body.classList.add('list-body');
+    clear(body, await artifactContents(artifact, query, navigate, state));
+  } else if (tab === 'Lineage') {
+    body.classList.add('list-body');
     const lineage = await get('/artifacts/' + id + '/lineage', {
       page_token: query.get('page_token'),
     });
     const producer = lineage.producer;
     clear(
       body,
-      section(
-        'Original producer',
-        producer
-          ? fields(
-              Object.entries(producer).map(([key, value]) => [
-                key,
-                key === 'run_id'
-                  ? link(value, 'runs/' + value)
-                  : key === 'task_id'
-                    ? link(value, 'tasks/' + value)
-                    : key === 'attempt_id'
-                      ? link(value, 'attempts/' + value)
-                      : String(value),
-              ]),
-            )
-          : notice('External artifact: no Dockflow producer.'),
-      ),
-      section(
-        'Consumer tasks',
-        el(
-          'p',
-          { class: 'subtle' },
-          'Tasks that recorded this artifact as an input. Reuse keeps the original producer identity.',
-        ),
+      listScreen(
+        [
+          el('h2', {}, 'Original producer'),
+          producer
+            ? el(
+                'details',
+                {},
+                el('summary', {}, 'Producer details'),
+                fields(
+                  Object.entries(producer).map(([key, value]) => [
+                    key,
+                    lineage.deleted_producer_ids?.includes(value)
+                      ? value + ' (deleted)'
+                      : key === 'run_id'
+                        ? link(value, 'runs/' + value)
+                        : key === 'task_id'
+                          ? link(value, 'tasks/' + value)
+                          : key === 'attempt_id'
+                            ? link(value, 'attempts/' + value)
+                            : String(value),
+                  ]),
+                ),
+              )
+            : notice('External artifact: no Dockflow producer.'),
+          el('h2', {}, 'Consumer tasks'),
+          el(
+            'p',
+            { class: 'subtle' },
+            'Tasks that recorded this artifact as an input. Reuse keeps the original producer identity.',
+          ),
+        ],
         table(
           ['Task', 'Run', 'State'],
           lineage.items.map((t) => [
@@ -809,6 +1098,7 @@ export async function artifactDetail(container, id, query, navigate, state) {
           route,
           pageHistory(state, route, query),
         ),
+        'Artifact consumers',
       ),
     );
   } else {
@@ -844,11 +1134,40 @@ export async function artifactDetail(container, id, query, navigate, state) {
           ['Created', date(artifact.created_at)],
           ['Content URI', artifact.content_uri],
           ['Source URI', artifact.source_uri],
+          ...(artifact.upload
+            ? [
+                ['Uploaded file', artifact.upload.filename],
+                [
+                  'ZIP handling',
+                  artifact.upload.archive_mode === 'extract'
+                    ? 'Extracted directory'
+                    : 'Kept as a file',
+                ],
+              ]
+            : []),
           ['Descriptor URI', artifact.uri],
           ['Data revision', artifact.version],
           [
             'Producer',
-            artifact.producer ? json(artifact.producer) : 'External',
+            artifact.producer
+              ? fields(
+                  Object.entries(artifact.producer).map(([key, value]) => {
+                    const collection = {
+                      run_id: 'runs',
+                      task_id: 'tasks',
+                      attempt_id: 'attempts',
+                      definition_id: 'definitions',
+                      component_id: 'components',
+                    }[key];
+                    return [
+                      key,
+                      collection
+                        ? link(String(value), collection + '/' + value)
+                        : String(value),
+                    ];
+                  }),
+                )
+              : 'External',
           ],
         ]),
       ),
@@ -869,10 +1188,12 @@ export async function artifactDetail(container, id, query, navigate, state) {
         json(artifact),
       ),
       notice(
-        'Payload URIs are displayed as data. This interface does not fetch external URLs or render artifact HTML.',
+        'Contents provides bounded previews of registered files. Payload URIs remain text; HTML and scripts are never rendered.',
       ),
     );
   }
+  const screen = detailLayout(container, body, tab);
+  screen.detailView = { path: route, accepts: () => false };
 }
 export function logsView(runId, query = {}) {
   let cursor,
@@ -1084,6 +1405,15 @@ export async function runDetail(container, id, query, navigate, state) {
     route = 'runs/' + id;
   state.currentRun = run;
   const actions = [
+    ...(terminal.has(run.state)
+      ? [
+          button(
+            'Delete run',
+            () => deleteResource('runs', id, () => navigate('runs')),
+            'danger',
+          ),
+        ]
+      : []),
     button('Clone run', () =>
       navigate('runs/new', new URLSearchParams({ clone: id })),
     ),
@@ -1109,20 +1439,20 @@ export async function runDetail(container, id, query, navigate, state) {
     state.schedule?.();
   });
   const body = el('div');
+  let selectionView;
   clear(
     container,
-    el(
-      'div',
-      { class: 'breadcrumb' },
-      link('Runs', 'runs'),
-      ' / ',
+    resourceHeading(
+      'Runs',
+      'runs',
       run.display_name,
+      actions,
+      badge(run.state),
     ),
-    pageHeader(run.display_name, id, actions),
     el(
       'div',
-      { class: 'run-summary' },
-      badge(run.state),
+      { class: 'detail-meta' },
+      referenceLabel('runs', id, true),
       el('span', {}, 'Created ' + date(run.created_at)),
       el('span', {}, 'Duration ' + duration(run)),
       link(
@@ -1160,8 +1490,7 @@ export async function runDetail(container, id, query, navigate, state) {
   );
   if (tab === 'Graph') {
     const model = graphModel(definition.pipeline_spec),
-      spec = model.nodes.find((n) => n.name === selected),
-      task = tasks.find((t) => t.name === selected);
+      byName = new Map(model.nodes.map((n) => [n.name, n]));
     clear(
       body,
       result.truncated
@@ -1169,24 +1498,39 @@ export async function runDetail(container, id, query, navigate, state) {
             'Showing the first 2,000 task records; inspect an individual task ID for additional history.',
           )
         : null,
-      el(
-        'div',
-        { class: selected ? 'split' : '' },
-        graph(
-          definition.pipeline_spec,
-          tasks,
-          selected,
-          (name) => {
-            const next = new URLSearchParams(query);
-            next.set('node', name);
-            navigate(route, next);
-          },
-          graphSettings(query, route, navigate),
+    );
+    const graphNode = graph(
+      definition.pipeline_spec,
+      tasks,
+      selected,
+      (name) => {
+        const next = new URLSearchParams(query);
+        next.set('node', name);
+        navigate(route, next);
+      },
+      {
+        ...graphSettings(query, route, navigate, () => query),
+        identity: definition.definition_id,
+      },
+    );
+    selectionView = graphWorkspace(
+      body,
+      route,
+      query,
+      navigate,
+      graphNode,
+      (name, next) =>
+        taskPanel(
+          tasks.find((task) => task.name === name),
+          byName.get(name),
+          definition,
+          next,
+          navigate,
+          route,
         ),
-        selected
-          ? taskPanel(task, spec, definition, query, navigate, route)
-          : null,
-      ),
+      (next) => {
+        query = next;
+      },
     );
   } else if (tab === 'Details')
     clear(
@@ -1194,9 +1538,9 @@ export async function runDetail(container, id, query, navigate, state) {
       section(
         'Invocation',
         fields([
-          ['Run ID', id],
+          ['Run ID', referenceLabel('runs', id)],
           [
-            'Definition',
+            'Pipeline ID',
             link(run.definition_id, 'definitions/' + run.definition_id),
           ],
           [
@@ -1227,116 +1571,171 @@ export async function runDetail(container, id, query, navigate, state) {
         json(run),
       ),
     );
-  else if (tab === 'Artifacts')
+  else if (tab === 'Artifacts') {
+    body.classList.add('list-body');
     clear(
       body,
-      section('Pipeline inputs', artifactLinks(run.inputs)),
-      section('Pipeline outputs', artifactLinks(run.outputs)),
-      section(
-        'Task results',
-        table(
-          ['Step', 'Status', 'Artifacts', 'Output parameters'],
-          tasks.map((t) => [
-            link(t.name, 'tasks/' + t.task_id),
-            badge(t.state),
-            artifactLinks(t.outputs),
-            json(t.output_parameters || {}),
-          ]),
-        ),
+      localList(
+        ['Step', 'Status', 'Artifacts', 'Output parameters'],
+        tasks.map((t) => [
+          link(t.name, 'tasks/' + t.task_id),
+          badge(t.state),
+          artifactLinks(t.outputs),
+          json(t.output_parameters || {}),
+        ]),
+        {
+          title: 'Task results',
+          limited: result.truncated,
+          header: el(
+            'div',
+            {},
+            el('h2', {}, 'Task results'),
+            el(
+              'details',
+              {},
+              el('summary', {}, 'Pipeline inputs and outputs'),
+              section('Pipeline inputs', artifactLinks(run.inputs)),
+              section('Pipeline outputs', artifactLinks(run.outputs)),
+            ),
+          ),
+        },
       ),
     );
-  else clear(body, section('Run logs', logsView(id)));
+  } else clear(body, section('Run logs', logsView(id)));
+  const screen = detailLayout(container, body, tab);
+  screen.detailView = selectionView || { path: route, accepts: () => false };
   return run;
 }
-export async function executionDetail(container, kind, id, navigate) {
+export async function executionDetail(container, kind, id, query, navigate) {
   const record = await get('/' + kind + '/' + id);
   const task =
     kind === 'tasks' ? record : await get('/tasks/' + record.task_id);
+  const tab = query.get('tab') || 'Overview',
+    route = kind + '/' + id;
+  const body = el('div');
   clear(
     container,
-    el(
-      'div',
-      { class: 'breadcrumb' },
-      link('Runs', 'runs'),
-      ' / ',
-      link(short(record.run_id), 'runs/' + record.run_id),
-      ' / ',
-      task.name,
-    ),
-    pageHeader(kind === 'tasks' ? task.name : 'Attempt ' + short(id), id, [
-      button('Open in graph', () =>
-        navigate(
-          'runs/' + record.run_id,
-          new URLSearchParams({ node: task.name }),
+    resourceHeading(
+      'Executions',
+      'executions',
+      kind === 'tasks' ? task.name : 'Attempt ' + short(id),
+      [
+        ...(kind === 'attempts' && terminal.has(record.state)
+          ? [
+              button(
+                'Delete execution',
+                () =>
+                  deleteResource('attempts', id, () => navigate('executions')),
+                'danger',
+              ),
+            ]
+          : []),
+        button('Open in graph', () =>
+          navigate(
+            'runs/' + record.run_id,
+            new URLSearchParams({ node: task.name }),
+          ),
         ),
-      ),
-    ]),
+        button('Refresh', () => navigate(route, query, true)),
+      ],
+      badge(record.state),
+    ),
     el(
       'div',
-      { class: 'run-summary' },
-      badge(record.state),
+      { class: 'detail-meta' },
+      referenceLabel(kind, id, true),
+      link('Run ' + short(record.run_id), 'runs/' + record.run_id),
+      link(task.name, 'tasks/' + task.task_id),
       kind === 'attempts'
         ? el('span', {}, 'Duration ' + duration(record))
         : null,
     ),
-    section(
-      'Execution',
-      fields([
-        ['Run', link(record.run_id, 'runs/' + record.run_id)],
-        ['Task', link(task.name, 'tasks/' + task.task_id)],
-        ['Exit status', record.exit_status ?? '—'],
-        ['Publication', record.publication_state ?? '—'],
-        ['Image', record.image ? json(record.image) : '—'],
-      ]),
+    tabs(['Overview', 'Inputs / outputs', 'Logs', 'Record'], tab, (name) =>
+      navigate(route, new URLSearchParams({ tab: name })),
     ),
-    record.error ? section('Error', json(record.error)) : null,
-    section('Parameters', json(record.parameters)),
-    section('Inputs', artifactLinks(record.inputs)),
-    section(
-      'Outputs',
-      artifactLinks(record.outputs),
-      json(record.output_parameters || {}),
-    ),
-    task.reuse?.producer_attempt_id
-      ? section(
-          'Reused producer',
-          link(
-            task.reuse.producer_attempt_id,
-            'attempts/' + task.reuse.producer_attempt_id,
-          ),
-          json(task.reuse),
-        )
-      : null,
-    kind === 'tasks'
-      ? section(
-          'Attempts',
-          task.attempt_ids?.length
-            ? el(
-                'ol',
-                {},
-                task.attempt_ids.map((aid, i) =>
-                  el(
-                    'li',
-                    {},
-                    link(
-                      'Attempt ' + (i + 1) + ' · ' + short(aid),
-                      'attempts/' + aid,
+    body,
+  );
+  if (tab === 'Inputs / outputs')
+    clear(
+      body,
+      section('Parameters', json(record.parameters)),
+      section('Inputs', artifactLinks(record.inputs)),
+      section(
+        'Outputs',
+        artifactLinks(record.outputs),
+        json(record.output_parameters || {}),
+      ),
+    );
+  else if (tab === 'Logs')
+    clear(
+      body,
+      section(
+        'Logs',
+        logsView(
+          record.run_id,
+          kind === 'tasks' ? { task_id: id } : { attempt_id: id },
+        ),
+      ),
+    );
+  else if (tab === 'Record')
+    clear(body, section('Complete record', json(record)));
+  else
+    clear(
+      body,
+      section(
+        'Execution',
+        fields([
+          ['Run', link(record.run_id, 'runs/' + record.run_id)],
+          ['Task', link(task.name, 'tasks/' + task.task_id)],
+          ['Exit status', record.exit_status ?? '—'],
+          ['Publication', record.publication_state ?? '—'],
+          ['Image', record.image ? json(record.image) : '—'],
+        ]),
+      ),
+      record.error ? section('Error', json(record.error)) : null,
+      task.reuse?.producer_attempt_id
+        ? section(
+            'Reused producer',
+            link(
+              task.reuse.producer_attempt_id,
+              'attempts/' + task.reuse.producer_attempt_id,
+            ),
+            json(task.reuse),
+          )
+        : null,
+      kind === 'tasks'
+        ? section(
+            'Attempts',
+            task.attempt_ids?.length
+              ? el(
+                  'ol',
+                  {},
+                  task.attempt_ids.map((aid, i) =>
+                    el(
+                      'li',
+                      {},
+                      link(
+                        'Attempt ' + (i + 1) + ' · ' + short(aid),
+                        'attempts/' + aid,
+                      ),
                     ),
                   ),
+                )
+              : el(
+                  'p',
+                  { class: 'subtle' },
+                  'No actual attempts for this task.',
                 ),
-              )
-            : el('p', { class: 'subtle' }, 'No actual attempts for this task.'),
-        )
-      : null,
-    section(
-      'Logs',
-      logsView(
-        record.run_id,
-        kind === 'tasks' ? { task_id: id } : { attempt_id: id },
-      ),
-    ),
-    el('details', {}, el('summary', {}, 'Complete record'), json(record)),
-  );
+          )
+        : null,
+    );
+  if (kind === 'attempts') {
+    const heading = container.querySelector('h1');
+    heading.dataset.referenceCollection = 'attempts';
+    heading.dataset.referenceId = id;
+  }
+  const screen = detailLayout(container, body, tab);
+  screen.detailView = { path: route, accepts: () => false };
 }
 export async function compareRuns(container, query) {
   const ids = [
@@ -1400,7 +1799,7 @@ export async function compareRuns(container, query) {
   const rows = [
     ['Status', ...records.map((r) => badge(r.run.state))],
     [
-      'Definition',
+      'Pipeline ID',
       ...records.map((r) =>
         link(short(r.run.definition_id), 'definitions/' + r.run.definition_id),
       ),
@@ -1430,32 +1829,38 @@ export async function compareRuns(container, query) {
   ];
   clear(
     container,
-    el('div', { class: 'breadcrumb' }, link('Runs', 'runs'), ' / Compare'),
-    pageHeader(
-      'Compare runs',
-      `${records.length} runs · recorded parameters and scalar results`,
-    ),
-    records.some((r) => r.limited)
-      ? notice(
-          'Comparison is limited to 2,000 tasks and 200 output artifacts per run. Open individual runs for complete history.',
-        )
-      : null,
-    el(
-      'div',
-      { class: 'panel comparison' },
-      table(
-        [
-          'Field',
-          ...records.map((r) =>
-            link(r.run.display_name, 'runs/' + r.run.run_id),
+    localList(
+      [
+        'Field',
+        ...records.map((r) => link(r.run.display_name, 'runs/' + r.run.run_id)),
+      ],
+      rows,
+      {
+        title: 'Comparison fields',
+        limited: records.some((r) => r.limited),
+        header: [
+          el(
+            'div',
+            { class: 'breadcrumb' },
+            link('Runs', 'runs'),
+            ' / Compare',
           ),
+          pageHeader(
+            'Compare runs',
+            `${records.length} runs · recorded parameters and scalar results`,
+          ),
+          records.some((r) => r.limited)
+            ? notice(
+                'Comparison is limited to 2,000 tasks and 200 output artifacts per run. Open individual runs for complete history.',
+              )
+            : null,
         ],
-        rows,
-      ),
+      },
     ),
   );
+  container.firstElementChild.classList.add('comparison');
 }
-export async function serviceInfo(container) {
+export async function serviceInfo(container, navigate) {
   const capabilities = await get('/capabilities');
   let health;
   try {
@@ -1464,12 +1869,30 @@ export async function serviceInfo(container) {
     if (error.status !== 503) throw error;
     health = error.data || { status: 'unavailable' };
   }
+  const body = el('div');
   clear(
     container,
-    pageHeader(
+    resourceHeading(
+      'Service',
+      'service',
       'Service information',
-      'Current project, execution profile and capabilities.',
+      [
+        button('Refresh', () =>
+          navigate('service', new URLSearchParams(), true),
+        ),
+      ],
+      badge(health.status),
     ),
+    el(
+      'div',
+      { class: 'detail-meta' },
+      el('span', {}, capabilities.project_id),
+      el('span', {}, capabilities.profile),
+    ),
+    body,
+  );
+  clear(
+    body,
     section(
       'Runtime',
       fields([
@@ -1503,4 +1926,6 @@ export async function serviceInfo(container) {
     ),
     section('Complete capabilities', json(capabilities)),
   );
+  const screen = detailLayout(container, body);
+  screen.detailView = { path: 'service', accepts: () => false };
 }

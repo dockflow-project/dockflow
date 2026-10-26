@@ -6,6 +6,17 @@ from .core import capabilities
 
 
 def operate(core, action: str, values: dict):
+    if action in {
+        "storage.scan",
+        "storage.show",
+        "deletions.plan",
+        "deletions.show",
+        "deletions.apply",
+        "retention",
+    }:
+        from .deletion import operate as deletion_operation
+
+        return deletion_operation(core, action, values)
     if action.startswith("cache."):
         from .cache_registry import Registry
 
@@ -32,7 +43,8 @@ def operate(core, action: str, values: dict):
         collection = action.split(".")[0]
         filters = values.get("filters", {})
         if collection == "experiments" and "name" in filters:
-            filters = {"display_name": filters["name"]}
+            filters = {**filters, "display_name": filters["name"]}
+            del filters["name"]
         page = core.page(
             collection,
             page_size=values.get("page_size", 50),
@@ -60,6 +72,17 @@ def operate(core, action: str, values: dict):
         return core.refresh()
     if action == "runs.cancel":
         return core.cancel(values["id"])
+    if action == "artifacts.upload":
+        from pathlib import Path
+
+        from .uploads import upload_path
+
+        return upload_path(
+            core.artifacts,
+            Path(values["path"]),
+            {key: value for key, value in values.items() if key != "path"},
+            core.settings.service["request_max_bytes"],
+        )
     if action == "artifacts.create":
         return core.artifacts.register(
             values["uri"],

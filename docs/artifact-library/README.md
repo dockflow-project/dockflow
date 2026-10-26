@@ -13,7 +13,7 @@ uv pip install ./packages/artifacts
 uv pip install --overrides tools/runtime-overrides.txt './packages/artifacts[s3,kfp]'
 ```
 
-Install the standalone library with `pip install dockflow-artifacts==0.2.0`.
+Install the standalone library with `pip install dockflow-artifacts==0.3.0`.
 Filesystem publication
 requires POSIX filesystem primitives; runtime qualification is on Linux.
 

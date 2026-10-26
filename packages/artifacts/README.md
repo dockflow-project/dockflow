@@ -9,9 +9,9 @@ Python 3.12–3.13. MIT licensed. Developed with AI assistance.
 Install with Python 3.12 or newer:
 
 ```bash
-pip install dockflow-artifacts==0.2.0
+pip install dockflow-artifacts==0.3.0
 # Optional S3 integration:
-pip install 'dockflow-artifacts[s3]==0.2.0'
+pip install 'dockflow-artifacts[s3]==0.3.0'
 ```
 
 For the optional `kfp` extra, follow the installation guide's explicit urllib3

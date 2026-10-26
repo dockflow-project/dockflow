@@ -1,5 +1,9 @@
 # Distributed artifact-cache coordination
 
+Explicit resource deletion, storage cleanup and deployment retention are governed
+by [Deletion and storage cleanup](015_deletion-and-storage-cleanup.md), which
+specializes the original preservation/disabled-cleanup defaults below.
+
 This document owns Dockflow cache coordination, registry persistence, lease and
 retry semantics, immutable cache publication, configuration and conformance.
 Execution journals and their database owner remain governed by [Execution](005_execution-and-lifecycle.md).
@@ -648,7 +652,7 @@ requires a complete validated sealed output set and confirmed local stop check;
 a later journal projection failure does not undo registry publication. Recovery
 must not replay an unpublished local output set into the cache without its live
 ownership tuple. Existing pins and cleanup never remove published cache bytes.
-Published cache eviction and automatic orphan cleanup are disabled initially.
+Published cache eviction is limited to the explicit [015 deletion and retention](015_deletion-and-storage-cleanup.md) protocol. Automatic orphan cleanup remains disabled.
 
 Expose `cache show KEY`, `cache invalidate KEY --artifact-id ID --reason TEXT`
 and `cache reset KEY --revision INTEGER --reason TEXT` under `dockflow pipelines`.

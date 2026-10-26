@@ -7,6 +7,7 @@ It creates retained test records only; it never cleans or resets a repository.
 
 import argparse
 import json
+import time
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -141,7 +142,7 @@ def main() -> None:
         ).to_be_visible()
         expect(page.locator("h1 img")).to_have_count(0)
         # Live status updates must follow actual Docker work to completion.
-        expect(page.locator(".run-summary .badge").first).to_have_text(
+        expect(page.locator(".detail-title .badge").first).to_have_text(
             "●succeeded", timeout=90000
         )
         expect(
@@ -162,6 +163,7 @@ def main() -> None:
         expect(
             page.get_by_role("heading", name="Attempt ", exact=False)
         ).to_be_visible()
+        page.get_by_role("tab", name="Logs", exact=True).click()
         expect(page.get_by_role("heading", name="Logs", exact=True)).to_be_visible()
         expect(page.locator(".logs")).to_contain_text(
             "Preparing dataset", timeout=15000
@@ -189,7 +191,7 @@ def main() -> None:
         ) as cloned:
             page.get_by_role("button", name="Start run", exact=True).click()
         second = cloned.value.json()
-        expect(page.locator(".run-summary .badge").first).to_have_text(
+        expect(page.locator(".detail-title .badge").first).to_have_text(
             "●succeeded", timeout=90000
         )
         expect(
@@ -201,7 +203,7 @@ def main() -> None:
             page.get_by_text("No new attempt was executed.", exact=False)
         ).to_be_visible()
         expect(
-            page.get_by_role("link", name="Original producer attempt", exact=True)
+            page.get_by_role("link", name="Original producer attempt", exact=False)
         ).to_be_visible()
         checks.append("clone, actual reuse and original producer link")
         page.locator("nav").get_by_role("link", name="Runs", exact=True).click()
@@ -275,7 +277,7 @@ def main() -> None:
                 page.get_by_role("dialog").get_by_role(
                     "button", name="Confirm", exact=True
                 ).click()
-            expect(page.locator(".run-summary .badge").first).to_have_text(
+            expect(page.locator(".detail-title .badge").first).to_have_text(
                 "●" + target, timeout=90000
             )
         checks.append("real failure and confirmed cancellation states")
@@ -290,12 +292,30 @@ def main() -> None:
         page.get_by_label("Metadata (JSON object)", exact=True).fill(
             '{"note":"<svg onload=alert(1)>"}'
         )
-        page.get_by_role("dialog").get_by_role(
-            "button", name="Create", exact=True
-        ).click()
+        # Terminal cancellation can precede the execution owner releasing its lock.
+        # Retry only an explicit pre-mutation idle-owner conflict.
+        deadline = time.monotonic() + 10
+        while True:
+            with page.expect_response(
+                lambda r: r.url.endswith("/dockflow/v1/artifacts")
+                and r.request.method == "POST"
+            ) as imported:
+                page.get_by_role("dialog").get_by_role(
+                    "button", name="Create", exact=True
+                ).click()
+            if imported.value.ok:
+                break
+            failure = imported.value.json()["error"]
+            assert (
+                imported.value.status == 409
+                and "idle execution owner" in failure["message"]
+            )
+            assert time.monotonic() < deadline, "Execution owner did not become idle"
+            time.sleep(0.2)
         expect(
             page.get_by_role("heading", name="Browser imported " + suffix, exact=True)
         ).to_be_visible()
+        page.get_by_role("tab", name="Overview", exact=True).click()
         expect(
             page.get_by_text("<svg onload=alert(1)>", exact=False).first
         ).to_be_visible()

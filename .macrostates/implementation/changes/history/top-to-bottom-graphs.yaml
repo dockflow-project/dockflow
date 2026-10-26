@@ -1,0 +1,22 @@
+schema_version: 1
+id: top-to-bottom-graphs
+summary: Render pipeline and Run graphs from top to bottom in every graph scope.
+origin:
+  commit: "72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4"
+  specification: "specs-1.0.0"
+  implementation: "imp-1.0.0"
+impact:
+  specification: minor
+  implementation: patch
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Pipelines 013 graph presentation and hierarchy.
+    implementation: Shared vertical node layout, peer columns, vertical connector paths and matching canvas bounds.
+    verification: Six JavaScript suites and Chromium pipeline/Run, nested/All tasks, parallel branches, connector attachment, selection, zoom and desktop/narrow checks passed; formatting, composition/import and diff checks passed.
+evidence:
+  - workflows/history/2026-10-25__1AQ2RC__top-to-bottom-graphs.md
+  - workflows/history/2026-10-25__1ARHHE__top-to-bottom-graph-requirement.md
+gaps: []
+delivery_limits:
+  - Feature acceptance, all-workflow closure and release authorized; actual publication remains an external gate.

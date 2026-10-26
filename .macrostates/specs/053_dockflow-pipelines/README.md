@@ -16,6 +16,10 @@ registers compiled pipelines and immutable named versions with embedded componen
 contracts. Components/images and compilation remain owned by consuming projects;
 the orchestrator image remains generic and unmodified.
 
+Native artifact upload registers client files as manual managed artifacts in one
+operation, with optional safe ZIP extraction into a directory artifact. Its
+contract is owned by [Artifacts](006_artifacts.md#upload-and-register).
+
 This package owns packages/pipelines, its deployment artifacts and integration
 acceptance. It consumes the [general Dockflow](../051_dockflow/README.md) policy
 and [shared CLI](../052_dockflow-cli/README.md) registration contract. There is one
@@ -39,6 +43,8 @@ composition, project phase and workflow lifecycle.
 | 12 | [Review and qualification](012_review-and-qualification.md) | Contract navigation, dependency/platform constraints and qualification evidence. |
 | 13 | [Web interface](013_web-interface.md) | Packaged browser UX, screens, interactions, safety and browser qualification. |
 | 14 | [Cache coordination](014_cache-coordination.md) | Atomic reuse/claim, distributed registry, leases, immutable publication and conformance. |
+
+| 15 | [Deletion and storage cleanup](015_deletion-and-storage-cleanup.md) | Dependency-protected deletion, storage inventory, explicit manual origin and optional retention. |
 
 All documents are core. The review guide is a useful overview before detailed
 reading; it links to topic owners instead of repeating their mutable defaults.

@@ -1,5 +1,31 @@
 # Acceptance and delivery
 
+## Human-readable reference qualification
+
+Verify component context for execution/Task IDs, pipeline context for Run and
+pipeline/version IDs and experiment names beside experiment IDs across list,
+detail, graph inspector, reuse/attempt, artifact lineage, comparison, selection
+and deletion surfaces. Include distinct task/component and Run/pipeline display
+names, duplicate names, missing/retired dependencies, references outside catalog
+pages, long/markup-shaped names, lookup failures, navigation/sign-out races and
+bounded deduplicated requests. Exact IDs, routes and form values remain intact;
+raw records/payloads remain untouched. Browser checks include desktop/narrow
+layouts, fixed regions and graph identity/zoom/scroll during selection/name updates.
+
+## Artifact upload qualification
+
+Verify web, direct/endpoint CLI and Python-client upload-and-register without a
+Run; byte-exact files/kept ZIPs, extracted nested/empty directories and empty ZIPs;
+manual classification, Contents defaults, metadata/type/revision and distinct IDs
+for separate submissions. Exercise filesystem and S3 managed publication with
+isolated fixtures. Reject unsafe/ambiguous archive paths, links/special entries,
+encryption/unsupported compression, CRC/truncation, entry/expanded/request limits,
+invalid options, incomplete/extra multipart parts, forbidden origin/auth and busy
+owner. Verify staging cleanup, no artifact/payload for invalid input, no success
+on publication failure, TLS/auth/redirect refusal in the client and preservation of
+existing URI import/registration, previews and graph/list/detail layouts. Check
+desktop/narrow form use and no automatic retry. Record provider/coverage limits.
+
 ## Meaning of acceptance
 
 The full initial-release contract is the set of required behaviors in this
@@ -47,7 +73,7 @@ have separate qualification surfaces.
 | A26 | Upload bounds, malformed/duplicate multipart/query fields, UTF-8/syntax errors, unsupported archives/URLs/namespaces/features, duplicate names, and configuration/API ownership conflicts reject without usable partial catalog entries; same bytes in different pipeline/version associations retain distinct immutable IDs and historical Runs. |
 | A27 | Inject failure before/after durable registration and during index projection; pipeline/version/component membership and default recover together, accepted IDs remain inspectable, and no dangling default, duplicate entry or changed admitted Run appears. |
 | A28 | Normal release and abrupt coordinator death permit a new acquisition with a fresh owner UUID while retaining the lock inode. A surviving task container, retained nonterminal/queued Run or unresolved/reconciliation-required Run/attempt still prevents new direct Run acceptance until explicit service reconciliation/draining; no replacement or implicit rerun occurs. Held locks remain exclusive despite stale/legacy/truncated/malformed/oversized diagnostic contents or another PID namespace. Busy errors expose only validated structured owner fields and an actionable endpoint; unsupported locking/I/O failures fail closed with a distinct diagnostic. No stale-age/PID/hostname takeover or network-filesystem guarantee is implied. |
-| A29 | Packaged browser UI and API explorer load without CDN/network assets from installed distributions and the generic service. Actual browser journeys cover no-token and bearer authentication, memory-only sign-out, public shell/protected records, exact filters/pagination, pipeline/version upload and configuration-origin restrictions, typed create/clone/validate/idempotent Run submission, confirmed cancellation, nested graphs and task/attempt links, cursor-bounded logs during execution with manual browser refresh, scalar comparison with absent values, artifact import/register/pins and actual producer/consumer lineage. Verify stale-response/polling behavior, empty/error/recovery states, text-only rendering of XSS-shaped content, Origin rejection, desktop/narrow layout and keyboard navigation. Native pipeline/task/attempt/lineage queries and generated OpenAPI filters/models match observed responses. Record fixture versus actual execution coverage, browser/platform and limitations separately. |
+| A29 | Packaged browser UI and API explorer load without CDN/network assets from installed distributions and the generic service. Actual browser journeys cover no-token and bearer authentication, memory-only sign-out, public shell/protected records, exact filters/pagination and recent name/ID autocomplete (ten options, empty-field focus, execution/definition recency and keyboard selection), pipeline/version upload and configuration-origin restrictions, typed create/clone/validate/idempotent Run submission, confirmed cancellation, nested graphs and task/attempt links, cursor-bounded logs during execution with manual browser refresh, scalar comparison with absent values, artifact import/register/pins and actual producer/consumer lineage. Verify stale-response/polling behavior, empty/error/recovery states, text-only rendering of XSS-shaped content, Origin rejection, desktop/narrow layout and keyboard navigation. Native pipeline/task/attempt/lineage queries and generated OpenAPI filters/models match observed responses. Record fixture versus actual execution coverage, browser/platform and limitations separately. |
 | A30 | Foreground local run displays persisted stdout/stderr on stderr by default, including component traces and failed-task diagnostics. Human none/trimmed/full modes keep Run identity/state/key/error, bound verbose generated metadata only in trimmed mode, and leave ordinary component messages intact unless separately hidden. Independent Dockflow/component visibility switches cover all four combinations, task separators/stream headings, partial-line flushing, host warnings/errors and failure exit status. Hiding Dockflow output also hides recognized container-side KFP INFO lookup/loading/input-JSON/output-file messages in every detail mode, across arbitrary chunks; ordinary user logs sharing the KFP formatter, warnings/errors, unknown messages and malformed/oversized metadata remain visible when component output is enabled. Both disabled silence normal successful human output. Machine JSON remains complete and isolated on stdout. No display option changes retained logs, artifacts, Run records, execution identity or API submissions. Qualify successful/failing Docker tasks, arbitrary user JSON, incomplete executor metadata, a disconnected terminal, offline option validation and scoped logger restoration. |
 | A31 | Flushed stdout/stderr is durable and visible before a real task container exits, both in direct execution and through service-worker log pages. Silent/noisy tasks remain cancellable; final tails, split UTF-8 and stream attribution survive capture. A disconnected attach can recover from verified retained logs; changed/truncated prefixes fail explicitly. Recovery appends unsaved tails once. Streamed metadata respects none/trimmed/full presentation across chunk boundaries. Terminal colors, redirected/NO_COLOR plain text and browser color stripping leave durable records unchanged. |
 
@@ -198,3 +224,7 @@ independent versions, concurrent first use, transaction rollback, read-only
 validation and missing/unsupported schemas. Retain backup/export selection,
 publication/maintenance fencing, cache coordination and golden identity bytes
 after relocating shared serialization and filesystem primitives.
+
+### A40. Deletion and storage cleanup
+
+Apply the acceptance scenarios in [015](015_deletion-and-storage-cleanup.md#acceptance-a40).

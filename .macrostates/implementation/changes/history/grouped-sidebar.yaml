@@ -1,0 +1,22 @@
+schema_version: 1
+id: grouped-sidebar
+summary: Group sidebar destinations under Definitions, Workloads and Storage with a Cleanup link.
+origin:
+  commit: "72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4"
+  specification: "specs-1.0.0"
+  implementation: "imp-1.0.0"
+impact:
+  specification: minor
+  implementation: patch
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Pipelines 013 grouped sidebar and 015 cleanup entry point.
+    implementation: Named sidebar groups, requested order/labels, narrow captions and route-keyed highlighting with existing destinations/footer utilities.
+    verification: Chromium desktop/narrow group ordering, seven destinations, keyboard, normal/retired detail highlighting and visual checks passed; 45 web/API tests, six JavaScript suites, formatting, composition/import and diff checks passed.
+evidence:
+  - workflows/history/2026-10-25__20JZ7N__grouped-sidebar-specification.md
+  - workflows/history/2026-10-25__20JZ7N__grouped-sidebar-implementation.md
+gaps: []
+delivery_limits:
+  - Feature acceptance, all-workflow closure and release authorized; actual publication remains an external gate.

@@ -1,0 +1,24 @@
+schema_version: 1
+id: filter-autocomplete
+summary: Recent scoped name/ID autocomplete with exact omitted counts, stable inline captions and dependent filter ordering.
+origin:
+  commit: "72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4"
+  specification: "specs-1.0.0"
+  implementation: "imp-1.0.0"
+impact:
+  specification: minor
+  implementation: minor
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Pipelines 013 filter autocomplete and 010 native search/suggestion contracts.
+    implementation: Bounded project-scoped SQL name/ID suggestions with snapshot-consistent omitted counts and parent scopes; accessible recent-ten dropdowns show inline captions while preserving canonical values, prescribed field order and matched control heights; an accessible inline clear control resets selections and dependents without changing header height.
+    verification: Fourteen dedicated API/SQL cases, 62 existing web/reference tests, seven JavaScript files, seven targeted browser groups, fifteen established authenticated browser groups and read-only preview checks passed; visual, static, schema and composition checks passed.
+evidence:
+  - workflows/history/2026-10-26__141VAQ__filter-autocomplete-specification.md
+  - workflows/history/2026-10-26__141VAQ__filter-autocomplete-implementation.md
+  - validation/filter-autocomplete.md
+gaps: []
+delivery_limits:
+  - Feature acceptance, all-workflow closure and release authorized; actual publication remains an external gate.
+  - SQLite and PostgreSQL suggestion paths qualified; no new maximum-load or additional platform qualification.

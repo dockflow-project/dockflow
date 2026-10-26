@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+## 0.3.0
+
+Add explicit resource/storage lifecycle management, manual artifact uploads and
+Contents previews, and a more usable browser workspace. All four distributions
+share this version. Existing state can be opened without an automatic format
+migration. The first accepted deletion advances project mapping version 1 to 2;
+older runtimes then refuse that project. Back up before destructive operations.
+This replaces the earlier preserve-history guarantee only for explicit deletion
+or enabled retention. Deletion is logical retirement, not secure erasure or
+physical database compaction; older backups retain their original data.
+
+- Delete terminal Runs, executions and eligible artifacts through Python, CLI,
+  native API and UI, with dependency/pin/publication protection shared by records
+  and files. Review durable plans; storage deletion requires typing DANGER.
+- Inventory managed filesystem/S3 storage, distinguish manual/execution artifacts,
+  retained files, publications, protected/unknown entries and proven orphans;
+  show selected/all/orphan byte estimates and support reviewed cleanup.
+- Configure optional artifact retention; manually added artifacts require explicit
+  deletion and are excluded from automatic/orphan cleanup. External source files
+  are never deleted by managed-storage maintenance.
+- Upload and register manual artifacts together, preserving ZIP files or safely
+  extracting directory artifacts. Browse Contents by default: paged CSV tables,
+  collapsible JSON, images, text and directory navigation.
+- Use top-to-bottom graphs with background drag panning, stable zoom/position
+  during selection and independent inspector scrolling. Keep list/detail headers
+  and pagination fixed while their content scrolls.
+- Group navigation into Definitions, Workloads and Storage; place project context
+  below the logo and service/connection controls at the bottom between dividers.
+- Show names before IDs, offer recent name/ID autocomplete with exact remaining
+  counts and dependent filter scopes, and preserve canonical selected IDs with
+  inline clear controls and a text fade before the clear button.
+
+Storage cleanup requires idle exclusive maintenance. S3 version/object-lock and
+conditional-delete safeguards remain provider-dependent; enabled-versioning S3
+and filesystem behavior are qualified. SeaweedFS-specific behavior, physical
+multi-host deployment and additional native execution platforms are not newly
+qualified. KFP client delete/archive operations remain outside the bounded API.
+
 ## 0.2.0
 
 This pre-1.0 release introduces incompatible persisted-state and backup formats.

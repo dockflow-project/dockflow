@@ -8,6 +8,8 @@ import {
   authenticate,
 } from './api.js';
 import { runForm } from './forms.js';
+import { storageCleanup } from './cleanup.js';
+import { watchReferences } from './references.js';
 import {
   collection,
   pipelineDetail,
@@ -22,6 +24,7 @@ import {
 } from './views.js';
 
 const content = document.getElementById('content');
+const references = watchReferences(content, document.getElementById('modal'));
 document.querySelector('.skip-link').addEventListener('click', (event) => {
   event.preventDefault();
   content.focus();
@@ -35,24 +38,52 @@ const state = {
 let generation = 0,
   timer,
   connected = false;
-const items = [
-  ['pipelines', '◇', 'Pipelines'],
-  ['experiments', '◫', 'Experiments'],
-  ['runs', '▷', 'Runs'],
-  ['artifacts', '⬡', 'Artifacts'],
-  ['executions', '≋', 'Executions'],
-  ['components', '▦', 'Components'],
+const groups = [
+  [
+    'Definitions',
+    [
+      ['pipelines', '◇', 'Pipelines'],
+      ['components', '▦', 'Components'],
+    ],
+  ],
+  [
+    'Workloads',
+    [
+      ['experiments', '◫', 'Experiments'],
+      ['runs', '▷', 'Runs'],
+      ['executions', '≋', 'Executions'],
+    ],
+  ],
+  [
+    'Storage',
+    [
+      ['artifacts', '⬡', 'Artifacts'],
+      ['storage', '▤', 'Cleanup'],
+    ],
+  ],
 ];
+const items = groups.flatMap(([, entries]) => entries);
 const navigation = document.getElementById('navigation');
-for (const [path, icon, label] of items)
+for (const [name, entries] of groups) {
+  const heading = 'navigation-' + name.toLowerCase();
   navigation.append(
-    link(el('span', { class: 'nav-icon', 'aria-hidden': 'true' }, icon), path, {
-      'aria-label': label,
-    }),
+    el(
+      'div',
+      { class: 'nav-section', role: 'group', 'aria-labelledby': heading },
+      el('h2', { id: heading, class: 'nav-section-title' }, name),
+      entries.map(([path, icon, label]) =>
+        link(
+          [
+            el('span', { class: 'nav-icon', 'aria-hidden': 'true' }, icon),
+            el('span', { class: 'nav-text' }, label),
+          ],
+          path,
+          { 'aria-label': label, title: label, dataset: { route: path } },
+        ),
+      ),
+    ),
   );
-[...navigation.children].forEach((node, index) =>
-  node.append(el('span', { class: 'nav-text' }, items[index][2])),
-);
+}
 function current() {
   const [path, qs] = (location.hash.slice(2) || 'pipelines').split('?');
   return { path, query: new URLSearchParams(qs) };
@@ -61,7 +92,7 @@ function navigate(path, query = new URLSearchParams(), refresh = false) {
   const next = '#/' + path + (query.size ? '?' + query : '');
   if (location.hash === next || refresh) {
     if (location.hash !== next) history.replaceState(null, '', next);
-    render();
+    render(false, refresh);
   } else location.hash = next;
 }
 function connection(label, ok = true) {
@@ -78,10 +109,20 @@ function signedOut(message = 'Connect to view this project.') {
   generation++;
   clearTimeout(timer);
   forgetToken();
+  references.reset(true);
+  const dialog = document.getElementById('modal');
+  if (dialog.dataset.kind !== 'authentication') {
+    if (dialog.open) dialog.close();
+    clear(dialog);
+  }
   connected = false;
   state.currentRun = null;
   state.pages = {};
+  state.cleanup = null;
+  state.contentsTrees = null;
+  content.classList.remove('detail-mode', 'list-mode');
   document.getElementById('project-name').textContent = 'Not connected';
+  document.getElementById('project-name').removeAttribute('title');
   connection('Not connected', false);
   connectButton();
   clear(
@@ -106,6 +147,8 @@ window.addEventListener('dockflow:unauthorized', () => {
 async function identify() {
   const result = await get('/capabilities');
   document.getElementById('project-name').textContent =
+    result.project_id || 'Current project';
+  document.getElementById('project-name').title =
     result.project_id || 'Current project';
   connected = true;
   connectButton();
@@ -137,6 +180,7 @@ function schedule() {
   timer = setTimeout(() => {
     if (
       document.getElementById('modal').open ||
+      document.querySelector('.graph-viewport.is-panning') ||
       ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)
     ) {
       schedule();
@@ -146,18 +190,29 @@ function schedule() {
   }, 3000);
 }
 state.schedule = schedule;
-async function render(silent = false) {
+async function render(silent = false, force = false) {
   clearTimeout(timer);
   const turn = ++generation;
   newPage();
+  references.reset();
   const { path, query } = current();
   const [kind, id] = path.split('/');
+  const mounted = content.querySelector('.detail-screen')?.detailView;
+  if (!silent && !force && mounted?.accepts(path, query)) {
+    mounted.updateQuery(query);
+    references.scan();
+    schedule();
+    return;
+  }
   const staged = el('div');
-  if (!silent)
+  const sameDetail = mounted?.path === path;
+  const sameList =
+    content.classList.contains('list-mode') && content.dataset.route === path;
+  const sameQuery = content.dataset.query === query.toString();
+  if (!silent && !sameDetail && !sameList) {
+    content.classList.remove('detail-mode', 'list-mode');
     clear(content, el('div', { class: 'loading', role: 'status' }, 'Loading…'));
-  const scrollPositions = [
-    ...content.querySelectorAll('.graph-viewport,.step-panel'),
-  ].map((node) => ({ left: node.scrollLeft, top: node.scrollTop }));
+  }
   state.currentRun = null;
   const section =
     kind === 'tasks' || kind === 'attempts'
@@ -167,15 +222,17 @@ async function render(silent = false) {
         : kind === 'compare'
           ? 'runs'
           : kind;
-  [...navigation.children].forEach((node, index) => {
-    const active = items[index][0] === section;
+  navigation.querySelectorAll('a').forEach((node) => {
+    const active = node.dataset.route === section;
     node.classList.toggle('active', active);
     if (active) node.setAttribute('aria-current', 'page');
     else node.removeAttribute('aria-current');
   });
   try {
     if (!connected || silent || kind === 'service') await identify();
-    if (kind === 'runs' && id === 'new') await runForm(staged, query, navigate);
+    if (kind === 'storage' && !id) await storageCleanup(staged, state);
+    else if (kind === 'runs' && id === 'new')
+      await runForm(staged, query, navigate);
     else if (kind === 'pipelines' && id)
       await pipelineDetail(staged, id, query, navigate, state);
     else if (kind === 'definitions' && id)
@@ -190,13 +247,14 @@ async function render(silent = false) {
       );
     else if (kind === 'runs' && id)
       await runDetail(staged, id, query, navigate, state);
-    else if (kind === 'components' && id) await componentDetail(staged, id);
+    else if (kind === 'components' && id)
+      await componentDetail(staged, id, query, navigate);
     else if (kind === 'artifacts' && id)
       await artifactDetail(staged, id, query, navigate, state);
     else if ((kind === 'tasks' || kind === 'attempts') && id)
-      await executionDetail(staged, kind, id, navigate);
+      await executionDetail(staged, kind, id, query, navigate);
     else if (kind === 'compare') await compareRuns(staged, query);
-    else if (kind === 'service') await serviceInfo(staged);
+    else if (kind === 'service') await serviceInfo(staged, navigate);
     else if (items.some((item) => item[0] === kind) && !id)
       await collection(
         staged,
@@ -212,18 +270,45 @@ async function render(silent = false) {
         link('Go to pipelines', 'pipelines'),
       );
     if (turn !== generation) return;
+    // Capture at commit time so panning/zooming during a request is retained.
+    const graphViewport = sameDetail
+      ? content.querySelector('.graph')?.captureViewport?.()
+      : null;
+    const scrollPositions = [
+      ...content.querySelectorAll(
+        '.graph-viewport,.step-panel,.list-content,.detail-context,.detail-body:not(.graph-body):not(.list-body)',
+      ),
+    ].map((node) => ({ left: node.scrollLeft, top: node.scrollTop }));
+    const localPage = sameQuery
+      ? content.querySelector('.list-screen')?.capturePage?.()
+      : null;
+    content.classList.toggle(
+      'detail-mode',
+      Boolean(staged.querySelector('.detail-screen')),
+    );
+    content.classList.toggle(
+      'list-mode',
+      Boolean(staged.firstElementChild?.classList.contains('list-screen')),
+    );
     clear(content, ...staged.childNodes);
+    references.scan();
+    content.dataset.route = path;
+    content.dataset.query = query.toString();
+    content.querySelector('.list-screen')?.restorePage?.(localPage);
+    content.querySelector('.graph')?.restoreViewport?.(graphViewport);
     document.title =
       (content.querySelector('h1')?.textContent || 'Workspace') + ' · Dockflow';
-    if (silent)
-      [...content.querySelectorAll('.graph-viewport,.step-panel')].forEach(
-        (node, index) => {
-          if (scrollPositions[index]) {
-            node.scrollLeft = scrollPositions[index].left;
-            node.scrollTop = scrollPositions[index].top;
-          }
-        },
-      );
+    if (silent || ((sameList || sameDetail) && sameQuery))
+      [
+        ...content.querySelectorAll(
+          '.graph-viewport,.step-panel,.list-content,.detail-context,.detail-body:not(.graph-body):not(.list-body)',
+        ),
+      ].forEach((node, index) => {
+        if (scrollPositions[index]) {
+          node.scrollLeft = scrollPositions[index].left;
+          node.scrollTop = scrollPositions[index].top;
+        }
+      });
     schedule();
   } catch (error) {
     if (
@@ -232,17 +317,21 @@ async function render(silent = false) {
       error.status === 401
     )
       return;
-    if (silent) {
+    if (silent || sameList || sameDetail) {
       content.querySelector('.refresh-error')?.remove();
       const warning = errorBox(error, () => render(true));
       warning.classList.add('refresh-error');
-      content.prepend(warning);
+      (content.querySelector('.detail-header,.list-header') || content).prepend(
+        warning,
+      );
       connection('Update failed · data may be stale', false);
-    } else
+    } else {
+      content.classList.remove('detail-mode', 'list-mode');
       clear(
         content,
         errorBox(error, () => render()),
       );
+    }
   }
 }
 window.addEventListener('hashchange', () => render());

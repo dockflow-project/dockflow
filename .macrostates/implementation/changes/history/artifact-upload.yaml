@@ -1,0 +1,23 @@
+schema_version: 1
+id: artifact-upload
+summary: One-step manual managed artifact upload and registration with ZIP keep/extract choices.
+origin:
+  commit: "72f14612e6e9a791ce6c391e1c17a7c9a8d8fac4"
+  specification: "specs-1.0.0"
+  implementation: "imp-1.0.0"
+impact:
+  specification: minor
+  implementation: minor
+deliverables:
+  - dockflow-pipelines
+requirements:
+  - requirement: Pipelines 006 upload-and-register, with CLI/API/web and acceptance references.
+    implementation: Bounded private staging, safe ZIP extraction, shared managed publication, manual-origin descriptor, native multipart endpoint, Python/CLI transport and web upload form with default Contents.
+    verification: 261 focused tests passed (30 optional skips), four real MinIO cases, six upload browser groups with/without bearer auth, six authenticated Contents groups and fourteen established browser journeys; static/reference/specification checks passed.
+evidence:
+  - workflows/history/2026-10-25__28MDE8__artifact-upload-specification.md
+  - workflows/history/2026-10-25__28MDE8__artifact-upload-implementation.md
+  - validation/artifact-upload.md
+gaps: []
+delivery_limits:
+  - Feature acceptance, all-workflow closure and release authorized; actual publication remains an external gate.

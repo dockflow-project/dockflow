@@ -132,6 +132,7 @@ class Scheduler:
         self.error = None
         self.last_recovery = 0.0
         self.execution_enabled = True
+        self.last_retention: float | None = None
 
     def available(self) -> bool:
         return (
@@ -389,7 +390,34 @@ class Scheduler:
                 finally:
                     self.active_run = None
             if not dispatched:
+                self.retention_tick()
                 self.stopping.wait(0.1)
+
+    def retention_tick(self):
+        interval = self.core.settings.artifacts.get("retention_interval_seconds", 3600)
+        if (
+            self.core.settings.artifacts.get("retention_days", -1) < 0
+            or self.last_retention is not None
+            and time.monotonic() - self.last_retention < interval
+        ):
+            return
+        self.last_retention = time.monotonic()
+        from .deletion import Deletions
+
+        with self.core.mutex:
+            try:
+                Deletions(self.core).retention({"apply": True}, automatic=True)
+            except Exception as exc:
+                message = (
+                    exc.message
+                    if isinstance(exc, DockflowError)
+                    else "Retention could not inspect storage; check provider access and retry"
+                )
+                self.core.store.set_project_metadata(
+                    "retention_status",
+                    {"error": message, "last_check_at": time.time()},
+                )
+                LOGGER.warning("Artifact retention deferred: %s", message)
 
     def _dispatch(self, run):
         parent, child = multiprocessing.get_context("spawn").Pipe()
@@ -600,12 +628,11 @@ def create_app(settings, *, execute: bool = True) -> FastAPI:
                 upload = request.method == "POST" and route_path in {
                     "/apis/v2beta1/pipelines/upload",
                     "/apis/v2beta1/pipelines/upload_version",
+                    "/dockflow/v1/artifacts/upload",
                 }
                 if upload:
                     if content_type.split(";")[0].strip() != "multipart/form-data":
-                        raise DockflowError(
-                            "Pipeline uploads require multipart/form-data"
-                        )
+                        raise DockflowError("Uploads require multipart/form-data")
                     response = await call_next(request)
                     if response.headers.get("content-type", "").startswith(
                         "application/json"
@@ -694,7 +721,9 @@ def create_app(settings, *, execute: bool = True) -> FastAPI:
                     "artifacts": {"type", "availability"},
                     "experiments": {"name"},
                 }[collection]
-                values = query(request, {"page_size", "page_token", *allowed_filters})
+                values = query(
+                    request, {"page_size", "page_token", "search", *allowed_filters}
+                )
                 try:
                     page_size = int(values.pop("page_size", 50))
                 except ValueError as exc:
@@ -816,6 +845,26 @@ def create_app(settings, *, execute: bool = True) -> FastAPI:
             return core.logs(run_id, **values)
 
     routes = {
+        "/storage/scan": ("storage.scan", {"prefix"}),
+        "/storage/scan/show": (
+            "storage.show",
+            {
+                "scan_id",
+                "page_size",
+                "page_token",
+                "selected",
+                "orphans",
+                "classification",
+                "artifact_id",
+            },
+        ),
+        "/deletions/plan": (
+            "deletions.plan",
+            {"targets", "scan_id", "selected", "orphans", "delete_files"},
+        ),
+        "/deletions/show": ("deletions.show", {"plan_id"}),
+        "/deletions/apply": ("deletions.apply", {"plan_id", "confirmation"}),
+        "/retention": ("retention", {"apply", "confirmation"}),
         "/definitions/validate": (
             "definitions.validate",
             {"definition_id", "pipeline_spec", "source_text", "parameters", "inputs"},
@@ -845,7 +894,7 @@ def create_app(settings, *, execute: bool = True) -> FastAPI:
                     )
                 if action == "experiments.create" and "display_name" not in body:
                     raise DockflowError("display_name is required")
-                for field in ("apply", "verify_contents"):
+                for field in ("apply", "verify_contents", "delete_files", "orphans"):
                     if field in body and type(body[field]) is not bool:
                         raise DockflowError(f"{field} must be boolean")
                 if action == "metadata.rebuild" and body.get("apply"):
@@ -855,6 +904,10 @@ def create_app(settings, *, execute: bool = True) -> FastAPI:
                         409,
                     )
                 mutation = action in {
+                    "storage.scan",
+                    "deletions.plan",
+                    "deletions.apply",
+                    "retention",
                     "definitions.refresh",
                     "artifacts.create",
                     "experiments.create",
@@ -941,6 +994,9 @@ def create_app(settings, *, execute: bool = True) -> FastAPI:
             name=operation + "_artifact",
         )
 
+    from .upload_api import mount_uploads
+
+    mount_uploads(app, core, scheduler)
     from .kfp_api import mount_kfp
 
     mount_kfp(app, core, scheduler)

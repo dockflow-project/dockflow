@@ -631,6 +631,18 @@ class StateDatabase:
         self, run_id, *, sequence=0, offset=0, task_id=None, attempt_id=None, limit=None
     ):
         clauses = ["project_id=?", "run_id=?", "sequence" + (">=?" if offset else ">?")]
+        deleted = self.adapter.json_text("retired.value", "deleted_at")
+        retiring = self.adapter.json_text("retired.value", "retiring_plan_id")
+        clauses.append(
+            "NOT EXISTS (SELECT 1 FROM dockflow_state_resources retired WHERE "
+            "retired.project_id=dockflow_log_entries.project_id AND "
+            "retired.collection='attempts' AND "
+            "retired.public_id=dockflow_log_entries.attempt_id AND ("
+            + deleted
+            + " IS NOT NULL OR "
+            + retiring
+            + " IS NOT NULL))"
+        )
         values = [self.project_id, run_id, sequence]
         for name, value in (("task_id", task_id), ("attempt_id", attempt_id)):
             if value is not None:

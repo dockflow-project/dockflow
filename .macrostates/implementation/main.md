@@ -9,8 +9,9 @@ reviewed integration finalizes candidate declarations. Application identity is
 owned by root `VERSION` and synchronized across all four packages. Its version is
 independent of the repository baseline numbers.
 
-The [0.2.0 qualification record](validation/release-0.2.0.md) describes current
-release preparation and scope. The [initial release review](validation/initial-release.md)
+The [0.3.0 qualification record](validation/release-0.3.0.md) describes current
+release preparation and scope. The [0.2.0 record](validation/release-0.2.0.md)
+retains the previous release qualification. The [initial release review](validation/initial-release.md)
 retains the first bounded milestone. Registry publication, immutable source tags
 and hosted artifacts are separate from baseline finalization. Earlier released
 identities and dated evidence retain their original meaning. Workflow records
@@ -149,7 +150,8 @@ writers; unregistered historical results are misses, while explicit manual
 historical inputs retain full verification. Configured scope policy and actual
 store identity must agree before dispatch; registry failure has no unlocked fallback.
 
-Published cache eviction and automated orphan cleanup remain disabled. SQLite is
+Published cache retirement follows the explicit deletion/retention contract below;
+automated orphan cleanup remains disabled. SQLite is
 local-host only; PostgreSQL requires common artifact access. Coordinated S3 files
 are limited to 5 GiB each. Project backup exports history and all project cache namespaces in one consistent
 SQL snapshot, plus cache-only managed bytes and store identity. Restoring older
@@ -197,7 +199,11 @@ still explicitly rejected. KFP 2.17's waiter does not recognize `CANCELED`; insp
 that truthful status with get_run or the native CLI.
 
 `web.py` serves packaged static assets and read-only artifact lineage. Browser
-JavaScript is split into transport/auth, safe DOM helpers, graph projection,
+navigation groups destinations under Definitions, Workloads and Storage. The
+Cleanup link retains the storage route; footer utilities remain separate. Named
+groups, compact narrow-layout captions and route-keyed highlighting preserve
+accessible names and detail-route selection across the grouped structure.
+Browser JavaScript is split into transport/auth, safe DOM helpers, graph projection,
 forms, read views, navigation and a read-only OpenAPI explorer. `/` redirects to
 `/ui/`; `/dockflow/v1/docs` works without external CDN assets. Pipelines/versions,
 experiments, Runs, graph/task/attempt details, retained logs, artifact provenance,
@@ -206,14 +212,114 @@ artifact/experiment operations reuse public APIs. No additional service, fronten
 runtime, database or executor is introduced. The UI is independent of the
 upstream KFP frontend and does not imply full KFP backend parity.
 
-Unreleased graph presentation renders one native DAG level at a time. Subpipeline
-nodes expose their exact task details and open into child graphs; breadcrumbs,
+Unreleased graph presentation renders one native DAG level at a time. The shared
+pipeline/Run renderer flows top to bottom, with peers side by side and edges from
+source bottom centers to dependent top centers in focused and All tasks views.
+Subpipeline nodes expose their exact task details and open into child graphs; breadcrumbs,
 deep links and browser history preserve scope. An explicit All tasks view retains
 the full dependency/containment projection. Both views are bounded to 1,000 visible
 nodes. Execution, persisted task identity, attempts, reuse and lineage are
 unchanged. This specializes the existing nested-graph UI contract; it introduces
 no specification baseline or API change. See the
 [active amendment](workflows/history/2026-10-22__1X7CB4__collapsed-pipeline-graphs.md).
+
+The plain project name sits beneath the Dockflow brand in the persistent sidebar.
+Service status and authentication controls sit at the very bottom of its fixed
+footer, below a divider and the utility links/runtime text; another divider
+separates those utilities from navigation. Grouped navigation scrolls independently
+when needed. With the global top bar removed, selected screens use the full height.
+See [sidebar context qualification](validation/sidebar-project-context.md).
+Resource list filters offer server-side ID/name autocomplete, including direct
+pipeline/component context. Opening an empty field shows ten recent options;
+workloads use start time with creation fallback, definitions use registration
+time. Primary Search supports literal substrings, related selectors retain exact
+IDs, and artifact Type suggests distinct recent schema titles. Selected names and
+IDs appear together inside fields; only canonical IDs are submitted. An inline
+× control clears selected values and dependents while retaining header geometry;
+selected text fades into its opaque hit area. Parent
+selections scope component, pipeline-version and Task options and clear dependent
+selections on change. Exact remaining-match counts appear below capped lists;
+text/select heights match without additional name hints in filter headers.
+The authenticated read-only endpoint performs project-scoped bounded SQL selection
+and snapshot-consistent window counts, without payload reads. Accessible popup
+lists preserve fixed header geometry; query epochs and
+page aborts discard stale responses after edits, navigation and sign-out. See
+[filter autocomplete qualification](validation/filter-autocomplete.md).
+Pipeline/definition and Run details use a viewport-filling workspace.
+Compact resource headers keep context/actions
+and bottom tabs visible. The graph and its independently scrolling inspector
+occupy the remaining area; narrow layouts show the inspector as a dismissible
+right drawer. Selection-only query changes update the inspector and selection
+styling on the mounted graph without refetching the page. Scope/version changes
+use normal navigation. Graph instances expose in-memory viewport snapshots for
+same-definition/scope live and explicit refreshes. No browser persistence or
+additional deployment setting is introduced.
+
+Non-graph element views use the same fixed detail workspace for components,
+artifacts, tasks/executions and service information. A bounded header context
+contains identity/status/actions, with any tabs fixed beneath it. The remaining
+named, focusable region scrolls the information; long JSON/source blocks follow
+that region rather than a separate height limit. Components separate overview,
+interface, executor and source; tasks/executions separate overview, inputs/outputs,
+logs and complete records. Existing artifact and pipeline/Run tabs remain.
+Tab URLs/history retain context, same-tab refresh restores body/header scroll and
+failed refresh keeps the last valid view. Embedded list and graph behavior keep
+their own scroll/state handling. See the
+[detail layout qualification](validation/element-detail-layout.md).
+
+Artifacts open on Contents before Overview/Lineage. A read-only API resolves
+registered payloads and inventory members through current filesystem/S3 scope,
+with non-following descriptor-relative opens or conditional/versioned range reads.
+CSV continuations carry signed identity-bound byte positions, retaining only
+bounded current rows. Directories page recorded children; JSON uses a bounded
+precision-preserving tree with lazy 100-child expansion and in-memory expansion
+state. Raster images arrive through authenticated reads as generated data URLs;
+text previews disclose truncation. Complete bounded files verify their checksum,
+while partial reads explicitly do not establish full integrity. Read transfers
+hold no SQL transaction/execution mutex, and retirement is rechecked before
+response. No new payload publication, executor or persistent preview cache is
+introduced. See [Contents qualification](validation/artifact-contents.md).
+
+UI resource references resolve component, compiled pipeline and experiment names
+through a bounded read-only presentation endpoint. Direct dependency lookups are
+deduplicated within a read snapshot; they do not scan catalogs or change records.
+A shared browser decorator updates links, ID labels and selector hints in place,
+keeping exact targets/values and graph DOM/viewport intact. Its memory-only cache
+is refreshed on navigation and cleared on sign-out; unavailable names retain IDs
+and stale replies are ignored. Raw source/records and artifact previews remain
+untouched. See [reference-name qualification](validation/human-readable-references.md).
+
+Native artifact upload stages a bounded client stream privately, optionally
+validates/extracts a ZIP with bounded paths/entries/expanded bytes, fingerprints
+the resulting file/directory, and uses the existing managed publication protocol
+before inserting its manual-origin descriptor. Web, direct/endpoint CLI and the
+standard-library Python client share the operation. Filenames are presentation
+metadata and select Contents format; they never choose a managed destination.
+No Run is invented, no SQL transaction spans payload transfers, and existing
+publication recovery protects durable partial failures. The web keeps URI
+registration/import alongside its upload action. See
+[upload qualification](validation/artifact-upload.md).
+Root graph views omit a standalone location row; nested-scope breadcrumbs share
+the existing graph toolbar so hierarchy navigation does not require another bar.
+
+The shared graph viewport also supports primary-button background drag panning
+through bounded scroll offsets at the current zoom. Pointer capture and gesture
+cleanup cover release outside the viewport, cancellation, lost capture and window
+blur. Nodes/controls and native touch scrolling retain their existing behavior;
+wheel input ends an active drag before native scrolling. Cursor feedback and a
+small motion threshold distinguish panning from incidental pointer movement.
+
+Record-table views share a viewport-filling list workspace with fixed top context,
+filters/actions and a fixed bottom count/pagination bar. A single named, focusable
+main region scrolls rows and horizontal overflow; column headings stick within
+that region. Catalogs, experiment Runs and artifact consumers retain server cursor
+pagination. Run task results and comparison fields page through bounded loaded
+rows with explicit loaded/truncated counts. Same-query refresh preserves local
+page and scroll, and failed refresh retains the last valid view with retry.
+Empty tables retain headings and pagination. Cleanup keeps whole-scan byte
+estimates in its fixed footer, collapses secondary options on narrow screens and
+opens job/retention tools from top actions. See the
+[list layout qualification](validation/fixed-list-layout.md).
 
 Static shells contain no project data and can load before authentication. API
 bearer tokens remain in page memory; protected records still require auth.
@@ -417,3 +523,20 @@ all derived projections and the authoritative counter; rebuild preserves aliases
 publication records and cache fences. Fresh state is required; no migration is
 provided. Compiled-source capture and filesystem publication now enforce their
 bounded/stable and ancestor-durability boundaries.
+
+## Deletion and storage cleanup
+
+Unreleased deletion uses journal-backed retirement markers, a shared dependency
+gate, exact storage inventories and persistent review/apply jobs. Retained
+references protect both artifact records and files. Manual registrations/imports
+and standalone publications are excluded from orphan cleanup and retention.
+The browser, CLI and native API share plans and exact DANGER enforcement.
+Filesystem operations avoid symlinks/mount crossings; S3 deletion uses exact
+versions or qualified conditional deletes. Unsupported conditions fail closed.
+Optional disabled-by-default retention uses the same maintenance gate and protects
+retained history. Logical deletion preserves the journal and cache fences; secure
+erasure/database compaction is not implemented. Scans/apply execute synchronously
+and may need response-loss recovery via retained plan IDs. The [qualification receipt](validation/deletion-and-storage-cleanup.md) records
+provider/interpreter/browser results; manual delivery remains in the open
+deletion/cleanup workflows. No release
+or publication is implied. See the [usage guide](../../docs/cleanup.md).

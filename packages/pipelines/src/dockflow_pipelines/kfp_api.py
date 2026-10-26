@@ -6,9 +6,10 @@ from fastapi.responses import JSONResponse
 from python_multipart.exceptions import MultipartParseError
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
-from starlette.formparsers import MultiPartException, MultiPartParser
+from starlette.formparsers import MultiPartException
 
 from .core import only_fields
+from .multipart import CompleteMultipartParser
 
 STATES = {
     "queued": "PENDING",
@@ -161,22 +162,6 @@ def mount_kfp(app, core, scheduler):
             raise DockflowError("Namespaces are unsupported")
         query.pop("namespace", None)
         return query
-
-    class CompleteMultipartParser(MultiPartParser):
-        """Require the parser's terminal boundary, including for truncated files."""
-
-        complete = False
-
-        def on_end(self):
-            super().on_end()
-            self.complete = True
-
-        async def parse(self):
-            form = await super().parse()
-            if not self.complete:
-                await form.close()
-                raise MultiPartException("Incomplete multipart body")
-            return form
 
     async def upload(request: Request, *, version: bool):
         if not scheduler.available():

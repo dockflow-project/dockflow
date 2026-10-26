@@ -1,5 +1,9 @@
 # Artifacts and publication
 
+Explicit resource deletion, storage cleanup and deployment retention are governed
+by [Deletion and storage cleanup](015_deletion-and-storage-cleanup.md), which
+specializes the original preservation/disabled-cleanup defaults below.
+
 ## Native KFP contract
 
 An artifact represents typed data consumed or produced by a pipeline. Preserve
@@ -90,6 +94,46 @@ An importer is represented in the graph but is not a Docker computation attempt.
 It must not claim to have generated the imported data. Portable compiled IR
 uses normal importer URI inputs; Dockflow IDs are resolved into those inputs by
 submission configuration, rather than requiring a Dockflow URI scheme in IR.
+
+## Upload and register
+
+Provide one native operation that accepts a client file and returns its committed
+artifact descriptor after durable managed publication and registration. No Run or
+execution is required. Preserve external origin, `creation_origin: manual`, managed
+ownership and no producer. Record `upload: {filename, archive_mode}` separately from
+user metadata; source URI is null. Uploaded artifacts follow the manual-artifact
+dependency, explicit-deletion and retention rules in the cleanup contract.
+
+The service chooses a fresh artifact-specific managed destination on its configured
+filesystem or S3 backend; filenames never select server paths or overwrite existing
+artifacts. Accept a portable basename (maximum 255 UTF-8 bytes), KFP type, optional
+data revision and JSON metadata under existing validation. Preserve the filename
+for presentation and Contents format detection. Keep URI register/import available.
+The multipart parser may normalize legacy Windows filename prefixes to a basename;
+the admitted basename still never determines a storage path.
+
+`archive_mode` is `keep` by default: store the exact uploaded bytes, including ZIPs,
+as a file artifact. `extract` requires a `.zip` filename and a valid ZIP; extract its
+contents directly into a new directory artifact, preserving nested/empty folders,
+without an extra enclosing folder. Do not recursively expand nested archives.
+Support stored/deflated entries only. Reject encrypted, symbolic-link/special,
+absolute, traversal, drive-qualified, backslash, control-character, nonportable,
+duplicate and case/Unicode-normalization-colliding paths, and file/directory
+conflicts. Reject malformed/truncated archives and CRC/size mismatches.
+
+Use private temporary staging outside admitted artifact roots; validate metadata
+before staging and the complete archive before publication. Bound input bytes by
+`service.request_max_bytes` (default 16 MiB, including multipart overhead over HTTP;
+direct upload applies that limit to file bytes). Bound expanded bytes to 256 MiB,
+archive entries to 10,000, path depth to 32 and path length to 1,024 UTF-8 bytes.
+Enforce declared and actual extraction sizes while streaming. Reject excess bytes
+with `REQUEST_TOO_LARGE` (413), invalid input with `INVALID_ARGUMENT` (400).
+Clean temporary files on success/failure. Invalid uploads create no artifact or
+published payload. A storage/metadata publication failure must never return success
+or a usable partial artifact; existing protected publication recovery/cleanup rules
+apply to any durable partial publication. Do not hold a SQL transaction while
+receiving, extracting, hashing or transferring bytes. Each successful submission
+creates a new artifact; there is no automatic retry after uncertain acceptance.
 
 ## External publication through parameters and importers
 
@@ -312,7 +356,7 @@ Cleanup is explicit and defaults to dry-run. No automatic deletion is enabled
 initially. The initial clean operation targets only disposable work for terminal
 Runs and recognized uncommitted orphan data with proven project ownership. It
 does not delete committed artifact contents, logs, definitions or control history.
-Published-artifact expiry/deletion requires a future explicit retention contract;
+Published-artifact expiry/deletion follows the explicit [015 retention contract](015_deletion-and-storage-cleanup.md);
 loss observed outside Dockflow is still recorded as unavailable. Protect active input leases, retained pins and publication in progress;
 recheck those protections while holding ownership before applying a plan. Never
 delete reference-registered external contents. Deleting a managed copy does not
@@ -349,3 +393,8 @@ metadata URI. This is an identity resolved through Dockflow, not a payload
 download URL. Exact descriptors and provenance live in SQL; content_uri continues
 to identify filesystem/S3 payloads. No descriptor identity depends on a worker's
 local state directory.
+
+The web [Contents contract](013_web-interface.md#artifact-contents) adds bounded
+read-only file/directory visualization through registered artifact identity. A
+partial preview is not materialization or full integrity verification and does
+not change artifact ownership, immutability, availability, lineage or reuse rules.
